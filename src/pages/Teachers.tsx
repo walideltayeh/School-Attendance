@@ -1,3 +1,4 @@
+
 import { 
   Pencil, 
   Mail, 
@@ -38,6 +39,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { dataService, Teacher } from "@/services/dataService";
 import { toast } from "@/components/ui/use-toast";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 export default function Teachers() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,6 +61,11 @@ export default function Teachers() {
   const availableSections = ["A", "B", "C"];
   const availableSubjects = ["Mathematics", "English", "Science", "History", "Computer Science", "Physical Education", "Art", "Music"];
   
+  const subjectOptions = availableSubjects.map(subject => ({ 
+    label: subject, 
+    value: subject 
+  }));
+  
   const filteredTeachers = teachers.filter(teacher => 
     teacher.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     teacher.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -67,7 +74,7 @@ export default function Teachers() {
   );
 
   const handleAddTeacher = () => {
-    if (!newTeacher.name || !newTeacher.email || !newTeacher.phone || !newTeacher.subject) {
+    if (!newTeacher.name || !newTeacher.email || !newTeacher.phone || newTeacher.subjects.length === 0) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields for the new teacher.",
@@ -81,9 +88,11 @@ export default function Teachers() {
       className = `${newTeacher.class} - Section ${newTeacher.section}`;
     }
     
+    const primarySubject = newTeacher.subjects.length > 0 ? newTeacher.subjects[0] : "";
+    
     const teacherToAdd = {
       ...newTeacher,
-      subjects: [newTeacher.subject, ...newTeacher.subjects.filter(s => s !== newTeacher.subject)],
+      subject: primarySubject,
       classes: className ? [...newTeacher.classes, className] : newTeacher.classes
     };
     
@@ -170,26 +179,17 @@ export default function Teachers() {
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="subject" className="text-right flex items-center">
+                  <Label htmlFor="subjects" className="text-right flex items-center">
                     <BookOpen className="mr-2 h-4 w-4" />
-                    Subject
+                    Subjects
                   </Label>
                   <div className="col-span-3">
-                    <Select
-                      value={newTeacher.subject}
-                      onValueChange={(value) => setNewTeacher({...newTeacher, subject: value})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a subject" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableSubjects.map((subject) => (
-                          <SelectItem key={subject} value={subject}>
-                            {subject}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <MultiSelect
+                      options={subjectOptions}
+                      selected={newTeacher.subjects}
+                      onChange={(values) => setNewTeacher({...newTeacher, subjects: values})}
+                      placeholder="Select subjects"
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
