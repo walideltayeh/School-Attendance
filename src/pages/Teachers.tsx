@@ -1,4 +1,3 @@
-
 import { 
   Pencil, 
   Mail, 
@@ -7,7 +6,10 @@ import {
   Search, 
   Plus,
   MoreHorizontal,
-  FileDown 
+  FileDown,
+  BookOpen,
+  GraduationCap,
+  Layers
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +35,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { dataService, Teacher } from "@/services/dataService";
 import { toast } from "@/components/ui/use-toast";
 
@@ -44,12 +47,17 @@ export default function Teachers() {
     email: "",
     phone: "",
     subject: "",
-    // Add the missing properties required by the Teacher interface
+    class: "",
+    section: "",
     subjects: [] as string[],
     classes: [] as string[],
     students: 0
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  
+  const availableClasses = ["Grade 5", "Grade 6", "Grade 7", "Grade 8"];
+  const availableSections = ["A", "B", "C"];
+  const availableSubjects = ["Mathematics", "English", "Science", "History", "Computer Science", "Physical Education", "Art", "Music"];
   
   const filteredTeachers = teachers.filter(teacher => 
     teacher.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -62,16 +70,21 @@ export default function Teachers() {
     if (!newTeacher.name || !newTeacher.email || !newTeacher.phone || !newTeacher.subject) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all fields for the new teacher.",
+        description: "Please fill in all required fields for the new teacher.",
         variant: "destructive"
       });
       return;
     }
     
-    // Update the subjects array to include the main subject
+    let className = "";
+    if (newTeacher.class && newTeacher.section) {
+      className = `${newTeacher.class} - Section ${newTeacher.section}`;
+    }
+    
     const teacherToAdd = {
       ...newTeacher,
-      subjects: [newTeacher.subject], // Ensure the main subject is in the subjects array
+      subjects: [newTeacher.subject, ...newTeacher.subjects.filter(s => s !== newTeacher.subject)],
+      classes: className ? [...newTeacher.classes, className] : newTeacher.classes
     };
     
     const addedTeacher = dataService.addTeacher(teacherToAdd);
@@ -88,6 +101,8 @@ export default function Teachers() {
       email: "",
       phone: "",
       subject: "",
+      class: "",
+      section: "",
       subjects: [],
       classes: [],
       students: 0
@@ -112,7 +127,7 @@ export default function Teachers() {
                 Add Teacher
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
                 <DialogTitle>Add New Teacher</DialogTitle>
                 <DialogDescription>
@@ -155,15 +170,73 @@ export default function Teachers() {
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="subject" className="text-right">
+                  <Label htmlFor="subject" className="text-right flex items-center">
+                    <BookOpen className="mr-2 h-4 w-4" />
                     Subject
                   </Label>
-                  <Input
-                    id="subject"
-                    value={newTeacher.subject}
-                    onChange={(e) => setNewTeacher({...newTeacher, subject: e.target.value})}
-                    className="col-span-3"
-                  />
+                  <div className="col-span-3">
+                    <Select
+                      value={newTeacher.subject}
+                      onValueChange={(value) => setNewTeacher({...newTeacher, subject: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a subject" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableSubjects.map((subject) => (
+                          <SelectItem key={subject} value={subject}>
+                            {subject}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="class" className="text-right flex items-center">
+                    <GraduationCap className="mr-2 h-4 w-4" />
+                    Class
+                  </Label>
+                  <div className="col-span-3">
+                    <Select
+                      value={newTeacher.class}
+                      onValueChange={(value) => setNewTeacher({...newTeacher, class: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a class" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableClasses.map((cls) => (
+                          <SelectItem key={cls} value={cls}>
+                            {cls}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="section" className="text-right flex items-center">
+                    <Layers className="mr-2 h-4 w-4" />
+                    Section
+                  </Label>
+                  <div className="col-span-3">
+                    <Select
+                      value={newTeacher.section}
+                      onValueChange={(value) => setNewTeacher({...newTeacher, section: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a section" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableSections.map((section) => (
+                          <SelectItem key={section} value={section}>
+                            Section {section}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
               <DialogFooter>
