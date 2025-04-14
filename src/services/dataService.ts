@@ -1,4 +1,3 @@
-
 // This service will handle all data operations in a central location
 // It can be expanded to connect to a real backend API
 
@@ -127,6 +126,51 @@ const STUDENTS: Student[] = [
   },
 ];
 
+const TEACHERS: Teacher[] = [
+  { 
+    id: "T001", 
+    name: "Ms. Johnson", 
+    email: "johnson@school.edu", 
+    phone: "(555) 123-4567", 
+    subject: "Mathematics" 
+  },
+  { 
+    id: "T002", 
+    name: "Mr. Davis", 
+    email: "davis@school.edu", 
+    phone: "(555) 234-5678", 
+    subject: "English" 
+  },
+  { 
+    id: "T003", 
+    name: "Ms. Adams", 
+    email: "adams@school.edu", 
+    phone: "(555) 345-6789", 
+    subject: "Mathematics" 
+  },
+  { 
+    id: "T004", 
+    name: "Mr. Taylor", 
+    email: "taylor@school.edu", 
+    phone: "(555) 456-7890", 
+    subject: "English" 
+  },
+  { 
+    id: "T005", 
+    name: "Ms. Williams", 
+    email: "williams@school.edu", 
+    phone: "(555) 567-8901", 
+    subject: "Mathematics" 
+  },
+  { 
+    id: "T006", 
+    name: "Mr. Jones", 
+    email: "jones@school.edu", 
+    phone: "(555) 678-9012", 
+    subject: "Physical Education" 
+  },
+];
+
 const CLASSES: ClassInfo[] = [
   { id: "class_5a", name: "Grade 5 - Section A", teacher: "Ms. Johnson", room: "103" },
   { id: "class_5b", name: "Grade 5 - Section B", teacher: "Mr. Davis", room: "104" },
@@ -162,6 +206,37 @@ export const dataService = {
       student.teacher.toLowerCase().includes(lowercaseQuery)
     );
   },
+
+  addStudent: (student: Omit<Student, "id">): Student => {
+    // Generate a new ID
+    const newId = "ST" + String(STUDENTS.length + 1).padStart(3, '0');
+    const newStudent = { ...student, id: newId };
+    
+    // Add to our "database"
+    STUDENTS.push(newStudent);
+    
+    return newStudent;
+  },
+  
+  // Teacher methods
+  getTeachers: (): Teacher[] => {
+    return [...TEACHERS];
+  },
+  
+  getTeacher: (id: string): Teacher | undefined => {
+    return TEACHERS.find(teacher => teacher.id === id);
+  },
+
+  addTeacher: (teacher: Omit<Teacher, "id">): Teacher => {
+    // Generate a new ID
+    const newId = "T" + String(TEACHERS.length + 1).padStart(3, '0');
+    const newTeacher = { ...teacher, id: newId };
+    
+    // Add to our "database"
+    TEACHERS.push(newTeacher);
+    
+    return newTeacher;
+  },
   
   // Class methods
   getClasses: (): ClassInfo[] => {
@@ -179,6 +254,17 @@ export const dataService = {
   
   getBusRoute: (id: string): BusRoute | undefined => {
     return BUS_ROUTES.find(route => route.id === id);
+  },
+
+  addBusRoute: (route: Omit<BusRoute, "id">): BusRoute => {
+    // Generate a new ID
+    const newId = "bus_" + (BUS_ROUTES.length + 1);
+    const newRoute = { ...route, id: newId };
+    
+    // Add to our "database"
+    BUS_ROUTES.push(newRoute);
+    
+    return newRoute;
   },
   
   // This would be replaced with an actual API call in production

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Check, 
   Edit, 
@@ -31,7 +31,12 @@ import { dataService, Student } from "@/services/dataService";
 
 export default function Students() {
   const [searchQuery, setSearchQuery] = useState("");
-  const students = dataService.getStudents();
+  const [students, setStudents] = useState<Student[]>([]);
+  
+  // Fetch students when component mounts
+  useEffect(() => {
+    setStudents(dataService.getStudents());
+  }, []);
   
   const filteredStudents = searchQuery 
     ? dataService.searchStudents(searchQuery)

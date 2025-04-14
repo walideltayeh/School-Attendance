@@ -1,4 +1,3 @@
-
 import { 
   Pencil, 
   Mail, 
@@ -31,75 +30,56 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
-
-// Mock teacher data
-const teachers = [
-  { 
-    id: "T001", 
-    name: "Ms. Johnson", 
-    email: "johnson@school.edu", 
-    phone: "(555) 123-4567", 
-    subjects: ["Mathematics", "Science"],
-    classes: ["Grade 5 - Section A"],
-    students: 24
-  },
-  { 
-    id: "T002", 
-    name: "Mr. Davis", 
-    email: "davis@school.edu", 
-    phone: "(555) 234-5678", 
-    subjects: ["English", "Social Studies"],
-    classes: ["Grade 5 - Section B"],
-    students: 22
-  },
-  { 
-    id: "T003", 
-    name: "Ms. Adams", 
-    email: "adams@school.edu", 
-    phone: "(555) 345-6789", 
-    subjects: ["Mathematics", "Science"],
-    classes: ["Grade 6 - Section A"],
-    students: 26
-  },
-  { 
-    id: "T004", 
-    name: "Mr. Taylor", 
-    email: "taylor@school.edu", 
-    phone: "(555) 456-7890", 
-    subjects: ["English", "Arts"],
-    classes: ["Grade 6 - Section B"],
-    students: 23
-  },
-  { 
-    id: "T005", 
-    name: "Ms. Williams", 
-    email: "williams@school.edu", 
-    phone: "(555) 567-8901", 
-    subjects: ["Mathematics", "Computer Science"],
-    classes: ["Grade 7 - Section A"],
-    students: 25
-  },
-  { 
-    id: "T006", 
-    name: "Mr. Jones", 
-    email: "jones@school.edu", 
-    phone: "(555) 678-9012", 
-    subjects: ["Physical Education", "Health"],
-    classes: ["Grade 7 - Section B"],
-    students: 27
-  },
-];
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { dataService, Teacher } from "@/services/dataService";
+import { toast } from "@/components/ui/use-toast";
 
 export default function Teachers() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [teachers, setTeachers] = useState<Teacher[]>(dataService.getTeachers());
+  const [newTeacher, setNewTeacher] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    subject: ""
+  });
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   const filteredTeachers = teachers.filter(teacher => 
     teacher.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     teacher.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
     teacher.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    teacher.subjects.some(subject => subject.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    teacher.classes.some(cls => cls.toLowerCase().includes(searchQuery.toLowerCase()))
+    teacher.subject.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleAddTeacher = () => {
+    if (!newTeacher.name || !newTeacher.email || !newTeacher.phone || !newTeacher.subject) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all fields for the new teacher.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const addedTeacher = dataService.addTeacher(newTeacher);
+    
+    setTeachers([...teachers, addedTeacher]);
+    
+    toast({
+      title: "Teacher Added Successfully",
+      description: `${addedTeacher.name} has been added to the teacher directory.`
+    });
+    
+    setNewTeacher({
+      name: "",
+      email: "",
+      phone: "",
+      subject: ""
+    });
+    setIsDialogOpen(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -111,10 +91,77 @@ export default function Teachers() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button className="bg-school-primary hover:bg-school-secondary">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Teacher
-          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-school-primary hover:bg-school-secondary">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Teacher
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Add New Teacher</DialogTitle>
+                <DialogDescription>
+                  Enter the new teacher's details below.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">
+                    Full Name
+                  </Label>
+                  <Input
+                    id="name"
+                    value={newTeacher.name}
+                    onChange={(e) => setNewTeacher({...newTeacher, name: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="email" className="text-right">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newTeacher.email}
+                    onChange={(e) => setNewTeacher({...newTeacher, email: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="phone" className="text-right">
+                    Phone
+                  </Label>
+                  <Input
+                    id="phone"
+                    value={newTeacher.phone}
+                    onChange={(e) => setNewTeacher({...newTeacher, phone: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="subject" className="text-right">
+                    Subject
+                  </Label>
+                  <Input
+                    id="subject"
+                    value={newTeacher.subject}
+                    onChange={(e) => setNewTeacher({...newTeacher, subject: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAddTeacher}>
+                  Add Teacher
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Button variant="outline">
             <FileDown className="mr-2 h-4 w-4" />
             Export

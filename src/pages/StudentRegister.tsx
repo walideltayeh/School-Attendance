@@ -14,23 +14,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
+import { dataService } from "@/services/dataService";
 
 export default function StudentRegister() {
   const navigate = useNavigate();
   const [barcodeValue, setBarcodeValue] = useState("STU" + Math.floor(Math.random() * 10000).toString().padStart(4, '0'));
   const [hasAllergies, setHasAllergies] = useState(false);
+  
+  // Student form state
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [gender, setGender] = useState("female");
+  const [bloodType, setBloodType] = useState("");
+  const [allergyDetails, setAllergyDetails] = useState("");
+  const [grade, setGrade] = useState("");
+  const [section, setSection] = useState("");
+  const [teacher, setTeacher] = useState("");
   
   // Mock list of teachers for select box
   const teachers = [
@@ -48,11 +50,46 @@ export default function StudentRegister() {
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    // In a real app, this would send the form data to an API
+    
+    // Form validation
+    if (!firstName || !lastName || !grade || !section || !teacher || !bloodType) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (hasAllergies && !allergyDetails) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide details about the allergies.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Create student object
+    const newStudent = {
+      name: `${firstName} ${lastName}`,
+      grade: grade,
+      section: section,
+      teacher: teacher,
+      bloodType: bloodType,
+      allergies: hasAllergies,
+      status: "active" as const
+    };
+    
+    // Add student to the database
+    const addedStudent = dataService.addStudent(newStudent);
+    
+    // Show success toast
     toast({
       title: "Student Registered Successfully",
       description: "The student information has been saved to the system.",
     });
+    
     // Navigate back to students page
     navigate("/students");
   };
@@ -104,14 +141,26 @@ export default function StudentRegister() {
                   <Label htmlFor="firstName" className="text-right">
                     First Name
                   </Label>
-                  <Input id="firstName" className="col-span-3" required />
+                  <Input 
+                    id="firstName" 
+                    className="col-span-3" 
+                    required 
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                  />
                 </div>
                 
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="lastName" className="text-right">
                     Last Name
                   </Label>
-                  <Input id="lastName" className="col-span-3" required />
+                  <Input 
+                    id="lastName" 
+                    className="col-span-3" 
+                    required 
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                  />
                 </div>
                 
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -123,7 +172,11 @@ export default function StudentRegister() {
                 
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label className="text-right">Gender</Label>
-                  <RadioGroup defaultValue="female" className="col-span-3 flex space-x-4">
+                  <RadioGroup 
+                    value={gender} 
+                    onValueChange={setGender} 
+                    className="col-span-3 flex space-x-4"
+                  >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="female" id="female" />
                       <Label htmlFor="female">Female</Label>
@@ -143,19 +196,19 @@ export default function StudentRegister() {
                   <Label htmlFor="bloodType" className="text-right">
                     Blood Type
                   </Label>
-                  <Select>
+                  <Select onValueChange={setBloodType} value={bloodType}>
                     <SelectTrigger id="bloodType" className="col-span-3">
                       <SelectValue placeholder="Select blood type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="a_positive">A+</SelectItem>
-                      <SelectItem value="a_negative">A-</SelectItem>
-                      <SelectItem value="b_positive">B+</SelectItem>
-                      <SelectItem value="b_negative">B-</SelectItem>
-                      <SelectItem value="ab_positive">AB+</SelectItem>
-                      <SelectItem value="ab_negative">AB-</SelectItem>
-                      <SelectItem value="o_positive">O+</SelectItem>
-                      <SelectItem value="o_negative">O-</SelectItem>
+                      <SelectItem value="A+">A+</SelectItem>
+                      <SelectItem value="A-">A-</SelectItem>
+                      <SelectItem value="B+">B+</SelectItem>
+                      <SelectItem value="B-">B-</SelectItem>
+                      <SelectItem value="AB+">AB+</SelectItem>
+                      <SelectItem value="AB-">AB-</SelectItem>
+                      <SelectItem value="O+">O+</SelectItem>
+                      <SelectItem value="O-">O-</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -180,7 +233,9 @@ export default function StudentRegister() {
                       id="allergyDetails" 
                       className="col-span-3" 
                       placeholder="Please describe the allergies in detail..."
-                      required
+                      required={hasAllergies}
+                      value={allergyDetails}
+                      onChange={(e) => setAllergyDetails(e.target.value)}
                     />
                   </div>
                 )}
@@ -197,13 +252,13 @@ export default function StudentRegister() {
                   <Label htmlFor="grade" className="text-right">
                     Grade
                   </Label>
-                  <Select>
+                  <Select onValueChange={setGrade} value={grade}>
                     <SelectTrigger id="grade" className="col-span-3">
                       <SelectValue placeholder="Select grade" />
                     </SelectTrigger>
                     <SelectContent>
                       {grades.map((grade) => (
-                        <SelectItem key={grade} value={grade.toLowerCase().replace(' ', '_')}>
+                        <SelectItem key={grade} value={grade}>
                           {grade}
                         </SelectItem>
                       ))}
@@ -215,13 +270,13 @@ export default function StudentRegister() {
                   <Label htmlFor="section" className="text-right">
                     Section
                   </Label>
-                  <Select>
+                  <Select onValueChange={setSection} value={section}>
                     <SelectTrigger id="section" className="col-span-3">
                       <SelectValue placeholder="Select section" />
                     </SelectTrigger>
                     <SelectContent>
                       {sections.map((section) => (
-                        <SelectItem key={section} value={section.toLowerCase()}>
+                        <SelectItem key={section} value={section}>
                           Section {section}
                         </SelectItem>
                       ))}
@@ -233,13 +288,13 @@ export default function StudentRegister() {
                   <Label htmlFor="teacher" className="text-right">
                     Teacher
                   </Label>
-                  <Select>
+                  <Select onValueChange={setTeacher} value={teacher}>
                     <SelectTrigger id="teacher" className="col-span-3">
                       <SelectValue placeholder="Select teacher" />
                     </SelectTrigger>
                     <SelectContent>
                       {teachers.map((teacher) => (
-                        <SelectItem key={teacher.id} value={teacher.id}>
+                        <SelectItem key={teacher.id} value={teacher.name}>
                           {teacher.name}
                         </SelectItem>
                       ))}
@@ -318,22 +373,22 @@ export default function StudentRegister() {
                 <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-2">
                   <User className="h-12 w-12 text-gray-400" />
                 </div>
-                <h4 className="font-bold">New Student</h4>
+                <h4 className="font-bold">{firstName ? `${firstName} ${lastName}` : "New Student"}</h4>
                 <p className="text-sm text-gray-600">ID: {barcodeValue}</p>
               </div>
               
               <div className="space-y-2 mb-4">
                 <div className="grid grid-cols-3 text-sm">
                   <span className="font-medium">Grade:</span>
-                  <span className="col-span-2">Not Assigned</span>
+                  <span className="col-span-2">{grade || "Not Assigned"}</span>
                 </div>
                 <div className="grid grid-cols-3 text-sm">
                   <span className="font-medium">Teacher:</span>
-                  <span className="col-span-2">Not Assigned</span>
+                  <span className="col-span-2">{teacher || "Not Assigned"}</span>
                 </div>
                 <div className="grid grid-cols-3 text-sm">
                   <span className="font-medium">Blood Type:</span>
-                  <span className="col-span-2">Not Specified</span>
+                  <span className="col-span-2">{bloodType || "Not Specified"}</span>
                 </div>
               </div>
               

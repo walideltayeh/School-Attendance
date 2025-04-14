@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Bus, 
@@ -35,91 +34,20 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
-// Mock bus route data
-const busRoutes = [
-  { 
-    id: "BUS001", 
-    name: "Route #1", 
-    driver: "John Smith",
-    phone: "(555) 123-4567",
-    students: 28,
-    stops: 8,
-    departureTime: "7:30 AM",
-    returnTime: "3:30 PM",
-    status: "active"
-  },
-  { 
-    id: "BUS002", 
-    name: "Route #2", 
-    driver: "Mary Johnson",
-    phone: "(555) 234-5678",
-    students: 25,
-    stops: 7,
-    departureTime: "7:45 AM",
-    returnTime: "3:45 PM",
-    status: "active"
-  },
-  { 
-    id: "BUS003", 
-    name: "Route #3", 
-    driver: "Robert Lee",
-    phone: "(555) 345-6789",
-    students: 22,
-    stops: 6,
-    departureTime: "7:30 AM",
-    returnTime: "3:30 PM",
-    status: "active"
-  },
-  { 
-    id: "BUS004", 
-    name: "Route #4", 
-    driver: "Patricia Clark",
-    phone: "(555) 456-7890",
-    students: 24,
-    stops: 9,
-    departureTime: "7:15 AM",
-    returnTime: "3:15 PM",
-    status: "inactive"
-  },
-  { 
-    id: "BUS005", 
-    name: "Route #5", 
-    driver: "Michael Davis",
-    phone: "(555) 567-8901",
-    students: 30,
-    stops: 10,
-    departureTime: "7:00 AM",
-    returnTime: "3:00 PM",
-    status: "active"
-  },
-];
-
-// Mock bus stops for Route #1
-const busStops = [
-  { id: "STOP1", name: "Oakwood Drive & 5th Ave", time: "7:10 AM", students: 5 },
-  { id: "STOP2", name: "Pine Street Elementary", time: "7:15 AM", students: 8 },
-  { id: "STOP3", name: "Maple Road & 10th St", time: "7:18 AM", students: 3 },
-  { id: "STOP4", name: "Cedar Boulevard", time: "7:22 AM", students: 4 },
-  { id: "STOP5", name: "Willow Lane & Park Ave", time: "7:25 AM", students: 6 },
-  { id: "STOP6", name: "Elmwood Community Center", time: "7:28 AM", students: 2 },
-];
-
-// Mock student assignments for Route #1
-const busStudents = [
-  { id: "ST001", name: "Emma Thompson", grade: "Grade 5", stop: "Oakwood Drive & 5th Ave" },
-  { id: "ST002", name: "Noah Martinez", grade: "Grade 5", stop: "Pine Street Elementary" },
-  { id: "ST006", name: "William Brown", grade: "Grade 7", stop: "Cedar Boulevard" },
-  { id: "ST008", name: "James Johnson", grade: "Grade 8", stop: "Willow Lane & Park Ave" },
-  { id: "ST012", name: "Sophia Wilson", grade: "Grade 6", stop: "Maple Road & 10th St" },
-  { id: "ST015", name: "Ethan Davis", grade: "Grade 5", stop: "Pine Street Elementary" },
-  { id: "ST018", name: "Isabella Garcia", grade: "Grade 7", stop: "Elmwood Community Center" },
-  { id: "ST022", name: "Lucas Smith", grade: "Grade 8", stop: "Willow Lane & Park Ave" },
-];
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { dataService, BusRoute } from "@/services/dataService";
+import { toast } from "@/components/ui/use-toast";
 
 export default function Transport() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [busRoutes, setBusRoutes] = useState<BusRoute[]>(dataService.getBusRoutes());
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newRoute, setNewRoute] = useState({
+    name: "",
+    driver: ""
+  });
   
   const filteredRoutes = busRoutes.filter(route => 
     route.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -129,6 +57,37 @@ export default function Transport() {
 
   const handleRouteSelect = (routeId: string) => {
     setSelectedRoute(routeId === selectedRoute ? null : routeId);
+  };
+
+  const handleAddRoute = () => {
+    // Validate form
+    if (!newRoute.name || !newRoute.driver) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all fields for the new bus route.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Add route to the database
+    const addedRoute = dataService.addBusRoute(newRoute);
+    
+    // Update local state
+    setBusRoutes([...busRoutes, addedRoute]);
+    
+    // Show success toast
+    toast({
+      title: "Bus Route Added Successfully",
+      description: `${addedRoute.name} with ${addedRoute.driver} as driver has been added.`
+    });
+    
+    // Reset form and close dialog
+    setNewRoute({
+      name: "",
+      driver: ""
+    });
+    setIsDialogOpen(false);
   };
 
   return (
@@ -141,10 +100,56 @@ export default function Transport() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button className="bg-school-primary hover:bg-school-secondary">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Route
-          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-school-primary hover:bg-school-secondary">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Route
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Add New Bus Route</DialogTitle>
+                <DialogDescription>
+                  Enter the new bus route details below.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="routeName" className="text-right">
+                    Route Name
+                  </Label>
+                  <Input
+                    id="routeName"
+                    value={newRoute.name}
+                    onChange={(e) => setNewRoute({...newRoute, name: e.target.value})}
+                    className="col-span-3"
+                    placeholder="e.g., Route #5"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="driverName" className="text-right">
+                    Driver Name
+                  </Label>
+                  <Input
+                    id="driverName"
+                    value={newRoute.driver}
+                    onChange={(e) => setNewRoute({...newRoute, driver: e.target.value})}
+                    className="col-span-3"
+                    placeholder="Full name of the driver"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAddRoute}>
+                  Add Route
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Button variant="outline">
             <FileDown className="mr-2 h-4 w-4" />
             Export
