@@ -1,3 +1,4 @@
+
 import { 
   Pencil, 
   Mail, 
@@ -42,7 +43,11 @@ export default function Teachers() {
     name: "",
     email: "",
     phone: "",
-    subject: ""
+    subject: "",
+    // Add the missing properties required by the Teacher interface
+    subjects: [] as string[],
+    classes: [] as string[],
+    students: 0
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
@@ -63,7 +68,13 @@ export default function Teachers() {
       return;
     }
     
-    const addedTeacher = dataService.addTeacher(newTeacher);
+    // Update the subjects array to include the main subject
+    const teacherToAdd = {
+      ...newTeacher,
+      subjects: [newTeacher.subject], // Ensure the main subject is in the subjects array
+    };
+    
+    const addedTeacher = dataService.addTeacher(teacherToAdd);
     
     setTeachers([...teachers, addedTeacher]);
     
@@ -76,7 +87,10 @@ export default function Teachers() {
       name: "",
       email: "",
       phone: "",
-      subject: ""
+      subject: "",
+      subjects: [],
+      classes: [],
+      students: 0
     });
     setIsDialogOpen(false);
   };
