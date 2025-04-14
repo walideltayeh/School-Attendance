@@ -61,6 +61,19 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Custom education theme colors
+				school: {
+					primary: '#7E69AB',
+					secondary: '#6E59A5',
+					accent: '#9b87f5',
+					light: '#E5DEFF',
+					dark: '#1A1F2C',
+					success: '#4CAF50',
+					warning: '#FFC107',
+					danger: '#F44336',
+					info: '#2196F3',
+					gray: '#8E9196',
 				}
 			},
 			borderRadius: {
