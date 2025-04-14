@@ -1,3 +1,4 @@
+
 // This service will handle all data operations in a central location
 // It can be expanded to connect to a real backend API
 
@@ -19,6 +20,10 @@ export interface Teacher {
   subject: string;
   email: string;
   phone: string;
+  // Add properties that are used in the Teachers page
+  subjects: string[];
+  classes: string[];
+  students: number;
 }
 
 export interface ClassInfo {
@@ -32,6 +37,13 @@ export interface BusRoute {
   id: string;
   name: string;
   driver: string;
+  // Add properties that are used in the Transport page
+  phone?: string;
+  departureTime?: string;
+  returnTime?: string;
+  students?: number;
+  stops?: number;
+  status?: "active" | "inactive";
 }
 
 export interface ScanRecord {
@@ -41,6 +53,21 @@ export interface ScanRecord {
   success: boolean;
   message?: string;
 }
+
+// Mock data for busStops and busStudents
+export const busStops = [
+  { id: "stop1", name: "Main Street", time: "7:30 AM", students: 8 },
+  { id: "stop2", name: "Oak Avenue", time: "7:40 AM", students: 12 },
+  { id: "stop3", name: "Pine Road", time: "7:50 AM", students: 5 },
+  { id: "stop4", name: "Cedar Lane", time: "8:00 AM", students: 10 }
+];
+
+export const busStudents = [
+  { id: "ST001", name: "Emma Thompson", grade: "Grade 5", stop: "Main Street" },
+  { id: "ST002", name: "Noah Martinez", grade: "Grade 5", stop: "Oak Avenue" },
+  { id: "ST005", name: "Ava Garcia", grade: "Grade 7", stop: "Pine Road" },
+  { id: "ST007", name: "Sophia Miller", grade: "Grade 8", stop: "Cedar Lane" }
+];
 
 // Mock data storage
 const STUDENTS: Student[] = [
@@ -132,42 +159,60 @@ const TEACHERS: Teacher[] = [
     name: "Ms. Johnson", 
     email: "johnson@school.edu", 
     phone: "(555) 123-4567", 
-    subject: "Mathematics" 
+    subject: "Mathematics",
+    subjects: ["Mathematics", "Science"],
+    classes: ["Grade 5 - Section A", "Grade 6 - Section A"],
+    students: 48
   },
   { 
     id: "T002", 
     name: "Mr. Davis", 
     email: "davis@school.edu", 
     phone: "(555) 234-5678", 
-    subject: "English" 
+    subject: "English",
+    subjects: ["English", "Literature"],
+    classes: ["Grade 5 - Section B", "Grade 7 - Section A"],
+    students: 52
   },
   { 
     id: "T003", 
     name: "Ms. Adams", 
     email: "adams@school.edu", 
     phone: "(555) 345-6789", 
-    subject: "Mathematics" 
+    subject: "Mathematics",
+    subjects: ["Mathematics"],
+    classes: ["Grade 6 - Section A"],
+    students: 25
   },
   { 
     id: "T004", 
     name: "Mr. Taylor", 
     email: "taylor@school.edu", 
     phone: "(555) 456-7890", 
-    subject: "English" 
+    subject: "English",
+    subjects: ["English", "History"],
+    classes: ["Grade 6 - Section B", "Grade 8 - Section A"],
+    students: 50
   },
   { 
     id: "T005", 
     name: "Ms. Williams", 
     email: "williams@school.edu", 
     phone: "(555) 567-8901", 
-    subject: "Mathematics" 
+    subject: "Mathematics",
+    subjects: ["Mathematics", "Computer Science"],
+    classes: ["Grade 7 - Section A", "Grade 8 - Section B"],
+    students: 45
   },
   { 
     id: "T006", 
     name: "Mr. Jones", 
     email: "jones@school.edu", 
     phone: "(555) 678-9012", 
-    subject: "Physical Education" 
+    subject: "Physical Education",
+    subjects: ["Physical Education"],
+    classes: ["Grade 7 - Section B"],
+    students: 30
   },
 ];
 
@@ -179,10 +224,50 @@ const CLASSES: ClassInfo[] = [
 ];
 
 const BUS_ROUTES: BusRoute[] = [
-  { id: "bus_1", name: "Route #1", driver: "John Smith" },
-  { id: "bus_2", name: "Route #2", driver: "Mary Johnson" },
-  { id: "bus_3", name: "Route #3", driver: "Robert Lee" },
-  { id: "bus_4", name: "Route #4", driver: "Patricia Clark" },
+  { 
+    id: "bus_1", 
+    name: "Route #1", 
+    driver: "John Smith",
+    phone: "(555) 111-2222",
+    departureTime: "7:15 AM",
+    returnTime: "4:00 PM",
+    students: 28,
+    stops: 6,
+    status: "active"
+  },
+  { 
+    id: "bus_2", 
+    name: "Route #2", 
+    driver: "Mary Johnson",
+    phone: "(555) 222-3333",
+    departureTime: "7:20 AM",
+    returnTime: "4:10 PM",
+    students: 32,
+    stops: 7,
+    status: "active"
+  },
+  { 
+    id: "bus_3", 
+    name: "Route #3", 
+    driver: "Robert Lee",
+    phone: "(555) 333-4444",
+    departureTime: "7:30 AM",
+    returnTime: "4:15 PM",
+    students: 25,
+    stops: 5,
+    status: "inactive"
+  },
+  { 
+    id: "bus_4", 
+    name: "Route #4", 
+    driver: "Patricia Clark",
+    phone: "(555) 444-5555",
+    departureTime: "7:25 AM",
+    returnTime: "4:05 PM",
+    students: 30,
+    stops: 8,
+    status: "active"
+  },
 ];
 
 // Data service methods
@@ -275,3 +360,4 @@ export const dataService = {
     return true;
   }
 };
+

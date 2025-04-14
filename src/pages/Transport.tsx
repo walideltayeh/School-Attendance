@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { 
   Bus, 
@@ -36,7 +37,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { dataService, BusRoute } from "@/services/dataService";
+import { dataService, BusRoute, busStops, busStudents } from "@/services/dataService";
 import { toast } from "@/components/ui/use-toast";
 
 export default function Transport() {
