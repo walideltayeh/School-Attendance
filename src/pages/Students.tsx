@@ -27,101 +27,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-
-// Mock student data
-const students = [
-  { 
-    id: "ST001", 
-    name: "Emma Thompson", 
-    grade: "Grade 5", 
-    section: "A", 
-    teacher: "Ms. Johnson",
-    bloodType: "A+",
-    allergies: true,
-    status: "active"
-  },
-  { 
-    id: "ST002", 
-    name: "Noah Martinez", 
-    grade: "Grade 5", 
-    section: "B", 
-    teacher: "Mr. Davis",
-    bloodType: "O-",
-    allergies: false,
-    status: "active"
-  },
-  { 
-    id: "ST003", 
-    name: "Olivia Wilson", 
-    grade: "Grade 6", 
-    section: "A", 
-    teacher: "Ms. Adams",
-    bloodType: "B+",
-    allergies: true,
-    status: "active"
-  },
-  { 
-    id: "ST004", 
-    name: "Liam Anderson", 
-    grade: "Grade 6", 
-    section: "B", 
-    teacher: "Mr. Taylor",
-    bloodType: "AB-",
-    allergies: false,
-    status: "inactive"
-  },
-  { 
-    id: "ST005", 
-    name: "Ava Garcia", 
-    grade: "Grade 7", 
-    section: "A", 
-    teacher: "Ms. Williams",
-    bloodType: "O+",
-    allergies: true,
-    status: "active"
-  },
-  { 
-    id: "ST006", 
-    name: "William Brown", 
-    grade: "Grade 7", 
-    section: "B", 
-    teacher: "Mr. Jones",
-    bloodType: "A-",
-    allergies: false,
-    status: "active"
-  },
-  { 
-    id: "ST007", 
-    name: "Sophia Miller", 
-    grade: "Grade 8", 
-    section: "A", 
-    teacher: "Ms. Lewis",
-    bloodType: "B-",
-    allergies: true,
-    status: "active"
-  },
-  { 
-    id: "ST008", 
-    name: "James Johnson", 
-    grade: "Grade 8", 
-    section: "B", 
-    teacher: "Mr. Clark",
-    bloodType: "AB+",
-    allergies: false,
-    status: "inactive"
-  },
-];
+import { dataService, Student } from "@/services/dataService";
 
 export default function Students() {
   const [searchQuery, setSearchQuery] = useState("");
+  const students = dataService.getStudents();
   
-  const filteredStudents = students.filter(student => 
-    student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.grade.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.section.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.teacher.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredStudents = searchQuery 
+    ? dataService.searchStudents(searchQuery)
+    : students;
 
   return (
     <div className="space-y-6">

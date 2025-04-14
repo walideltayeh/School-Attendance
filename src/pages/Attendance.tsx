@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Check, QrCode, RefreshCw, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { dataService, ClassInfo, BusRoute, ScanRecord } from "@/services/dataService";
 
 export default function Attendance() {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -16,13 +16,10 @@ export default function Attendance() {
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedBus, setSelectedBus] = useState("");
   const [isScanning, setIsScanning] = useState(false);
-  const [recentScans, setRecentScans] = useState<Array<{
-    id: string;
-    name: string;
-    time: Date;
-    success: boolean;
-    message?: string;
-  }>>([]);
+  const [recentScans, setRecentScans] = useState<ScanRecord[]>([]);
+  
+  const classes = dataService.getClasses();
+  const busRoutes = dataService.getBusRoutes();
 
   // Update the time every second
   useEffect(() => {
@@ -32,22 +29,6 @@ export default function Attendance() {
 
     return () => clearInterval(timer);
   }, []);
-
-  // Mock class data
-  const classes = [
-    { id: "class_5a", name: "Grade 5 - Section A", teacher: "Ms. Johnson", room: "103" },
-    { id: "class_5b", name: "Grade 5 - Section B", teacher: "Mr. Davis", room: "104" },
-    { id: "class_6a", name: "Grade 6 - Section A", teacher: "Ms. Adams", room: "201" },
-    { id: "class_6b", name: "Grade 6 - Section B", teacher: "Mr. Taylor", room: "202" },
-  ];
-
-  // Mock bus route data
-  const busRoutes = [
-    { id: "bus_1", name: "Route #1", driver: "John Smith" },
-    { id: "bus_2", name: "Route #2", driver: "Mary Johnson" },
-    { id: "bus_3", name: "Route #3", driver: "Robert Lee" },
-    { id: "bus_4", name: "Route #4", driver: "Patricia Clark" },
-  ];
 
   const handleStartScan = () => {
     // Validate selection
@@ -91,23 +72,15 @@ export default function Attendance() {
 
   // Function to simulate a student scan for demo purposes
   const simulateScan = () => {
-    // Random student IDs and names for simulation
-    const students = [
-      { id: "ST001", name: "Emma Thompson" },
-      { id: "ST002", name: "Noah Martinez" },
-      { id: "ST003", name: "Olivia Wilson" },
-      { id: "ST004", name: "Liam Anderson" },
-      { id: "ST005", name: "Ava Garcia" },
-    ];
-    
-    // Randomly select a student
+    // Get a random student from our database
+    const students = dataService.getStudents();
     const randomStudent = students[Math.floor(Math.random() * students.length)];
     
     // Randomly determine if the scan is successful (90% chance of success)
     const isSuccessful = Math.random() > 0.1;
     
     // Create a scan record
-    const newScan = {
+    const newScan: ScanRecord = {
       id: randomStudent.id,
       name: randomStudent.name,
       time: new Date(),
