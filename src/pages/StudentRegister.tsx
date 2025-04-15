@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { QrCode, Save, ArrowLeft, User, FileDown } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
-import { dataService } from "@/services/dataService";
+import { dataService, Teacher, ClassInfo } from "@/services/dataService";
 
 export default function StudentRegister() {
   const navigate = useNavigate();
@@ -34,19 +34,60 @@ export default function StudentRegister() {
   const [section, setSection] = useState("");
   const [teacher, setTeacher] = useState("");
   
-  // Mock list of teachers for select box
-  const teachers = [
-    { id: "1", name: "Ms. Johnson" },
-    { id: "2", name: "Mr. Davis" },
-    { id: "3", name: "Ms. Adams" },
-    { id: "4", name: "Mr. Taylor" },
-    { id: "5", name: "Ms. Williams" },
-    { id: "6", name: "Mr. Jones" },
-  ];
+  // Loaded data
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const [availableGrades, setAvailableGrades] = useState<string[]>([]);
+  const [availableSections, setAvailableSections] = useState<string[]>([]);
 
-  // Mock list of classes/grades
-  const grades = ["Grade 5", "Grade 6", "Grade 7", "Grade 8"];
-  const sections = ["A", "B", "C"];
+  // Load data on component mount
+  useEffect(() => {
+    const loadedTeachers = dataService.getTeachers();
+    const loadedClasses = dataService.getClasses();
+    
+    setTeachers(loadedTeachers);
+    setClasses(loadedClasses);
+    
+    // Extract unique grades
+    const grades = Array.from(new Set(loadedClasses.map(c => c.name.split(" - ")[0])));
+    if (grades.length === 0) {
+      // Fallback grades if no classes exist
+      setAvailableGrades(["Grade 5", "Grade 6", "Grade 7", "Grade 8"]);
+    } else {
+      setAvailableGrades(grades);
+    }
+  }, []);
+
+  // Update available sections when grade changes
+  useEffect(() => {
+    if (grade) {
+      const sectionsForGrade = classes
+        .filter(c => c.name.startsWith(grade))
+        .map(c => c.name.split(" - ")[1].replace("Section ", ""));
+      
+      if (sectionsForGrade.length === 0) {
+        // Fallback sections if no sections exist for this grade
+        setAvailableSections(["A", "B", "C"]);
+      } else {
+        setAvailableSections(sectionsForGrade);
+      }
+    }
+  }, [grade, classes]);
+
+  // Update available teachers when grade and section change
+  useEffect(() => {
+    if (grade && section) {
+      const className = `${grade} - Section ${section}`;
+      const teachersForClass = teachers.filter(t => 
+        t.classes.includes(className)
+      );
+      
+      // If a teacher is selected but not available for this class, reset selection
+      if (teacher && !teachersForClass.some(t => t.name === teacher)) {
+        setTeacher("");
+      }
+    }
+  }, [grade, section, teachers, teacher]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -98,19 +139,35 @@ export default function StudentRegister() {
     setBarcodeValue("STU" + Math.floor(Math.random() * 10000).toString().padStart(4, '0'));
   };
 
+  // Filter teachers based on selected grade and section
+  const availableTeachers = teachers.filter(teacher => {
+    if (!grade || !section) return true;
+    return teacher.classes.some(cls => cls === `${grade} - Section ${section}`);
+  });
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center">
-        <Link to="/students" className="mr-4">
-          <Button variant="outline" size="icon">
-            <ArrowLeft className="h-4 w-4" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          <Link to="/students" className="mr-4">
+            <Button variant="outline" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Register New Student</h2>
+            <p className="text-muted-foreground">
+              Enter student information and generate ID card/barcode
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate("/admin")}>
+            Go to Admin
           </Button>
-        </Link>
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Register New Student</h2>
-          <p className="text-muted-foreground">
-            Enter student information and generate ID card/barcode
-          </p>
+          <Button variant="outline" onClick={() => navigate("/teachers")}>
+            View Teachers
+          </Button>
         </div>
       </div>
       
@@ -244,6 +301,10 @@ export default function StudentRegister() {
             
             <CardHeader>
               <CardTitle>Class Assignment</CardTitle>
+              <CardDescription>
+                Select a grade, section, and teacher
+                {availableGrades.length === 0 && " (No classes available, please add teachers and classes first)"}
+              </CardDescription>
             </CardHeader>
             
             <CardContent className="space-y-4">
@@ -257,7 +318,7 @@ export default function StudentRegister() {
                       <SelectValue placeholder="Select grade" />
                     </SelectTrigger>
                     <SelectContent>
-                      {grades.map((grade) => (
+                      {availableGrades.map((grade) => (
                         <SelectItem key={grade} value={grade}>
                           {grade}
                         </SelectItem>
@@ -270,12 +331,12 @@ export default function StudentRegister() {
                   <Label htmlFor="section" className="text-right">
                     Section
                   </Label>
-                  <Select onValueChange={setSection} value={section}>
+                  <Select onValueChange={setSection} value={section} disabled={!grade}>
                     <SelectTrigger id="section" className="col-span-3">
-                      <SelectValue placeholder="Select section" />
+                      <SelectValue placeholder={grade ? "Select section" : "Select grade first"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {sections.map((section) => (
+                      {availableSections.map((section) => (
                         <SelectItem key={section} value={section}>
                           Section {section}
                         </SelectItem>
@@ -288,14 +349,14 @@ export default function StudentRegister() {
                   <Label htmlFor="teacher" className="text-right">
                     Teacher
                   </Label>
-                  <Select onValueChange={setTeacher} value={teacher}>
+                  <Select onValueChange={setTeacher} value={teacher} disabled={!grade || !section}>
                     <SelectTrigger id="teacher" className="col-span-3">
-                      <SelectValue placeholder="Select teacher" />
+                      <SelectValue placeholder={grade && section ? "Select teacher" : "Select grade and section first"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {teachers.map((teacher) => (
+                      {availableTeachers.map((teacher) => (
                         <SelectItem key={teacher.id} value={teacher.name}>
-                          {teacher.name}
+                          {teacher.name} - {teacher.subjects.join(", ")}
                         </SelectItem>
                       ))}
                     </SelectContent>

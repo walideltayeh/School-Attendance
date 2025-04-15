@@ -1,3 +1,4 @@
+
 // This service will handle all data operations in a central location
 // It can be expanded to connect to a real backend API
 
@@ -69,7 +70,7 @@ export const busStudents = [
 ];
 
 // Mock data storage
-const STUDENTS: Student[] = [
+let STUDENTS: Student[] = [
   { 
     id: "ST001", 
     name: "Emma Thompson", 
@@ -152,7 +153,7 @@ const STUDENTS: Student[] = [
   },
 ];
 
-const TEACHERS: Teacher[] = [
+let TEACHERS: Teacher[] = [
   { 
     id: "T001", 
     name: "Ms. Johnson", 
@@ -215,14 +216,14 @@ const TEACHERS: Teacher[] = [
   },
 ];
 
-const CLASSES: ClassInfo[] = [
+let CLASSES: ClassInfo[] = [
   { id: "class_5a", name: "Grade 5 - Section A", teacher: "Ms. Johnson", room: "103" },
   { id: "class_5b", name: "Grade 5 - Section B", teacher: "Mr. Davis", room: "104" },
   { id: "class_6a", name: "Grade 6 - Section A", teacher: "Ms. Adams", room: "201" },
   { id: "class_6b", name: "Grade 6 - Section B", teacher: "Mr. Taylor", room: "202" },
 ];
 
-const BUS_ROUTES: BusRoute[] = [
+let BUS_ROUTES: BusRoute[] = [
   { 
     id: "bus_1", 
     name: "Route #1", 
@@ -330,6 +331,21 @@ export const dataService = {
   getClass: (id: string): ClassInfo | undefined => {
     return CLASSES.find(classInfo => classInfo.id === id);
   },
+
+  // Add a new class
+  addClass: (classInfo: Omit<ClassInfo, "id">): ClassInfo => {
+    // Generate a new ID - use the grade and section to create a unique ID
+    const grade = classInfo.name.split(" - ")[0].toLowerCase().replace(" ", "_");
+    const section = classInfo.name.split(" - ")[1].toLowerCase().replace("section ", "");
+    const newId = `class_${grade}${section}`;
+    
+    const newClass = { ...classInfo, id: newId };
+    
+    // Add to our "database"
+    CLASSES.push(newClass);
+    
+    return newClass;
+  },
   
   // Bus route methods
   getBusRoutes: (): BusRoute[] => {
@@ -370,10 +386,10 @@ export const dataService = {
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Clear all mock data arrays
-    STUDENTS.length = 0;
-    TEACHERS.length = 0;
-    CLASSES.length = 0;
-    BUS_ROUTES.length = 0;
+    STUDENTS = [];
+    TEACHERS = [];
+    CLASSES = [];
+    BUS_ROUTES = [];
     
     return true;
   }
