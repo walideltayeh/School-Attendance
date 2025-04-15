@@ -1,4 +1,3 @@
-
 // This service will handle all data operations in a central location
 // It can be expanded to connect to a real backend API
 
@@ -31,6 +30,7 @@ export interface ClassInfo {
   name: string;
   teacher: string;
   room: string;
+  subject?: string; // Add subject to class info
 }
 
 export interface BusRoute {
@@ -217,10 +217,10 @@ let TEACHERS: Teacher[] = [
 ];
 
 let CLASSES: ClassInfo[] = [
-  { id: "class_5a", name: "Grade 5 - Section A", teacher: "Ms. Johnson", room: "103" },
-  { id: "class_5b", name: "Grade 5 - Section B", teacher: "Mr. Davis", room: "104" },
-  { id: "class_6a", name: "Grade 6 - Section A", teacher: "Ms. Adams", room: "201" },
-  { id: "class_6b", name: "Grade 6 - Section B", teacher: "Mr. Taylor", room: "202" },
+  { id: "class_5a", name: "Grade 5 - Section A", teacher: "Ms. Johnson", room: "103", subject: "Mathematics" },
+  { id: "class_5b", name: "Grade 5 - Section B", teacher: "Mr. Davis", room: "104", subject: "English" },
+  { id: "class_6a", name: "Grade 6 - Section A", teacher: "Ms. Adams", room: "201", subject: "Mathematics" },
+  { id: "class_6b", name: "Grade 6 - Section B", teacher: "Mr. Taylor", room: "202", subject: "English" },
 ];
 
 let BUS_ROUTES: BusRoute[] = [
@@ -335,9 +335,11 @@ export const dataService = {
   // Add a new class
   addClass: (classInfo: Omit<ClassInfo, "id">): ClassInfo => {
     // Generate a new ID - use the grade and section to create a unique ID
-    const grade = classInfo.name.split(" - ")[0].toLowerCase().replace(" ", "_");
-    const section = classInfo.name.split(" - ")[1].toLowerCase().replace("section ", "");
-    const newId = `class_${grade}${section}`;
+    const parts = classInfo.name.split(" - ");
+    const grade = parts[0].toLowerCase().replace(" ", "_");
+    const section = parts[1].toLowerCase().replace("section ", "");
+    const subject = classInfo.subject ? classInfo.subject.toLowerCase().replace(" ", "_") : "";
+    const newId = `class_${grade}${section}${subject ? "_" + subject : ""}`;
     
     const newClass = { ...classInfo, id: newId };
     

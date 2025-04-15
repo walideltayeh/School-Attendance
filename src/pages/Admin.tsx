@@ -9,12 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { dataService, Teacher, BusRoute } from "@/services/dataService";
-import { PlusCircle, Trash, Save } from "lucide-react";
+import { PlusCircle, Trash, Save, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface ClassAssignment {
   grade: string;
   section: string;
+  subject: string; // Add subject to track which subject this assignment is for
 }
 
 interface AddTeacherFormProps {
@@ -28,7 +29,8 @@ const AddTeacherForm = ({ onSubmit }: AddTeacherFormProps) => {
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [classAssignments, setClassAssignments] = useState<ClassAssignment[]>([{
     grade: "",
-    section: ""
+    section: "",
+    subject: ""
   }]);
 
   const subjectOptions = [
@@ -47,7 +49,7 @@ const AddTeacherForm = ({ onSubmit }: AddTeacherFormProps) => {
   const sectionOptions = ["A", "B", "C", "D", "E"];
 
   const handleAddClassAssignment = () => {
-    setClassAssignments([...classAssignments, { grade: "", section: "" }]);
+    setClassAssignments([...classAssignments, { grade: "", section: "", subject: "" }]);
   };
 
   const handleRemoveClassAssignment = (index: number) => {
@@ -77,11 +79,11 @@ const AddTeacherForm = ({ onSubmit }: AddTeacherFormProps) => {
     }
 
     // Check if at least one class assignment is complete
-    const hasCompleteAssignment = classAssignments.some(a => a.grade && a.section);
+    const hasCompleteAssignment = classAssignments.some(a => a.grade && a.section && a.subject);
     if (!hasCompleteAssignment) {
       toast({
         title: "Error",
-        description: "Please assign at least one class and section",
+        description: "Please assign at least one class with grade, section, and subject",
         variant: "destructive",
       });
       return;
@@ -89,8 +91,8 @@ const AddTeacherForm = ({ onSubmit }: AddTeacherFormProps) => {
 
     // Format class assignments as strings
     const formattedClasses = classAssignments
-      .filter(a => a.grade && a.section)
-      .map(a => `${a.grade} - Section ${a.section}`);
+      .filter(a => a.grade && a.section && a.subject)
+      .map(a => `${a.grade} - Section ${a.section} (${a.subject})`);
     
     const newTeacher: Omit<Teacher, "id"> = {
       name,
@@ -109,7 +111,7 @@ const AddTeacherForm = ({ onSubmit }: AddTeacherFormProps) => {
     setEmail("");
     setPhone("");
     setSelectedSubjects([]);
-    setClassAssignments([{ grade: "", section: "" }]);
+    setClassAssignments([{ grade: "", section: "", subject: "" }]);
 
     toast({
       title: "Success",
@@ -173,52 +175,85 @@ const AddTeacherForm = ({ onSubmit }: AddTeacherFormProps) => {
         </div>
         
         {classAssignments.map((assignment, index) => (
-          <div key={index} className="flex items-end gap-4 border p-3 rounded-md">
-            <div className="space-y-2 flex-1">
-              <Label htmlFor={`class-${index}`}>Class</Label>
-              <Select 
-                value={assignment.grade} 
-                onValueChange={(value) => updateClassAssignment(index, "grade", value)}
-              >
-                <SelectTrigger id={`class-${index}`}>
-                  <SelectValue placeholder="Select class" />
-                </SelectTrigger>
-                <SelectContent>
-                  {classOptions.map((grade) => (
-                    <SelectItem key={grade} value={grade}>
-                      {grade}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div key={index} className="border p-3 rounded-md space-y-3">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <BookOpen className="h-4 w-4 text-primary" />
+              <Label className="font-semibold">
+                Assignment {index + 1}
+              </Label>
             </div>
-            <div className="space-y-2 flex-1">
-              <Label htmlFor={`section-${index}`}>Section</Label>
-              <Select 
-                value={assignment.section} 
-                onValueChange={(value) => updateClassAssignment(index, "section", value)}
-              >
-                <SelectTrigger id={`section-${index}`}>
-                  <SelectValue placeholder="Select section" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sectionOptions.map((section) => (
-                    <SelectItem key={section} value={section}>
-                      Section {section}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor={`subject-${index}`}>Subject</Label>
+                <Select 
+                  value={assignment.subject} 
+                  onValueChange={(value) => updateClassAssignment(index, "subject", value)}
+                >
+                  <SelectTrigger id={`subject-${index}`}>
+                    <SelectValue placeholder="Select subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {selectedSubjects.map((subject) => (
+                      <SelectItem key={subject} value={subject}>
+                        {subject}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor={`class-${index}`}>Class</Label>
+                <Select 
+                  value={assignment.grade} 
+                  onValueChange={(value) => updateClassAssignment(index, "grade", value)}
+                >
+                  <SelectTrigger id={`class-${index}`}>
+                    <SelectValue placeholder="Select class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classOptions.map((grade) => (
+                      <SelectItem key={grade} value={grade}>
+                        {grade}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor={`section-${index}`}>Section</Label>
+                <Select 
+                  value={assignment.section} 
+                  onValueChange={(value) => updateClassAssignment(index, "section", value)}
+                >
+                  <SelectTrigger id={`section-${index}`}>
+                    <SelectValue placeholder="Select section" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sectionOptions.map((section) => (
+                      <SelectItem key={section} value={section}>
+                        Section {section}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => handleRemoveClassAssignment(index)}
-              disabled={classAssignments.length <= 1}
-            >
-              <Trash className="h-4 w-4 text-destructive" />
-            </Button>
+            
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => handleRemoveClassAssignment(index)}
+                disabled={classAssignments.length <= 1}
+                className="text-destructive"
+              >
+                <Trash className="h-4 w-4 mr-1" /> Remove
+              </Button>
+            </div>
           </div>
         ))}
       </div>
@@ -371,15 +406,20 @@ const Admin = () => {
     // Add teacher's classes to the class list
     if (teacher.classes && teacher.classes.length > 0) {
       teacher.classes.forEach(className => {
-        const [grade, sectionPart] = className.split(" - ");
-        const teacher = addedTeacher.name;
-        const room = "Room " + Math.floor(Math.random() * 300 + 100); // Random room number
-        
-        dataService.addClass({
-          name: className,
-          teacher: teacher,
-          room: room
-        });
+        // Extract the subject from the end of the class name
+        const match = className.match(/(.*) \((.*)\)$/);
+        if (match) {
+          const [, classNameWithoutSubject, subject] = match;
+          const teacher = addedTeacher.name;
+          const room = "Room " + Math.floor(Math.random() * 300 + 100); // Random room number
+          
+          dataService.addClass({
+            name: classNameWithoutSubject,
+            teacher: teacher,
+            room: room,
+            subject: subject // Add subject to class info
+          });
+        }
       });
     }
     
