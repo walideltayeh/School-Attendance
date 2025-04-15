@@ -54,22 +54,22 @@ export interface ScanRecord {
   message?: string;
 }
 
-// Mock data for busStops and busStudents
-export const busStops = [
+// Global data storage - using let so we can completely replace the arrays
+let busStops = [
   { id: "stop1", name: "Main Street", time: "7:30 AM", students: 8 },
   { id: "stop2", name: "Oak Avenue", time: "7:40 AM", students: 12 },
   { id: "stop3", name: "Pine Road", time: "7:50 AM", students: 5 },
   { id: "stop4", name: "Cedar Lane", time: "8:00 AM", students: 10 }
 ];
 
-export const busStudents = [
+let busStudents = [
   { id: "ST001", name: "Emma Thompson", grade: "Grade 5", stop: "Main Street" },
   { id: "ST002", name: "Noah Martinez", grade: "Grade 5", stop: "Oak Avenue" },
   { id: "ST005", name: "Ava Garcia", grade: "Grade 7", stop: "Pine Road" },
   { id: "ST007", name: "Sophia Miller", grade: "Grade 8", stop: "Cedar Lane" }
 ];
 
-// Mock data storage
+// Mock data storage - using let instead of const so we can reset them
 let STUDENTS: Student[] = [
   { 
     id: "ST001", 
@@ -282,22 +282,19 @@ export const dataService = {
   },
   
   searchStudents: (query: string): Student[] => {
-    const lowercaseQuery = query.toLowerCase();
     return STUDENTS.filter(student => 
-      student.name.toLowerCase().includes(lowercaseQuery) ||
-      student.id.toLowerCase().includes(lowercaseQuery) ||
-      student.grade.toLowerCase().includes(lowercaseQuery) ||
-      student.section.toLowerCase().includes(lowercaseQuery) ||
-      student.teacher.toLowerCase().includes(lowercaseQuery)
+      student.name.toLowerCase().includes(query.toLowerCase()) ||
+      student.id.toLowerCase().includes(query.toLowerCase()) ||
+      student.grade.toLowerCase().includes(query.toLowerCase()) ||
+      student.section.toLowerCase().includes(query.toLowerCase()) ||
+      student.teacher.toLowerCase().includes(query.toLowerCase())
     );
   },
 
   addStudent: (student: Omit<Student, "id">): Student => {
-    // Generate a new ID
     const newId = "ST" + String(STUDENTS.length + 1).padStart(3, '0');
     const newStudent = { ...student, id: newId };
     
-    // Add to our "database"
     STUDENTS.push(newStudent);
     
     return newStudent;
@@ -313,11 +310,9 @@ export const dataService = {
   },
 
   addTeacher: (teacher: Omit<Teacher, "id">): Teacher => {
-    // Generate a new ID
     const newId = "T" + String(TEACHERS.length + 1).padStart(3, '0');
     const newTeacher = { ...teacher, id: newId };
     
-    // Add to our "database"
     TEACHERS.push(newTeacher);
     
     return newTeacher;
@@ -332,9 +327,7 @@ export const dataService = {
     return CLASSES.find(classInfo => classInfo.id === id);
   },
 
-  // Add a new class
   addClass: (classInfo: Omit<ClassInfo, "id">): ClassInfo => {
-    // Generate a new ID - use the grade and section to create a unique ID
     const parts = classInfo.name.split(" - ");
     const grade = parts[0].toLowerCase().replace(" ", "_");
     const section = parts[1].toLowerCase().replace("section ", "");
@@ -343,7 +336,6 @@ export const dataService = {
     
     const newClass = { ...classInfo, id: newId };
     
-    // Add to our "database"
     CLASSES.push(newClass);
     
     return newClass;
@@ -359,11 +351,9 @@ export const dataService = {
   },
 
   addBusRoute: (route: Omit<BusRoute, "id">): BusRoute => {
-    // Generate a new ID
     const newId = "bus_" + (BUS_ROUTES.length + 1);
     const newRoute = { ...route, id: newId };
     
-    // Add to our "database"
     BUS_ROUTES.push(newRoute);
     
     return newRoute;
@@ -372,26 +362,29 @@ export const dataService = {
   // This would be replaced with an actual API call in production
   saveSettings: async (settings: Record<string, any>): Promise<boolean> => {
     console.log("Saving settings:", settings);
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000));
     return true;
   },
   
-  // Delete all data
+  // Delete all data - Updated for more thorough deletion
   deleteAllData: async (): Promise<boolean> => {
     console.log("Deleting all data");
     
-    // In a real application, this would call APIs to delete data from the database
-    // For our mock implementation, we'll clear the arrays
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Clear all mock data arrays
     STUDENTS = [];
     TEACHERS = [];
     CLASSES = [];
     BUS_ROUTES = [];
+    busStops = [];
+    busStudents = [];
+    
+    console.log("Data deletion complete:", {
+      students: STUDENTS.length,
+      teachers: TEACHERS.length,
+      classes: CLASSES.length,
+      busRoutes: BUS_ROUTES.length,
+      busStops: busStops.length,
+      busStudents: busStudents.length
+    });
     
     return true;
   }

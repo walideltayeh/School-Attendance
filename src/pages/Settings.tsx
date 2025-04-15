@@ -20,6 +20,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { dataService } from "@/services/dataService";
+import { useNavigate } from "react-router-dom";
 
 export default function Settings() {
   const [schoolName, setSchoolName] = useState("Valley High School");
@@ -29,10 +30,10 @@ export default function Settings() {
   const [enableBarcodes, setEnableBarcodes] = useState(true);
   const [saveLoading, setSaveLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const navigate = useNavigate();
   
   const handleSaveGeneral = async () => {
     setSaveLoading(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     setSaveLoading(false);
     
@@ -44,7 +45,6 @@ export default function Settings() {
 
   const handleSaveDatabase = async () => {
     setSaveLoading(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     setSaveLoading(false);
     
@@ -58,7 +58,7 @@ export default function Settings() {
     setDeleteLoading(true);
     
     try {
-      // This would be an actual API call to delete all data in production
+      console.log("Starting data deletion process...");
       await dataService.deleteAllData();
       
       toast({
@@ -66,7 +66,12 @@ export default function Settings() {
         description: "All system data has been successfully deleted.",
         variant: "destructive",
       });
+      
+      setTimeout(() => {
+        navigate("/");
+      }, 1500);
     } catch (error) {
+      console.error("Error deleting data:", error);
       toast({
         title: "Error",
         description: "Failed to delete data. Please try again.",
