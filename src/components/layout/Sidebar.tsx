@@ -9,7 +9,8 @@ import {
   Settings, 
   Users,
   QrCode,
-  Bell
+  Bell,
+  ShieldAlert
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -113,6 +114,18 @@ export function Sidebar({ isOpen }: SidebarProps) {
           >
             <Bell className="h-5 w-5" />
             <span>Notifications</span>
+          </NavLink>
+          <NavLink 
+            to="/admin" 
+            className={({ isActive }) => 
+              cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground",
+                isActive ? "bg-muted text-foreground" : ""
+              )
+            }
+          >
+            <ShieldAlert className="h-5 w-5" />
+            <span>Admin</span>
           </NavLink>
           <NavLink 
             to="/settings" 
