@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,7 +7,19 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
-import { Save, Server, Bell, Shield, Database } from "lucide-react";
+import { Save, Server, Bell, Shield, Database, Trash2 } from "lucide-react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { dataService } from "@/services/dataService";
 
 export default function Settings() {
   const [schoolName, setSchoolName] = useState("Valley High School");
@@ -17,6 +28,7 @@ export default function Settings() {
   const [sendNotifications, setSendNotifications] = useState(true);
   const [enableBarcodes, setEnableBarcodes] = useState(true);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   
   const handleSaveGeneral = async () => {
     setSaveLoading(true);
@@ -42,6 +54,29 @@ export default function Settings() {
     });
   };
 
+  const handleDeleteAllData = async () => {
+    setDeleteLoading(true);
+    
+    try {
+      // This would be an actual API call to delete all data in production
+      await dataService.deleteAllData();
+      
+      toast({
+        title: "All data deleted",
+        description: "All system data has been successfully deleted.",
+        variant: "destructive",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -57,6 +92,7 @@ export default function Settings() {
           <TabsTrigger value="database">Database</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="dangerous">Dangerous Zone</TabsTrigger>
         </TabsList>
         
         <TabsContent value="general" className="space-y-4">
@@ -209,6 +245,59 @@ export default function Settings() {
               <Button className="mt-4 bg-school-primary hover:bg-school-secondary">
                 Run Security Audit
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="dangerous" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-destructive">Dangerous Zone</CardTitle>
+              <CardDescription>
+                Actions in this section can permanently delete data and cannot be undone
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-md bg-destructive/10 p-4 border border-destructive">
+                <div className="flex items-start gap-4">
+                  <Trash2 className="h-5 w-5 text-destructive mt-0.5" />
+                  <div>
+                    <div className="font-medium text-destructive">Delete All Data</div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      This will permanently delete all students, teachers, classes, and other data from the system.
+                      This action cannot be undone.
+                    </div>
+                    
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" className="mt-4">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete All Data
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action will permanently delete all data from the system including all students, 
+                            teachers, classes, and other records. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleDeleteAllData}
+                            className="bg-destructive hover:bg-destructive/90"
+                            disabled={deleteLoading}
+                          >
+                            {deleteLoading ? "Deleting..." : "Yes, delete all data"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

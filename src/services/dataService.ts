@@ -1,4 +1,3 @@
-
 // This service will handle all data operations in a central location
 // It can be expanded to connect to a real backend API
 
@@ -358,6 +357,24 @@ export const dataService = {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000));
     return true;
+  },
+  
+  // Delete all data
+  deleteAllData: async (): Promise<boolean> => {
+    console.log("Deleting all data");
+    
+    // In a real application, this would call APIs to delete data from the database
+    // For our mock implementation, we'll clear the arrays
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Clear all mock data arrays
+    STUDENTS.length = 0;
+    TEACHERS.length = 0;
+    CLASSES.length = 0;
+    BUS_ROUTES.length = 0;
+    
+    return true;
   }
 };
-
