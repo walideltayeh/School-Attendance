@@ -5,9 +5,8 @@ import {
   Phone, 
   User, 
   Search, 
-  Plus,
-  MoreHorizontal,
   FileDown,
+  MoreHorizontal,
   BookOpen,
   GraduationCap,
   Layers
@@ -34,37 +33,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Link, useNavigate } from "react-router-dom";
 import { dataService, Teacher } from "@/services/dataService";
 import { toast } from "@/components/ui/use-toast";
-import { MultiSelect } from "@/components/ui/multi-select";
 
 export default function Teachers() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [teachers, setTeachers] = useState<Teacher[]>(dataService.getTeachers());
-  const [newTeacher, setNewTeacher] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    subject: "",
-    class: "",
-    section: "",
-    subjects: [] as string[],
-    classes: [] as string[],
-    students: 0
-  });
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
-  const availableClasses = ["Grade 5", "Grade 6", "Grade 7", "Grade 8"];
-  const availableSections = ["A", "B", "C"];
-  const availableSubjects = ["Mathematics", "English", "Science", "History", "Computer Science", "Physical Education", "Art", "Music"];
-  
-  const subjectOptions = availableSubjects.map(subject => ({ 
-    label: subject, 
-    value: subject 
-  }));
   
   const filteredTeachers = teachers.filter(teacher => 
     teacher.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -72,52 +48,6 @@ export default function Teachers() {
     teacher.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     teacher.subject.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const handleAddTeacher = () => {
-    if (!newTeacher.name || !newTeacher.email || !newTeacher.phone || newTeacher.subjects.length === 0) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields for the new teacher.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    let className = "";
-    if (newTeacher.class && newTeacher.section) {
-      className = `${newTeacher.class} - Section ${newTeacher.section}`;
-    }
-    
-    const primarySubject = newTeacher.subjects.length > 0 ? newTeacher.subjects[0] : "";
-    
-    const teacherToAdd = {
-      ...newTeacher,
-      subject: primarySubject,
-      classes: className ? [...newTeacher.classes, className] : newTeacher.classes
-    };
-    
-    const addedTeacher = dataService.addTeacher(teacherToAdd);
-    
-    setTeachers([...teachers, addedTeacher]);
-    
-    toast({
-      title: "Teacher Added Successfully",
-      description: `${addedTeacher.name} has been added to the teacher directory.`
-    });
-    
-    setNewTeacher({
-      name: "",
-      email: "",
-      phone: "",
-      subject: "",
-      class: "",
-      section: "",
-      subjects: [],
-      classes: [],
-      students: 0
-    });
-    setIsDialogOpen(false);
-  };
 
   return (
     <div className="space-y-6">
@@ -129,126 +59,9 @@ export default function Teachers() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-school-primary hover:bg-school-secondary">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Teacher
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Add New Teacher</DialogTitle>
-                <DialogDescription>
-                  Enter the new teacher's details below.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">
-                    Full Name
-                  </Label>
-                  <Input
-                    id="name"
-                    value={newTeacher.name}
-                    onChange={(e) => setNewTeacher({...newTeacher, name: e.target.value})}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="email" className="text-right">
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newTeacher.email}
-                    onChange={(e) => setNewTeacher({...newTeacher, email: e.target.value})}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="phone" className="text-right">
-                    Phone
-                  </Label>
-                  <Input
-                    id="phone"
-                    value={newTeacher.phone}
-                    onChange={(e) => setNewTeacher({...newTeacher, phone: e.target.value})}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="subjects" className="text-right flex items-center">
-                    <BookOpen className="mr-2 h-4 w-4" />
-                    Subjects
-                  </Label>
-                  <div className="col-span-3">
-                    <MultiSelect
-                      options={subjectOptions}
-                      selected={newTeacher.subjects}
-                      onChange={(values) => setNewTeacher({...newTeacher, subjects: values})}
-                      placeholder="Select subjects"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="class" className="text-right flex items-center">
-                    <GraduationCap className="mr-2 h-4 w-4" />
-                    Class
-                  </Label>
-                  <div className="col-span-3">
-                    <Select
-                      value={newTeacher.class}
-                      onValueChange={(value) => setNewTeacher({...newTeacher, class: value})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a class" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableClasses.map((cls) => (
-                          <SelectItem key={cls} value={cls}>
-                            {cls}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="section" className="text-right flex items-center">
-                    <Layers className="mr-2 h-4 w-4" />
-                    Section
-                  </Label>
-                  <div className="col-span-3">
-                    <Select
-                      value={newTeacher.section}
-                      onValueChange={(value) => setNewTeacher({...newTeacher, section: value})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a section" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableSections.map((section) => (
-                          <SelectItem key={section} value={section}>
-                            Section {section}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleAddTeacher}>
-                  Add Teacher
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button variant="outline" onClick={() => navigate("/admin")}>
+            Go to Admin
+          </Button>
           <Button variant="outline">
             <FileDown className="mr-2 h-4 w-4" />
             Export
@@ -272,7 +85,7 @@ export default function Teachers() {
             </div>
           </div>
           <CardDescription>
-            View and manage teachers
+            View and manage teachers (add teachers in Admin)
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -7,7 +7,6 @@ import {
   FileDown, 
   FilePlus, 
   MoreHorizontal, 
-  Plus, 
   Search, 
   Trash2, 
   User, 
@@ -25,11 +24,12 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { dataService, Student } from "@/services/dataService";
 
 export default function Students() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [students, setStudents] = useState<Student[]>([]);
   
@@ -52,12 +52,9 @@ export default function Students() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link to="/students/register">
-            <Button className="bg-school-primary hover:bg-school-secondary">
-              <Plus className="mr-2 h-4 w-4" />
-              Register Student
-            </Button>
-          </Link>
+          <Button variant="outline" onClick={() => navigate("/admin")}>
+            Go to Admin
+          </Button>
           <Button variant="outline">
             <FileDown className="mr-2 h-4 w-4" />
             Export
@@ -81,7 +78,7 @@ export default function Students() {
             </div>
           </div>
           <CardDescription>
-            View and manage all registered students
+            View and manage all registered students (register new students in Admin)
           </CardDescription>
         </CardHeader>
         <CardContent>

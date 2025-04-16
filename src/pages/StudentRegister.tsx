@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { QrCode, Save, ArrowLeft, User, FileDown } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -39,6 +38,7 @@ export default function StudentRegister() {
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [availableGrades, setAvailableGrades] = useState<string[]>([]);
   const [availableSections, setAvailableSections] = useState<string[]>([]);
+  const [filteredTeachers, setFilteredTeachers] = useState<Teacher[]>([]);
 
   // Load data on component mount
   useEffect(() => {
@@ -52,7 +52,7 @@ export default function StudentRegister() {
     const grades = Array.from(new Set(loadedClasses.map(c => c.name.split(" - ")[0])));
     if (grades.length === 0) {
       // Fallback grades if no classes exist
-      setAvailableGrades(["Grade 5", "Grade 6", "Grade 7", "Grade 8"]);
+      setAvailableGrades(["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8"]);
     } else {
       setAvailableGrades(grades);
     }
@@ -71,23 +71,39 @@ export default function StudentRegister() {
       } else {
         setAvailableSections(sectionsForGrade);
       }
+      
+      // Reset teacher when grade changes
+      setTeacher("");
+      
+      // Update filtered teachers for this grade
+      updateFilteredTeachers(grade, "");
     }
   }, [grade, classes]);
 
   // Update available teachers when grade and section change
   useEffect(() => {
     if (grade && section) {
-      const className = `${grade} - Section ${section}`;
-      const teachersForClass = teachers.filter(t => 
-        t.classes.includes(className)
-      );
-      
-      // If a teacher is selected but not available for this class, reset selection
-      if (teacher && !teachersForClass.some(t => t.name === teacher)) {
-        setTeacher("");
-      }
+      updateFilteredTeachers(grade, section);
     }
-  }, [grade, section, teachers, teacher]);
+  }, [section, teachers]);
+
+  // Function to update filtered teachers based on grade and section
+  const updateFilteredTeachers = (selectedGrade: string, selectedSection: string) => {
+    const className = selectedSection 
+      ? `${selectedGrade} - Section ${selectedSection}`
+      : selectedGrade;
+    
+    const teachersForClass = teachers.filter(t => 
+      t.classes.some(cls => cls.includes(className))
+    );
+    
+    setFilteredTeachers(teachersForClass);
+    
+    // If a teacher is selected but not available for this class, reset selection
+    if (teacher && !teachersForClass.some(t => t.name === teacher)) {
+      setTeacher("");
+    }
+  };
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -139,12 +155,6 @@ export default function StudentRegister() {
     setBarcodeValue("STU" + Math.floor(Math.random() * 10000).toString().padStart(4, '0'));
   };
 
-  // Filter teachers based on selected grade and section
-  const availableTeachers = teachers.filter(teacher => {
-    if (!grade || !section) return true;
-    return teacher.classes.some(cls => cls === `${grade} - Section ${section}`);
-  });
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -164,9 +174,6 @@ export default function StudentRegister() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => navigate("/admin")}>
             Go to Admin
-          </Button>
-          <Button variant="outline" onClick={() => navigate("/teachers")}>
-            View Teachers
           </Button>
         </div>
       </div>
@@ -354,7 +361,7 @@ export default function StudentRegister() {
                       <SelectValue placeholder={grade && section ? "Select teacher" : "Select grade and section first"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableTeachers.map((teacher) => (
+                      {filteredTeachers.map((teacher) => (
                         <SelectItem key={teacher.id} value={teacher.name}>
                           {teacher.name} - {teacher.subjects.join(", ")}
                         </SelectItem>

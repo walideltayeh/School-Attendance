@@ -55,6 +55,19 @@ export interface ScanRecord {
   message?: string;
 }
 
+// Dashboard data for charts and metrics
+export interface DashboardData {
+  attendanceByDay: { day: string; present: number; absent: number; late: number }[];
+  studentsByGrade: { grade: string; count: number }[];
+  recentScans: ScanRecord[];
+  metrics: {
+    totalStudents: number;
+    totalTeachers: number;
+    todayAttendance: number;
+    activeRoutes: number;
+  };
+}
+
 // Global data storage - using let so we can completely replace the arrays
 export let busStops = [
   { id: "stop1", name: "Main Street", time: "7:30 AM", students: 8 },
@@ -69,6 +82,35 @@ export let busStudents = [
   { id: "ST005", name: "Ava Garcia", grade: "Grade 7", stop: "Pine Road" },
   { id: "ST007", name: "Sophia Miller", grade: "Grade 8", stop: "Cedar Lane" }
 ];
+
+// Sample dashboard data
+export let dashboardData: DashboardData = {
+  attendanceByDay: [
+    { day: "Mon", present: 320, absent: 20, late: 10 },
+    { day: "Tue", present: 315, absent: 25, late: 15 },
+    { day: "Wed", present: 310, absent: 30, late: 12 },
+    { day: "Thu", present: 325, absent: 15, late: 8 },
+    { day: "Fri", present: 330, absent: 10, late: 5 }
+  ],
+  studentsByGrade: [
+    { grade: "Grade 5", count: 87 },
+    { grade: "Grade 6", count: 92 },
+    { grade: "Grade 7", count: 85 },
+    { grade: "Grade 8", count: 90 }
+  ],
+  recentScans: [
+    { id: "scan1", name: "Emma Thompson", time: new Date(), success: true },
+    { id: "scan2", name: "Noah Martinez", time: new Date(), success: true },
+    { id: "scan3", name: "Olivia Wilson", time: new Date(), success: false, message: "Invalid ID" },
+    { id: "scan4", name: "Liam Anderson", time: new Date(), success: true }
+  ],
+  metrics: {
+    totalStudents: 354,
+    totalTeachers: 24,
+    todayAttendance: 92,
+    activeRoutes: 4
+  }
+};
 
 // Mock data storage - using let instead of const so we can reset them
 let STUDENTS: Student[] = [
@@ -271,6 +313,21 @@ let BUS_ROUTES: BusRoute[] = [
   },
 ];
 
+// Function to reset all data to empty arrays
+const createEmptyDashboardData = (): DashboardData => {
+  return {
+    attendanceByDay: [],
+    studentsByGrade: [],
+    recentScans: [],
+    metrics: {
+      totalStudents: 0,
+      totalTeachers: 0,
+      todayAttendance: 0,
+      activeRoutes: 0
+    }
+  };
+};
+
 // Data service methods
 export const dataService = {
   // Student methods
@@ -369,6 +426,11 @@ export const dataService = {
     return [...busStudents];
   },
   
+  // Dashboard data
+  getDashboardData: (): DashboardData => {
+    return { ...dashboardData };
+  },
+  
   // This would be replaced with an actual API call in production
   saveSettings: async (settings: Record<string, any>): Promise<boolean> => {
     console.log("Saving settings:", settings);
@@ -376,7 +438,7 @@ export const dataService = {
     return true;
   },
   
-  // Delete all data - Updated for more thorough deletion
+  // Delete all data - Updated for more thorough deletion including dashboard data
   deleteAllData: async (): Promise<boolean> => {
     console.log("Deleting all data");
     
@@ -387,13 +449,17 @@ export const dataService = {
     busStops = [];
     busStudents = [];
     
+    // Reset dashboard data too
+    dashboardData = createEmptyDashboardData();
+    
     console.log("Data deletion complete:", {
       students: STUDENTS.length,
       teachers: TEACHERS.length,
       classes: CLASSES.length,
       busRoutes: BUS_ROUTES.length,
       busStops: busStops.length,
-      busStudents: busStudents.length
+      busStudents: busStudents.length,
+      dashboardData
     });
     
     return true;
