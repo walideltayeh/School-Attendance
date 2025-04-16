@@ -248,11 +248,23 @@ class DataService {
     const newStudent = { ...student, id };
     students.push(newStudent);
     
-    // Update teacher's student count
-    const teacherIndex = teachers.findIndex(t => 
-      t.name === student.teacher || 
-      t.classes.some(c => c.includes(student.grade) && c.includes(`Section ${student.section}`))
+    // Find matching teacher from class assignments
+    // Get the first part of the class name assigned to the student (Grade X) 
+    // and the section to find the full class name
+    const classFullName = `${student.grade} - Section ${student.section}`;
+    
+    // Find all teachers who teach this class
+    const matchingTeachers = teachers.filter(teacher => 
+      teacher.classes.some(cls => cls.includes(classFullName))
     );
+    
+    // If we have matching teachers but the student's teacher isn't specified, use the first match
+    if (matchingTeachers.length > 0 && (!student.teacher || student.teacher.trim() === "")) {
+      newStudent.teacher = matchingTeachers[0].name;
+    }
+    
+    // Update teacher's student count
+    const teacherIndex = teachers.findIndex(t => t.name === student.teacher);
     
     if (teacherIndex !== -1) {
       teachers[teacherIndex].students += 1;

@@ -11,7 +11,8 @@ import {
   Trash2, 
   User, 
   QrCode,
-  Mail
+  Mail,
+  Bus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { dataService, Student } from "@/services/dataService";
+import { dataService, Student, BusRoute } from "@/services/dataService";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
@@ -37,6 +38,7 @@ export default function Students() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [students, setStudents] = useState<Student[]>([]);
+  const [busRoutes, setBusRoutes] = useState<BusRoute[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -47,6 +49,7 @@ export default function Students() {
   // Fetch students when component mounts
   useEffect(() => {
     setStudents(dataService.getStudents());
+    setBusRoutes(dataService.getBusRoutes());
   }, []);
   
   const filteredStudents = searchQuery 
@@ -113,9 +116,15 @@ export default function Students() {
     }
   };
 
+  const getBusRouteName = (routeId?: string) => {
+    if (!routeId) return "None";
+    const route = busRoutes.find(r => r.id === routeId);
+    return route ? route.name : "Unknown";
+  };
+
   const handleExport = () => {
     // Create CSV content for students
-    const headers = ["ID", "Name", "Grade", "Section", "Teacher", "Blood Type", "Allergies", "Status"];
+    const headers = ["ID", "Name", "Grade", "Section", "Teacher", "Blood Type", "Allergies", "Bus Route", "Status"];
     const csvContent = [
       headers.join(','),
       ...filteredStudents.map(student => [
@@ -126,6 +135,7 @@ export default function Students() {
         student.teacher,
         student.bloodType,
         student.allergies ? "Yes" : "No",
+        student.busRoute ? getBusRouteName(student.busRoute) : "None",
         student.status
       ].join(','))
     ].join('\n');
@@ -196,6 +206,7 @@ export default function Students() {
                 <TableHead>Teacher</TableHead>
                 <TableHead>Blood Type</TableHead>
                 <TableHead>Allergies</TableHead>
+                <TableHead>Bus Route</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -209,6 +220,16 @@ export default function Students() {
                   <TableCell>{student.teacher}</TableCell>
                   <TableCell>{student.bloodType}</TableCell>
                   <TableCell>{student.allergies ? "Yes" : "No"}</TableCell>
+                  <TableCell>
+                    {student.busRoute ? (
+                      <div className="flex items-center gap-1">
+                        <Bus className="h-4 w-4 text-school-primary" />
+                        <span>{getBusRouteName(student.busRoute)}</span>
+                      </div>
+                    ) : (
+                      "None"
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={student.status === "active" ? "default" : "secondary"} className={student.status === "active" ? "bg-school-success" : "bg-muted"}>
                       {student.status === "active" ? "Active" : "Inactive"}
@@ -310,6 +331,10 @@ export default function Students() {
                   <p>{selectedStudent.allergies ? "Yes" : "No"}</p>
                 </div>
                 <div>
+                  <h4 className="text-sm font-medium text-muted-foreground">Bus Route</h4>
+                  <p>{selectedStudent.busRoute ? getBusRouteName(selectedStudent.busRoute) : "None"}</p>
+                </div>
+                <div>
                   <h4 className="text-sm font-medium text-muted-foreground">Status</h4>
                   <Badge variant={selectedStudent.status === "active" ? "default" : "secondary"} className={selectedStudent.status === "active" ? "bg-school-success" : "bg-muted"}>
                     {selectedStudent.status === "active" ? "Active" : "Inactive"}
@@ -396,6 +421,12 @@ export default function Students() {
                 <h3 className="text-xl font-bold">{selectedStudent.name}</h3>
                 <p className="text-sm text-muted-foreground">ID: {selectedStudent.id}</p>
                 <p className="text-sm">{selectedStudent.grade} - Section {selectedStudent.section}</p>
+                {selectedStudent.busRoute && (
+                  <div className="flex items-center justify-center mt-1 gap-1">
+                    <Bus className="h-4 w-4 text-school-primary" />
+                    <span className="text-sm">Route: {getBusRouteName(selectedStudent.busRoute)}</span>
+                  </div>
+                )}
               </div>
               <div className="bg-gray-100 p-4 rounded-md flex justify-center items-center">
                 <QrCode className="h-24 w-24" />
