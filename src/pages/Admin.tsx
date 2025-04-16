@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,14 +9,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { dataService, Teacher, BusRoute } from "@/services/dataService";
-import { PlusCircle, Trash, Save, BookOpen, Edit, X } from "lucide-react";
+import { PlusCircle, Trash, Save, BookOpen, Edit, X, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 interface ClassAssignment {
   grade: string;
   section: string;
-  subject: string; // Add subject to track which subject this assignment is for
+  subject: string;
+  room: string; // Add room field to track classroom for attendance
 }
 
 interface AddTeacherFormProps {
@@ -37,15 +39,26 @@ const AddTeacherForm = ({ onSubmit, initialValues, isEditing = false, onCancel }
         const match = cls.match(/(Grade \d+) - Section ([A-E]) \((.*)\)/);
         if (match) {
           const [, grade, section, subject] = match;
-          return { grade, section, subject };
+          // Find the room associated with this class
+          const classInfo = dataService.getClasses().find(c => 
+            c.name === `${grade} - Section ${section}` && 
+            c.subject === subject);
+          
+          return { 
+            grade, 
+            section, 
+            subject,
+            room: classInfo?.room || "" 
+          };
         }
-        return { grade: "", section: "", subject: "" };
+        return { grade: "", section: "", subject: "", room: "" };
       }).filter(a => a.grade !== "");
     }
     return [{
       grade: "",
       section: "",
-      subject: ""
+      subject: "",
+      room: ""
     }];
   });
 
@@ -66,7 +79,7 @@ const AddTeacherForm = ({ onSubmit, initialValues, isEditing = false, onCancel }
   const sectionOptions = ["A", "B", "C", "D", "E"];
 
   const handleAddClassAssignment = () => {
-    setClassAssignments([...classAssignments, { grade: "", section: "", subject: "" }]);
+    setClassAssignments([...classAssignments, { grade: "", section: "", subject: "", room: "" }]);
   };
 
   const handleRemoveClassAssignment = (index: number) => {
@@ -96,11 +109,11 @@ const AddTeacherForm = ({ onSubmit, initialValues, isEditing = false, onCancel }
     }
 
     // Check if at least one class assignment is complete
-    const hasCompleteAssignment = classAssignments.some(a => a.grade && a.section && a.subject);
+    const hasCompleteAssignment = classAssignments.some(a => a.grade && a.section && a.subject && a.room);
     if (!hasCompleteAssignment) {
       toast({
         title: "Error",
-        description: "Please assign at least one class with grade, section, and subject",
+        description: "Please assign at least one class with grade, section, subject and room",
         variant: "destructive",
       });
       return;
@@ -129,7 +142,7 @@ const AddTeacherForm = ({ onSubmit, initialValues, isEditing = false, onCancel }
       setEmail("");
       setPhone("");
       setSelectedSubjects([]);
-      setClassAssignments([{ grade: "", section: "", subject: "" }]);
+      setClassAssignments([{ grade: "", section: "", subject: "", room: "" }]);
     }
 
     toast({
@@ -207,7 +220,7 @@ const AddTeacherForm = ({ onSubmit, initialValues, isEditing = false, onCancel }
               </Label>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label htmlFor={`subject-${index}`}>Subject</Label>
                 <Select 
@@ -263,6 +276,16 @@ const AddTeacherForm = ({ onSubmit, initialValues, isEditing = false, onCancel }
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor={`room-${index}`}>Room</Label>
+                <Input
+                  id={`room-${index}`}
+                  value={assignment.room}
+                  onChange={(e) => updateClassAssignment(index, "room", e.target.value)}
+                  placeholder="Room 101"
+                />
               </div>
             </div>
             
@@ -449,14 +472,21 @@ const Admin = () => {
         const match = className.match(/(.*) \((.*)\)$/);
         if (match) {
           const [, classNameWithoutSubject, subject] = match;
-          const teacher = addedTeacher.name;
-          const room = "Room " + Math.floor(Math.random() * 300 + 100); // Random room number
+          const teacherName = addedTeacher.name;
+          
+          // Find the matching class assignment to get the room
+          const classAssignment = classAssignments.find(ca => 
+            `${ca.grade} - Section ${ca.section}` === classNameWithoutSubject && 
+            ca.subject === subject
+          );
+          
+          const room = classAssignment?.room || "Room " + Math.floor(Math.random() * 300 + 100); // Use assignment room or random
           
           dataService.addClass({
             name: classNameWithoutSubject,
-            teacher: teacher,
+            teacher: teacherName,
             room: room,
-            subject: subject // Add subject to class info
+            subject: subject
           });
         }
       });

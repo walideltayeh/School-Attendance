@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { QrCode, Save, ArrowLeft, User, FileDown } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -16,12 +17,13 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
-import { dataService, Teacher, ClassInfo } from "@/services/dataService";
+import { dataService, Teacher, ClassInfo, BusRoute } from "@/services/dataService";
 
 export default function StudentRegister() {
   const navigate = useNavigate();
   const [barcodeValue, setBarcodeValue] = useState("STU" + Math.floor(Math.random() * 10000).toString().padStart(4, '0'));
   const [hasAllergies, setHasAllergies] = useState(false);
+  const [requiresBus, setRequiresBus] = useState(false);
   
   // Student form state
   const [firstName, setFirstName] = useState("");
@@ -32,10 +34,12 @@ export default function StudentRegister() {
   const [grade, setGrade] = useState("");
   const [section, setSection] = useState("");
   const [teacher, setTeacher] = useState("");
+  const [busRoute, setBusRoute] = useState("");
   
   // Loaded data
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const [busRoutes, setBusRoutes] = useState<BusRoute[]>([]);
   const [availableGrades, setAvailableGrades] = useState<string[]>([]);
   const [availableSections, setAvailableSections] = useState<string[]>([]);
   const [filteredTeachers, setFilteredTeachers] = useState<Teacher[]>([]);
@@ -44,9 +48,11 @@ export default function StudentRegister() {
   useEffect(() => {
     const loadedTeachers = dataService.getTeachers();
     const loadedClasses = dataService.getClasses();
+    const loadedBusRoutes = dataService.getBusRoutes();
     
     setTeachers(loadedTeachers);
     setClasses(loadedClasses);
+    setBusRoutes(loadedBusRoutes);
     
     // Extract unique grades
     const grades = Array.from(new Set(loadedClasses.map(c => c.name.split(" - ")[0])));
@@ -127,6 +133,15 @@ export default function StudentRegister() {
       return;
     }
     
+    if (requiresBus && !busRoute) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a bus route.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // Create student object
     const newStudent = {
       name: `${firstName} ${lastName}`,
@@ -135,11 +150,29 @@ export default function StudentRegister() {
       teacher: teacher,
       bloodType: bloodType,
       allergies: hasAllergies,
+      busRoute: requiresBus ? busRoute : "",
       status: "active" as const
     };
     
     // Add student to the database
     const addedStudent = dataService.addStudent(newStudent);
+    
+    // If student uses bus, add them to bus students
+    if (requiresBus && busRoute) {
+      const busRouteName = busRoutes.find(route => route.id === busRoute)?.name || "";
+      dataService.addBusStudent({
+        studentId: addedStudent.id,
+        name: `${firstName} ${lastName}`,
+        grade: grade,
+        stop: "", // This would need to be set in a more detailed form
+        status: "active"
+      });
+      
+      toast({
+        title: "Bus Assignment",
+        description: `Student assigned to bus route: ${busRouteName}`,
+      });
+    }
     
     // Show success toast
     toast({
@@ -303,6 +336,40 @@ export default function StudentRegister() {
                     />
                   </div>
                 )}
+                
+                {/* Bus transportation section */}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Bus Transportation</Label>
+                  <div className="col-span-3 flex items-center space-x-2">
+                    <Switch
+                      checked={requiresBus}
+                      onCheckedChange={setRequiresBus}
+                    />
+                    <Label>Requires bus transportation</Label>
+                  </div>
+                </div>
+                
+                {requiresBus && (
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="busRoute" className="text-right">
+                      Bus Route
+                    </Label>
+                    <Select onValueChange={setBusRoute} value={busRoute}>
+                      <SelectTrigger id="busRoute" className="col-span-3">
+                        <SelectValue placeholder="Select bus route" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {busRoutes
+                          .filter(route => route.status === "active")
+                          .map((route) => (
+                            <SelectItem key={route.id} value={route.id}>
+                              {route.name} ({route.departureTime} - {route.returnTime})
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             </CardContent>
             
@@ -458,6 +525,14 @@ export default function StudentRegister() {
                   <span className="font-medium">Blood Type:</span>
                   <span className="col-span-2">{bloodType || "Not Specified"}</span>
                 </div>
+                {requiresBus && (
+                  <div className="grid grid-cols-3 text-sm">
+                    <span className="font-medium">Bus Route:</span>
+                    <span className="col-span-2">
+                      {busRoute ? busRoutes.find(r => r.id === busRoute)?.name || "Not Specified" : "Not Specified"}
+                    </span>
+                  </div>
+                )}
               </div>
               
               <div className="border border-dashed border-gray-300 p-3 flex justify-center">

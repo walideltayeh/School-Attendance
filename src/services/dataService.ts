@@ -8,6 +8,7 @@ export interface Student {
   teacher: string;
   bloodType: string;
   allergies: boolean;
+  busRoute?: string;
   status: "active" | "inactive";
 }
 
@@ -87,6 +88,7 @@ const students: Student[] = [
     teacher: "Sarah Parker", 
     bloodType: "A-", 
     allergies: true, 
+    busRoute: "BUS0002",
     status: "active" 
   },
   { 
@@ -256,6 +258,14 @@ class DataService {
       teachers[teacherIndex].students += 1;
     }
     
+    // Update bus route's student count if applicable
+    if (student.busRoute) {
+      const busRouteIndex = busRoutes.findIndex(r => r.id === student.busRoute);
+      if (busRouteIndex !== -1) {
+        busRoutes[busRouteIndex].students += 1;
+      }
+    }
+    
     return newStudent;
   }
 
@@ -301,6 +311,13 @@ class DataService {
 
   getBusStudents(): BusStudent[] {
     return busStudents;
+  }
+  
+  addBusStudent(student: Omit<BusStudent, "id">): BusStudent {
+    const id = `BSTU${String(busStudents.length + 1).padStart(4, '0')}`;
+    const newBusStudent = { ...student, id };
+    busStudents.push(newBusStudent);
+    return newBusStudent;
   }
 
   // Dashboard methods
