@@ -1,4 +1,3 @@
-
 import { 
   Pencil, 
   Mail, 
@@ -41,13 +40,74 @@ export default function Teachers() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [teachers, setTeachers] = useState<Teacher[]>(dataService.getTeachers());
-  
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+
   const filteredTeachers = teachers.filter(teacher => 
     teacher.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     teacher.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
     teacher.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     teacher.subject.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleExport = () => {
+    // Create CSV content for teachers
+    const headers = ["ID", "Name", "Email", "Phone", "Subject", "Classes", "Students"];
+    const csvContent = [
+      headers.join(','),
+      ...filteredTeachers.map(teacher => [
+        teacher.id,
+        teacher.name,
+        teacher.email,
+        teacher.phone,
+        teacher.subject,
+        teacher.classes.join('; '),
+        teacher.students
+      ].join(','))
+    ].join('\n');
+    
+    // Create a blob and download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'teachers.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Export Successful",
+      description: "Teacher data has been exported as CSV",
+    });
+  };
+
+  const handleViewDetails = (teacher) => {
+    setSelectedTeacher(teacher);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleEditTeacher = (teacher) => {
+    toast({
+      title: "Edit Teacher",
+      description: `Editing ${teacher.name}'s details`,
+    });
+  };
+
+  const handleViewSchedule = (teacher) => {
+    toast({
+      title: "Schedule",
+      description: `Viewing schedule for ${teacher.name}`,
+    });
+  };
+
+  const handleAssignClass = (teacher) => {
+    toast({
+      title: "Assign Class",
+      description: `Assigning new class to ${teacher.name}`,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -162,18 +222,22 @@ export default function Teachers() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleViewDetails(teacher)}>
                           <User className="mr-2 h-4 w-4" />
                           View Profile
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditTeacher(teacher)}>
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit Details
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleViewSchedule(teacher)}>
                           <Mail className="mr-2 h-4 w-4" />
                           Send Message
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAssignClass(teacher)}>
+                          <Layers className="mr-2 h-4 w-4" />
+                          Assign Class
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
