@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +20,7 @@ interface ClassAssignment {
 }
 
 interface AddTeacherFormProps {
-  onSubmit: (teacher: Omit<Teacher, "id">) => void;
+  onSubmit: (teacher: Omit<Teacher, "id">, classAssignments: ClassAssignment[]) => void;
   initialValues?: Teacher;
   isEditing?: boolean;
   onCancel?: () => void;
@@ -134,7 +133,7 @@ const AddTeacherForm = ({ onSubmit, initialValues, isEditing = false, onCancel }
       students: initialValues?.students || 0 // Keep the original student count if editing
     };
     
-    onSubmit(newTeacher);
+    onSubmit(newTeacher, classAssignments);
     
     // Reset form if not editing
     if (!isEditing) {
@@ -461,7 +460,7 @@ const Admin = () => {
     setTeachers(dataService.getTeachers());
   }, []);
 
-  const handleAddTeacher = (teacher: Omit<Teacher, "id">) => {
+  const handleAddTeacher = (teacher: Omit<Teacher, "id">, classAssignments: ClassAssignment[]) => {
     const addedTeacher = dataService.addTeacher(teacher);
     console.log("Added teacher:", addedTeacher);
     
@@ -506,7 +505,7 @@ const Admin = () => {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateTeacher = (updatedTeacherData: Omit<Teacher, "id">) => {
+  const handleUpdateTeacher = (updatedTeacherData: Omit<Teacher, "id">, classAssignments: ClassAssignment[]) => {
     if (selectedTeacher) {
       // In a real application, you would update the teacher in the database
       const updatedTeacher = { 
