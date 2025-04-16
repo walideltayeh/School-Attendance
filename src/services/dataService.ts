@@ -1,3 +1,4 @@
+
 // This service will handle all data operations in a central location
 // It can be expanded to connect to a real backend API
 
@@ -55,14 +56,14 @@ export interface ScanRecord {
 }
 
 // Global data storage - using let so we can completely replace the arrays
-let busStops = [
+export let busStops = [
   { id: "stop1", name: "Main Street", time: "7:30 AM", students: 8 },
   { id: "stop2", name: "Oak Avenue", time: "7:40 AM", students: 12 },
   { id: "stop3", name: "Pine Road", time: "7:50 AM", students: 5 },
   { id: "stop4", name: "Cedar Lane", time: "8:00 AM", students: 10 }
 ];
 
-let busStudents = [
+export let busStudents = [
   { id: "ST001", name: "Emma Thompson", grade: "Grade 5", stop: "Main Street" },
   { id: "ST002", name: "Noah Martinez", grade: "Grade 5", stop: "Oak Avenue" },
   { id: "ST005", name: "Ava Garcia", grade: "Grade 7", stop: "Pine Road" },
@@ -357,6 +358,15 @@ export const dataService = {
     BUS_ROUTES.push(newRoute);
     
     return newRoute;
+  },
+  
+  // Bus stops and students methods
+  getBusStops: () => {
+    return [...busStops];
+  },
+
+  getBusStudents: () => {
+    return [...busStudents];
   },
   
   // This would be replaced with an actual API call in production
