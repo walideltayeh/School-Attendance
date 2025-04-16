@@ -1,3 +1,4 @@
+
 import { 
   Pencil, 
   Mail, 
@@ -35,6 +36,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { dataService, Teacher } from "@/services/dataService";
 import { toast } from "@/components/ui/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function Teachers() {
   const navigate = useNavigate();
@@ -42,6 +44,8 @@ export default function Teachers() {
   const [teachers, setTeachers] = useState<Teacher[]>(dataService.getTeachers());
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
+  const [messageText, setMessageText] = useState("");
 
   const filteredTeachers = teachers.filter(teacher => 
     teacher.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -83,30 +87,56 @@ export default function Teachers() {
     });
   };
 
-  const handleViewDetails = (teacher) => {
+  const handleViewDetails = (teacher: Teacher) => {
     setSelectedTeacher(teacher);
     setIsViewDialogOpen(true);
   };
 
-  const handleEditTeacher = (teacher) => {
+  const handleEditTeacher = (teacher: Teacher) => {
+    navigate("/admin", { state: { editTeacher: teacher } });
     toast({
       title: "Edit Teacher",
-      description: `Editing ${teacher.name}'s details`,
+      description: `Redirecting to admin page to edit ${teacher.name}'s details`,
     });
   };
 
-  const handleViewSchedule = (teacher) => {
+  const handleViewSchedule = (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
     toast({
       title: "Schedule",
       description: `Viewing schedule for ${teacher.name}`,
     });
   };
 
-  const handleAssignClass = (teacher) => {
+  const handleSendMessage = (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
+    setIsMessageDialogOpen(true);
+  };
+
+  const handleSubmitMessage = () => {
+    if (!messageText.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a message",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "Message Sent",
+      description: `Message sent to ${selectedTeacher?.name}`,
+    });
+    setMessageText("");
+    setIsMessageDialogOpen(false);
+  };
+
+  const handleAssignClass = (teacher: Teacher) => {
     toast({
       title: "Assign Class",
-      description: `Assigning new class to ${teacher.name}`,
+      description: `Redirecting to admin page to assign new class to ${teacher.name}`,
     });
+    navigate("/admin", { state: { editTeacher: teacher, focusOnClassAssignment: true } });
   };
 
   return (
@@ -122,7 +152,7 @@ export default function Teachers() {
           <Button variant="outline" onClick={() => navigate("/admin")}>
             Go to Admin
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExport}>
             <FileDown className="mr-2 h-4 w-4" />
             Export
           </Button>
@@ -231,7 +261,7 @@ export default function Teachers() {
                           Edit Details
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleViewSchedule(teacher)}>
+                        <DropdownMenuItem onClick={() => handleSendMessage(teacher)}>
                           <Mail className="mr-2 h-4 w-4" />
                           Send Message
                         </DropdownMenuItem>
@@ -261,6 +291,109 @@ export default function Teachers() {
           </div>
         </CardFooter>
       </Card>
+
+      {/* View Teacher Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader>
+            <DialogTitle>Teacher Profile</DialogTitle>
+            <DialogDescription>
+              Detailed information about the selected teacher.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedTeacher && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarFallback className="text-lg bg-school-primary text-white">
+                    {selectedTeacher.name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-xl font-semibold">{selectedTeacher.name}</h3>
+                  <p className="text-sm text-muted-foreground">ID: {selectedTeacher.id}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground">Email</h4>
+                  <p>{selectedTeacher.email}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground">Phone</h4>
+                  <p>{selectedTeacher.phone}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground">Primary Subject</h4>
+                  <p>{selectedTeacher.subject}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground">Students</h4>
+                  <p>{selectedTeacher.students}</p>
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">Subjects</h4>
+                <div className="flex flex-wrap gap-1">
+                  {selectedTeacher.subjects.map((subject, i) => (
+                    <Badge key={i} variant="outline">
+                      {subject}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">Classes</h4>
+                <div className="flex flex-wrap gap-1">
+                  {selectedTeacher.classes.map((cls, i) => (
+                    <Badge key={i} className="bg-school-light text-school-dark">
+                      {cls}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Message Dialog */}
+      <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Send Message</DialogTitle>
+            <DialogDescription>
+              Send a message to {selectedTeacher?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="message">Message</Label>
+              <textarea
+                id="message"
+                className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Type your message here..."
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsMessageDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmitMessage}>Send</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

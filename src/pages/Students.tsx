@@ -10,7 +10,8 @@ import {
   Search, 
   Trash2, 
   User, 
-  QrCode 
+  QrCode,
+  Mail
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +29,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { dataService, Student } from "@/services/dataService";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function Students() {
   const navigate = useNavigate();
@@ -37,6 +40,9 @@ export default function Students() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
+  const [messageText, setMessageText] = useState("");
+  const [isIDCardDialogOpen, setIsIDCardDialogOpen] = useState(false);
   
   // Fetch students when component mounts
   useEffect(() => {
@@ -53,7 +59,8 @@ export default function Students() {
   };
 
   const handleEditStudent = (student: Student) => {
-    // In a real application, you would navigate to an edit page with student details
+    // Navigate to register student page with pre-filled data
+    navigate("/students/register", { state: { editStudent: student } });
     toast({
       title: "Edit Student",
       description: `Editing ${student.name}'s details`,
@@ -61,15 +68,36 @@ export default function Students() {
   };
 
   const handleGenerateIDCard = (student: Student) => {
-    toast({
-      title: "ID Card Generated",
-      description: `ID Card for ${student.name} has been generated`,
-    });
+    setSelectedStudent(student);
+    setIsIDCardDialogOpen(true);
   };
 
   const handleDeleteStudent = (student: Student) => {
     setSelectedStudent(student);
     setIsDeleteDialogOpen(true);
+  };
+
+  const handleSendMessage = (student: Student) => {
+    setSelectedStudent(student);
+    setIsMessageDialogOpen(true);
+  };
+
+  const handleSubmitMessage = () => {
+    if (!messageText.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a message",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "Message Sent",
+      description: `Message sent to ${selectedStudent?.name}'s parents`,
+    });
+    setMessageText("");
+    setIsMessageDialogOpen(false);
   };
 
   const confirmDeleteStudent = () => {
@@ -155,7 +183,7 @@ export default function Students() {
             </div>
           </div>
           <CardDescription>
-            View and manage all registered students. To register new students, please go to the Admin page.
+            View and manage all registered students. Register new students in Admin.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -207,6 +235,10 @@ export default function Students() {
                         <DropdownMenuItem onClick={() => handleGenerateIDCard(student)}>
                           <QrCode className="mr-2 h-4 w-4" />
                           Barcode/ID Card
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleSendMessage(student)}>
+                          <Mail className="mr-2 h-4 w-4" />
+                          Send Message
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
@@ -309,6 +341,79 @@ export default function Students() {
             </Button>
             <Button variant="destructive" onClick={confirmDeleteStudent}>
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Message Dialog */}
+      <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Send Message</DialogTitle>
+            <DialogDescription>
+              Send a message to {selectedStudent?.name}'s parents
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="message">Message</Label>
+              <textarea
+                id="message"
+                className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Type your message here..."
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsMessageDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmitMessage}>Send</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ID Card Dialog */}
+      <Dialog open={isIDCardDialogOpen} onOpenChange={setIsIDCardDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Student ID Card</DialogTitle>
+            <DialogDescription>
+              Student ID Card and Barcode
+            </DialogDescription>
+          </DialogHeader>
+          {selectedStudent && (
+            <div className="p-4 border rounded-md">
+              <div className="flex justify-center mb-4">
+                <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="h-12 w-12 text-primary" />
+                </div>
+              </div>
+              <div className="text-center mb-4">
+                <h3 className="text-xl font-bold">{selectedStudent.name}</h3>
+                <p className="text-sm text-muted-foreground">ID: {selectedStudent.id}</p>
+                <p className="text-sm">{selectedStudent.grade} - Section {selectedStudent.section}</p>
+              </div>
+              <div className="bg-gray-100 p-4 rounded-md flex justify-center items-center">
+                <QrCode className="h-24 w-24" />
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex justify-between">
+            <Button variant="outline" onClick={() => setIsIDCardDialogOpen(false)}>
+              Close
+            </Button>
+            <Button onClick={() => {
+              toast({
+                title: "ID Card Printed",
+                description: `ID Card for ${selectedStudent?.name} has been sent to the printer`,
+              });
+              setIsIDCardDialogOpen(false);
+            }}>
+              Print ID Card
             </Button>
           </DialogFooter>
         </DialogContent>

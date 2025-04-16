@@ -1,16 +1,16 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { dataService, Teacher, BusRoute } from "@/services/dataService";
-import { PlusCircle, Trash, Save, BookOpen } from "lucide-react";
+import { PlusCircle, Trash, Save, BookOpen, Edit, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 interface ClassAssignment {
   grade: string;
@@ -20,20 +20,37 @@ interface ClassAssignment {
 
 interface AddTeacherFormProps {
   onSubmit: (teacher: Omit<Teacher, "id">) => void;
+  initialValues?: Teacher;
+  isEditing?: boolean;
+  onCancel?: () => void;
 }
 
-const AddTeacherForm = ({ onSubmit }: AddTeacherFormProps) => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-  const [classAssignments, setClassAssignments] = useState<ClassAssignment[]>([{
-    grade: "",
-    section: "",
-    subject: ""
-  }]);
+const AddTeacherForm = ({ onSubmit, initialValues, isEditing = false, onCancel }: AddTeacherFormProps) => {
+  const [name, setName] = useState(initialValues?.name || "");
+  const [email, setEmail] = useState(initialValues?.email || "");
+  const [phone, setPhone] = useState(initialValues?.phone || "");
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(initialValues?.subjects || []);
+  const [classAssignments, setClassAssignments] = useState<ClassAssignment[]>(() => {
+    if (initialValues?.classes?.length) {
+      return initialValues.classes.map(cls => {
+        // Parse the class string to extract information
+        const match = cls.match(/(Grade \d+) - Section ([A-E]) \((.*)\)/);
+        if (match) {
+          const [, grade, section, subject] = match;
+          return { grade, section, subject };
+        }
+        return { grade: "", section: "", subject: "" };
+      }).filter(a => a.grade !== "");
+    }
+    return [{
+      grade: "",
+      section: "",
+      subject: ""
+    }];
+  });
 
   const subjectOptions = [
+    { label: "All", value: "All" },
     { label: "Mathematics", value: "Mathematics" },
     { label: "Science", value: "Science" },
     { label: "English", value: "English" },
@@ -101,22 +118,29 @@ const AddTeacherForm = ({ onSubmit }: AddTeacherFormProps) => {
       subject: selectedSubjects[0] || "", // Primary subject is the first one selected
       subjects: selectedSubjects,
       classes: formattedClasses,
-      students: 0 // Initial value
+      students: initialValues?.students || 0 // Keep the original student count if editing
     };
     
     onSubmit(newTeacher);
     
-    // Reset form
-    setName("");
-    setEmail("");
-    setPhone("");
-    setSelectedSubjects([]);
-    setClassAssignments([{ grade: "", section: "", subject: "" }]);
+    // Reset form if not editing
+    if (!isEditing) {
+      setName("");
+      setEmail("");
+      setPhone("");
+      setSelectedSubjects([]);
+      setClassAssignments([{ grade: "", section: "", subject: "" }]);
+    }
 
     toast({
-      title: "Success",
-      description: "Teacher added successfully",
+      title: isEditing ? "Updated" : "Success",
+      description: isEditing ? "Teacher updated successfully" : "Teacher added successfully",
     });
+
+    // If we're editing and there's a cancel handler, call it
+    if (isEditing && onCancel) {
+      onCancel();
+    }
   };
 
   return (
@@ -258,9 +282,16 @@ const AddTeacherForm = ({ onSubmit }: AddTeacherFormProps) => {
         ))}
       </div>
       
-      <Button type="submit" className="w-full">
-        <Save className="h-4 w-4 mr-2" /> Add Teacher
-      </Button>
+      <div className="flex gap-2 justify-end">
+        {isEditing && onCancel && (
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
+        <Button type="submit" className={isEditing ? "" : "w-full"}>
+          <Save className="h-4 w-4 mr-2" /> {isEditing ? "Save Changes" : "Add Teacher"}
+        </Button>
+      </div>
     </form>
   );
 };
@@ -398,7 +429,15 @@ const AddBusRouteForm = ({ onSubmit }: AddBusRouteFormProps) => {
 
 const Admin = () => {
   const navigate = useNavigate();
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
+  useEffect(() => {
+    // Load teachers when the component mounts
+    setTeachers(dataService.getTeachers());
+  }, []);
+
   const handleAddTeacher = (teacher: Omit<Teacher, "id">) => {
     const addedTeacher = dataService.addTeacher(teacher);
     console.log("Added teacher:", addedTeacher);
@@ -423,10 +462,43 @@ const Admin = () => {
       });
     }
     
+    // Refresh the teachers list
+    setTeachers(dataService.getTeachers());
+    
     toast({
       title: "Teacher Added",
       description: `${teacher.name} has been added with ${teacher.classes.length} class assignments`,
     });
+  };
+
+  const handleEditTeacher = (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateTeacher = (updatedTeacherData: Omit<Teacher, "id">) => {
+    if (selectedTeacher) {
+      // In a real application, you would update the teacher in the database
+      const updatedTeacher = { 
+        ...updatedTeacherData, 
+        id: selectedTeacher.id 
+      };
+      
+      // This is a simplified update that doesn't handle class changes
+      // In a real app, you would need to also update classes
+      const updatedTeachers = teachers.map(t => 
+        t.id === selectedTeacher.id ? updatedTeacher : t
+      );
+      
+      setTeachers(updatedTeachers);
+      setIsEditDialogOpen(false);
+      setSelectedTeacher(null);
+      
+      toast({
+        title: "Teacher Updated",
+        description: `${updatedTeacherData.name}'s information has been updated`,
+      });
+    }
   };
 
   const handleAddBusRoute = (route: Omit<BusRoute, "id">) => {
@@ -476,6 +548,32 @@ const Admin = () => {
               <AddTeacherForm onSubmit={handleAddTeacher} />
             </CardContent>
           </Card>
+          
+          {teachers.length > 0 && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Teacher List</CardTitle>
+                <CardDescription>
+                  Edit or manage existing teachers
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {teachers.map(teacher => (
+                    <div key={teacher.id} className="flex justify-between items-center p-4 border rounded-md">
+                      <div>
+                        <h3 className="font-medium">{teacher.name}</h3>
+                        <p className="text-sm text-muted-foreground">{teacher.email} | {teacher.subjects.join(", ")}</p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => handleEditTeacher(teacher)}>
+                        <Edit className="h-4 w-4 mr-2" /> Edit
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
         
         <TabsContent value="buses">
@@ -492,6 +590,33 @@ const Admin = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Edit Teacher Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[800px]">
+          <DialogHeader>
+            <DialogTitle>Edit Teacher</DialogTitle>
+          </DialogHeader>
+          {selectedTeacher && (
+            <AddTeacherForm 
+              onSubmit={handleUpdateTeacher} 
+              initialValues={selectedTeacher}
+              isEditing={true}
+              onCancel={() => setIsEditDialogOpen(false)}
+            />
+          )}
+          <DialogFooter className="sm:justify-start">
+            <Button 
+              type="button" 
+              variant="secondary" 
+              onClick={() => setIsEditDialogOpen(false)}
+              className="mt-2 sm:mt-0"
+            >
+              <X className="h-4 w-4 mr-2" /> Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
