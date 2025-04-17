@@ -81,7 +81,7 @@ export default function Dashboard() {
       
       const trendValue = ((currentRate - previousRate) * 100).toFixed(1);
       attendanceTrend = `${trendValue > 0 ? '+' : ''}${trendValue}%`;
-      trendType = trendValue > 0 ? "positive" : trendValue < 0 ? "negative" : "neutral";
+      trendType = parseFloat(trendValue) > 0 ? "positive" : parseFloat(trendValue) < 0 ? "negative" : "neutral";
     }
     
     // Update stats with real data

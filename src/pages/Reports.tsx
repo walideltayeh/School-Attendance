@@ -30,6 +30,39 @@ import { Separator } from "@/components/ui/separator";
 import { dataService } from "@/services/dataService";
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip as RechartsTooltip } from "recharts";
 
+// Define the weekday data type
+interface WeekdayData {
+  [key: string]: {
+    present: number;
+    absent: number;
+  };
+}
+
+// Define the type for hourly data
+interface HourlyData {
+  time: string;
+  count: number;
+}
+
+// Define type for classroom attendance
+interface ClassroomAttendance {
+  grade: string;
+  section: string;
+  present: number;
+  absent: number;
+  total: number;
+  percentage: number;
+}
+
+// Define type for bus attendance
+interface BusAttendance {
+  route: string;
+  present: number;
+  absent: number;
+  total: number;
+  percentage: number;
+}
+
 export default function Reports() {
   const [dateRange, setDateRange] = useState("this_week");
   const [attendanceOverview, setAttendanceOverview] = useState({
@@ -41,11 +74,11 @@ export default function Reports() {
     trend: "0%"
   });
   
-  const [classroomAttendance, setClassroomAttendance] = useState([]);
-  const [busAttendance, setBusAttendance] = useState([]);
-  const [weekdayData, setWeekdayData] = useState({});
-  const [hourlyData, setHourlyData] = useState([]);
-  const [pieChartData, setPieChartData] = useState([]);
+  const [classroomAttendance, setClassroomAttendance] = useState<ClassroomAttendance[]>([]);
+  const [busAttendance, setBusAttendance] = useState<BusAttendance[]>([]);
+  const [weekdayData, setWeekdayData] = useState<WeekdayData>({});
+  const [hourlyData, setHourlyData] = useState<HourlyData[]>([]);
+  const [pieChartData, setPieChartData] = useState<{ name: string; value: number }[]>([]);
   
   // Colors for the pie chart
   const COLORS = ['#4CAF50', '#F44336', '#FFC107'];
@@ -142,7 +175,7 @@ export default function Reports() {
     
     // Generate weekday data
     const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
-    const mockWeekdayData = {};
+    const mockWeekdayData: WeekdayData = {};
     
     weekdays.forEach((day, index) => {
       const present = 96 - (index * 2.3); // Gradually decreasing attendance through the week
