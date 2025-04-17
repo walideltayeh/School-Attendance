@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Calendar, 
   Download, 
@@ -27,62 +27,151 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { dataService } from "@/services/dataService";
+import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip as RechartsTooltip } from "recharts";
 
 export default function Reports() {
   const [dateRange, setDateRange] = useState("this_week");
+  const [attendanceOverview, setAttendanceOverview] = useState({
+    present: 0,
+    absent: 0,
+    total: 0,
+    presentPercent: 0,
+    absentPercent: 0,
+    trend: "0%"
+  });
   
-  // Mock attendance overview data
-  const attendanceOverview = {
-    present: 1138,
-    absent: 111,
-    total: 1249,
-    presentPercent: 91.1,
-    absentPercent: 8.9,
-    trend: "+1.2%"
-  };
+  const [classroomAttendance, setClassroomAttendance] = useState([]);
+  const [busAttendance, setBusAttendance] = useState([]);
+  const [weekdayData, setWeekdayData] = useState({});
+  const [hourlyData, setHourlyData] = useState([]);
+  const [pieChartData, setPieChartData] = useState([]);
   
-  // Mock classroom attendance data (daily breakdown)
-  const classroomAttendance = [
-    { grade: "Grade 5", section: "A", present: 23, absent: 1, total: 24, percentage: 95.8 },
-    { grade: "Grade 5", section: "B", present: 22, absent: 0, total: 22, percentage: 100 },
-    { grade: "Grade 6", section: "A", present: 25, absent: 1, total: 26, percentage: 96.2 },
-    { grade: "Grade 6", section: "B", present: 21, absent: 2, total: 23, percentage: 91.3 },
-    { grade: "Grade 7", section: "A", present: 23, absent: 2, total: 25, percentage: 92.0 },
-    { grade: "Grade 7", section: "B", present: 26, absent: 1, total: 27, percentage: 96.3 },
-    { grade: "Grade 8", section: "A", present: 24, absent: 1, total: 25, percentage: 96.0 },
-    { grade: "Grade 8", section: "B", present: 20, absent: 3, total: 23, percentage: 87.0 },
-  ];
+  // Colors for the pie chart
+  const COLORS = ['#4CAF50', '#F44336', '#FFC107'];
   
-  // Mock bus attendance data
-  const busAttendance = [
-    { route: "Route #1", present: 26, absent: 2, total: 28, percentage: 92.9 },
-    { route: "Route #2", present: 23, absent: 2, total: 25, percentage: 92.0 },
-    { route: "Route #3", present: 22, absent: 0, total: 22, percentage: 100.0 },
-    { route: "Route #4", present: 23, absent: 1, total: 24, percentage: 95.8 },
-    { route: "Route #5", present: 28, absent: 2, total: 30, percentage: 93.3 },
-  ];
-  
-  // Mock days of week data
-  const weekdayData = {
-    monday: { present: 95.2, absent: 4.8 },
-    tuesday: { present: 93.1, absent: 6.9 },
-    wednesday: { present: 91.8, absent: 8.2 },
-    thursday: { present: 88.5, absent: 11.5 },
-    friday: { present: 86.7, absent: 13.3 },
-  };
-
-  // Mock hourly data
-  const hourlyData = [
-    { time: "7:00 AM", count: 89 },
-    { time: "8:00 AM", count: 352 },
-    { time: "9:00 AM", count: 134 },
-    { time: "10:00 AM", count: 35 },
-    { time: "11:00 AM", count: 22 },
-    { time: "12:00 PM", count: 18 },
-    { time: "1:00 PM", count: 27 },
-    { time: "2:00 PM", count: 15 },
-    { time: "3:00 PM", count: 457 },
-  ];
+  useEffect(() => {
+    // Get attendance data
+    const attendanceData = dataService.getAttendanceData();
+    
+    // Calculate overall attendance stats
+    if (attendanceData.length > 0) {
+      let totalPresent = 0;
+      let totalAbsent = 0;
+      let totalLate = 0;
+      
+      attendanceData.forEach(day => {
+        totalPresent += day.present;
+        totalAbsent += day.absent;
+        totalLate += day.late || 0;
+      });
+      
+      const total = totalPresent + totalAbsent + totalLate;
+      const presentPercent = total > 0 ? parseFloat(((totalPresent / total) * 100).toFixed(1)) : 0;
+      const absentPercent = total > 0 ? parseFloat(((totalAbsent / total) * 100).toFixed(1)) : 0;
+      const latePercent = total > 0 ? parseFloat(((totalLate / total) * 100).toFixed(1)) : 0;
+      
+      // Calculate trend
+      let trendValue = "0%";
+      if (attendanceData.length >= 2) {
+        const latest = attendanceData[attendanceData.length - 1];
+        const previous = attendanceData[attendanceData.length - 2];
+        
+        const latestRate = latest.present / (latest.present + latest.absent + (latest.late || 0));
+        const previousRate = previous.present / (previous.present + previous.absent + (previous.late || 0));
+        
+        trendValue = `${((latestRate - previousRate) * 100).toFixed(1)}%`;
+        if (latestRate > previousRate) {
+          trendValue = "+" + trendValue;
+        }
+      }
+      
+      setAttendanceOverview({
+        present: totalPresent,
+        absent: totalAbsent,
+        total,
+        presentPercent,
+        absentPercent,
+        trend: trendValue
+      });
+      
+      // Set data for pie chart
+      setPieChartData([
+        { name: 'Present', value: totalPresent },
+        { name: 'Absent', value: totalAbsent },
+        { name: 'Late', value: totalLate }
+      ]);
+    }
+    
+    // Generate mock classroom attendance data (in a real app, this would come from the API)
+    const classes = dataService.getClasses();
+    const mockClassroomData = classes.map(cls => {
+      const total = Math.floor(Math.random() * 10) + 20; // Random between 20-30 students
+      const absent = Math.floor(Math.random() * 3); // Random between 0-2 absences
+      const present = total - absent;
+      const percentage = parseFloat(((present / total) * 100).toFixed(1));
+      
+      return {
+        grade: cls.name.split(" - ")[0],
+        section: cls.name.split(" - ")[1],
+        present,
+        absent,
+        total,
+        percentage
+      };
+    });
+    setClassroomAttendance(mockClassroomData);
+    
+    // Generate mock bus attendance data
+    const busRoutes = dataService.getBusRoutes();
+    const mockBusData = busRoutes.map(route => {
+      const total = route.students;
+      const absent = Math.floor(Math.random() * 3); // Random between 0-2 absences
+      const present = total - absent;
+      const percentage = parseFloat(((present / total) * 100).toFixed(1));
+      
+      return {
+        route: route.name,
+        present,
+        absent,
+        total,
+        percentage
+      };
+    });
+    setBusAttendance(mockBusData);
+    
+    // Generate weekday data
+    const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+    const mockWeekdayData = {};
+    
+    weekdays.forEach((day, index) => {
+      const present = 96 - (index * 2.3); // Gradually decreasing attendance through the week
+      mockWeekdayData[day] = {
+        present: parseFloat(present.toFixed(1)),
+        absent: parseFloat((100 - present).toFixed(1))
+      };
+    });
+    setWeekdayData(mockWeekdayData);
+    
+    // Generate hourly data
+    const hours = [
+      '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM',
+      '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM'
+    ];
+    
+    const mockHourlyData = hours.map(time => {
+      let count;
+      if (time === '8:00 AM' || time === '3:00 PM') {
+        count = Math.floor(Math.random() * 100) + 300; // Peak hours
+      } else {
+        count = Math.floor(Math.random() * 50) + 10; // Regular hours
+      }
+      
+      return { time, count };
+    });
+    setHourlyData(mockHourlyData);
+    
+  }, [dateRange]); // Refresh when date range changes
 
   return (
     <div className="space-y-6">
@@ -137,7 +226,7 @@ export default function Reports() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="rounded-lg border p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="text-muted-foreground text-sm">Present Students</div>
@@ -147,7 +236,9 @@ export default function Reports() {
                 </div>
                 <div className="text-3xl font-bold">{attendanceOverview.present}</div>
                 <div className="text-sm text-muted-foreground flex items-center gap-1">
-                  <span className="text-green-600">{attendanceOverview.trend}</span>
+                  <span className={attendanceOverview.trend.startsWith('+') ? 'text-green-600' : attendanceOverview.trend.startsWith('-') ? 'text-red-600' : 'text-gray-600'}>
+                    {attendanceOverview.trend}
+                  </span>
                   <span>from previous period</span>
                 </div>
                 <div className="text-sm font-medium">{attendanceOverview.presentPercent}% of total</div>
@@ -187,6 +278,35 @@ export default function Reports() {
                   </div>
                 </div>
               </div>
+              
+              <div className="rounded-lg border p-4 space-y-1">
+                <h4 className="text-sm font-medium mb-2">Attendance Distribution</h4>
+                <div className="h-[160px]">
+                  {pieChartData.length > 0 && (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsPieChart>
+                        <Pie
+                          data={pieChartData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={40}
+                          outerRadius={60}
+                          paddingAngle={5}
+                          dataKey="value"
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          labelLine={false}
+                        >
+                          {pieChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Legend />
+                        <RechartsTooltip />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -222,7 +342,7 @@ export default function Reports() {
                       }`}
                     >
                       <div className="col-span-5">
-                        <span className="font-medium">{cls.grade} - Section {cls.section}</span>
+                        <span className="font-medium">{cls.grade} - {cls.section}</span>
                       </div>
                       <div className="col-span-2 text-right text-green-600 font-medium">
                         {cls.present}
