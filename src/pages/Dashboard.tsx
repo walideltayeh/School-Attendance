@@ -1,4 +1,3 @@
-
 import { BarChart3, BookOpen, QrCode, School, Users, Bus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,14 +50,12 @@ export default function Dashboard() {
   const [attendanceData, setAttendanceData] = useState([]);
 
   useEffect(() => {
-    // Get data from services
     const students = dataService.getStudents();
     const teachers = dataService.getTeachers();
     const busRoutes = dataService.getBusRoutes().filter(route => route.status === "active");
     const attendanceStats = dataService.getAttendanceData();
     const activities = dataService.getRecentActivities();
     
-    // Calculate attendance percentage
     let attendancePercentage = "0%";
     if (attendanceStats.length > 0) {
       const latestDay = attendanceStats[attendanceStats.length - 1];
@@ -68,7 +65,6 @@ export default function Dashboard() {
       }
     }
     
-    // Calculate attendance trend
     let attendanceTrend = "0%";
     let trendType = "neutral";
     
@@ -79,12 +75,11 @@ export default function Dashboard() {
       const currentRate = current.present / (current.present + current.absent + current.late);
       const previousRate = previous.present / (previous.present + previous.absent + previous.late);
       
-      const trendValue = ((currentRate - previousRate) * 100).toFixed(1);
-      attendanceTrend = `${trendValue > 0 ? '+' : ''}${trendValue}%`;
-      trendType = parseFloat(trendValue) > 0 ? "positive" : parseFloat(trendValue) < 0 ? "negative" : "neutral";
+      const trendValue = ((currentRate - previousRate) * 100);
+      attendanceTrend = `${trendValue > 0 ? '+' : ''}${trendValue.toFixed(1)}%`;
+      trendType = trendValue > 0 ? "positive" : trendValue < 0 ? "negative" : "neutral";
     }
     
-    // Update stats with real data
     setStats([
       {
         title: "Total Students",
@@ -116,10 +111,8 @@ export default function Dashboard() {
       },
     ]);
     
-    // Set recent activities
     setRecentActivities(activities);
     
-    // Format attendance data for the chart
     const chartData = attendanceStats.map(day => ({
       date: new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       present: day.present,
