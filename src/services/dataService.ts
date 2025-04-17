@@ -490,7 +490,7 @@ class DataService {
   getPeriods(): Period[] {
     const periods = localStorage.getItem('school_periods');
     return periods ? JSON.parse(periods) : [];
-  },
+  }
 
   addOrUpdatePeriod(period: Period): Period {
     const periods = this.getPeriods();
