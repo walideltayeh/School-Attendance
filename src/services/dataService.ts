@@ -89,6 +89,12 @@ export interface Room {
   available: boolean;
 }
 
+export interface Period {
+  periodNumber: number;
+  startTime: string;
+  endTime: string;
+}
+
 // Mock data
 const students: Student[] = [
   { 
@@ -478,6 +484,33 @@ class DataService {
                  schedule.day === currentDay && 
                  (schedule.week === currentWeek || schedule.week === 1)
     );
+  }
+
+  // Period methods
+  getPeriods(): Period[] {
+    const periods = localStorage.getItem('school_periods');
+    return periods ? JSON.parse(periods) : [];
+  },
+
+  addOrUpdatePeriod(period: Period): Period {
+    const periods = this.getPeriods();
+    
+    // Find existing period with same number
+    const existingIndex = periods.findIndex(p => p.periodNumber === period.periodNumber);
+    
+    if (existingIndex >= 0) {
+      // Update existing period
+      periods[existingIndex] = period;
+    } else {
+      // Add new period
+      periods.push(period);
+    }
+    
+    // Sort periods by number
+    periods.sort((a, b) => a.periodNumber - b.periodNumber);
+    
+    localStorage.setItem('school_periods', JSON.stringify(periods));
+    return period;
   }
 }
 

@@ -14,6 +14,7 @@ import Notifications from "@/pages/Notifications";
 import Attendance from "@/pages/Attendance";
 import NotFound from "@/pages/NotFound";
 import ClassroomLogin from "@/pages/ClassroomLogin";
+import Calendar from "@/pages/Calendar";
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
           <Route path="/attendance" element={<Attendance />} />
           <Route path="/attendance/scan/:roomId/:teacherId" element={<Attendance />} />
           <Route path="/classroom-login/:roomId" element={<ClassroomLogin />} />
+          <Route path="/calendar" element={<Calendar />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

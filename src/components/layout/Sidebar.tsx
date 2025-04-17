@@ -10,7 +10,8 @@ import {
   Users,
   QrCode,
   Bell,
-  ShieldAlert
+  ShieldAlert,
+  Calendar
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,18 @@ export function Sidebar({ isOpen }: SidebarProps) {
           >
             <QrCode className="h-5 w-5" />
             <span>Attendance</span>
+          </NavLink>
+          <NavLink 
+            to="/calendar" 
+            className={({ isActive }) => 
+              cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground",
+                isActive ? "bg-muted text-foreground" : ""
+              )
+            }
+          >
+            <Calendar className="h-5 w-5" />
+            <span>Calendar</span>
           </NavLink>
           <NavLink 
             to="/reports" 

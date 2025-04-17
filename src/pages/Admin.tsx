@@ -8,10 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { dataService, Teacher, BusRoute, ClassInfo, Room, ClassSchedule } from "@/services/dataService";
-import { PlusCircle, Trash, Save, BookOpen, Edit, X, MapPin, Calendar, Eye, EyeOff } from "lucide-react";
+import { PlusCircle, Trash, Save, BookOpen, Edit, X, MapPin, Calendar, Eye, EyeOff, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ClassPeriodsForm } from "@/components/admin/ClassPeriodsForm";
 
 interface ClassAssignment {
   grade: string;
@@ -849,13 +850,17 @@ const Admin = () => {
         <Button variant="outline" onClick={() => navigate("/transport")}>
           Transport
         </Button>
+        <Button variant="outline" onClick={() => navigate("/calendar")}>
+          Calendar
+        </Button>
       </div>
       
       <Tabs defaultValue="teachers" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
+        <TabsList className="grid w-full grid-cols-4 mb-6">
           <TabsTrigger value="teachers">Manage Teachers</TabsTrigger>
           <TabsTrigger value="buses">Manage Bus Routes</TabsTrigger>
           <TabsTrigger value="calendar">School Calendar</TabsTrigger>
+          <TabsTrigger value="periods">Class Periods</TabsTrigger>
         </TabsList>
         
         <TabsContent value="teachers">
@@ -956,6 +961,20 @@ const Admin = () => {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+        
+        <TabsContent value="periods">
+          <Card>
+            <CardHeader>
+              <CardTitle>Class Period Times</CardTitle>
+              <CardDescription>
+                Configure the start and end times for each class period
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ClassPeriodsForm />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
       
