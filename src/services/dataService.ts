@@ -1,4 +1,3 @@
-
 // Type definitions
 export interface Student {
   id: string;
@@ -21,6 +20,8 @@ export interface Teacher {
   subjects: string[];
   classes: string[];
   students: number;
+  username?: string;
+  password?: string;
 }
 
 export interface ClassInfo {
@@ -66,6 +67,26 @@ export interface ScanRecord {
   time: Date;
   success: boolean;
   message: string;
+}
+
+export interface ClassSchedule {
+  id: string;
+  teacherId: string;
+  teacherName: string;
+  classId: string;
+  className: string;
+  roomId: string;
+  roomName: string;
+  day: "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday";
+  period: number;
+  week: number;
+}
+
+export interface Room {
+  id: string;
+  name: string;
+  capacity: number;
+  available: boolean;
 }
 
 // Mock data
@@ -226,6 +247,17 @@ const upcomingEvents: any[] = [
   { id: 4, title: "End of Term Exam", date: "2023-06-05", time: "09:00 AM - 12:00 PM" }
 ];
 
+// Preset rooms from Room 01 to Room 100
+const rooms: Room[] = Array.from({ length: 100 }, (_, i) => ({
+  id: `RM${String(i + 1).padStart(3, '0')}`,
+  name: `Room ${String(i + 1).padStart(2, '0')}`,
+  capacity: Math.floor(Math.random() * 20) + 20,
+  available: true
+}));
+
+// Class schedules
+const classSchedules: ClassSchedule[] = [];
+
 // Data service class
 class DataService {
   // Student methods
@@ -293,6 +325,14 @@ class DataService {
     return newTeacher;
   }
 
+  updateTeacher(teacherId: string, updatedTeacher: Partial<Teacher>): Teacher | null {
+    const index = teachers.findIndex(t => t.id === teacherId);
+    if (index === -1) return null;
+    
+    teachers[index] = { ...teachers[index], ...updatedTeacher };
+    return teachers[index];
+  }
+
   // Class methods
   getClasses(): ClassInfo[] {
     return classes;
@@ -332,6 +372,50 @@ class DataService {
     return newBusStudent;
   }
 
+  // Room methods
+  getRooms(): Room[] {
+    return rooms;
+  }
+
+  getRoom(roomId: string): Room | undefined {
+    return rooms.find(room => room.id === roomId);
+  }
+
+  // Check if a room name is valid (between Room 01 and Room 100)
+  isValidRoomName(roomName: string): boolean {
+    const roomNumberMatch = roomName.match(/Room (\d+)/i);
+    if (!roomNumberMatch) return false;
+    
+    const roomNumber = parseInt(roomNumberMatch[1]);
+    return roomNumber >= 1 && roomNumber <= 100;
+  }
+
+  // Schedule methods
+  getClassSchedules(): ClassSchedule[] {
+    return classSchedules;
+  }
+
+  getTeacherSchedules(teacherId: string): ClassSchedule[] {
+    return classSchedules.filter(schedule => schedule.teacherId === teacherId);
+  }
+
+  getRoomSchedules(roomId: string): ClassSchedule[] {
+    return classSchedules.filter(schedule => schedule.roomId === roomId);
+  }
+
+  getSchedulesByDay(day: string, week: number = 1): ClassSchedule[] {
+    return classSchedules.filter(
+      schedule => schedule.day === day && schedule.week === week
+    );
+  }
+
+  addClassSchedule(schedule: Omit<ClassSchedule, "id">): ClassSchedule {
+    const id = `SCH${String(classSchedules.length + 1).padStart(4, '0')}`;
+    const newSchedule = { ...schedule, id };
+    classSchedules.push(newSchedule);
+    return newSchedule;
+  }
+
   // Dashboard methods
   getAttendanceData() {
     return attendanceData;
@@ -358,11 +442,42 @@ class DataService {
     busRoutes.length = 0;
     busStops.length = 0;
     busStudents.length = 0;
+    classSchedules.length = 0;
+    
+    // Reset room availability
+    rooms.forEach(room => {
+      room.available = true;
+    });
+    
     // Clear dashboard data
     attendanceData.length = 0;
     performanceData.length = 0;
     recentActivities.length = 0;
     upcomingEvents.length = 0;
+    
+    console.log("All data has been deleted successfully");
+  }
+  
+  // Verify teacher login
+  verifyTeacherLogin(username: string, password: string): Teacher | null {
+    const teacher = teachers.find(t => t.username === username && t.password === password);
+    return teacher || null;
+  }
+  
+  // Get today's schedule for a specific room
+  getRoomScheduleForToday(roomId: string): ClassSchedule[] {
+    const today = new Date();
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const currentDay = dayNames[today.getDay()];
+    
+    // Get the current week number (simplified to modulo 4 + 1)
+    const currentWeek = (Math.floor(today.getDate() / 7) % 4) + 1;
+    
+    return classSchedules.filter(
+      schedule => schedule.roomId === roomId && 
+                 schedule.day === currentDay && 
+                 (schedule.week === currentWeek || schedule.week === 1)
+    );
   }
 }
 
@@ -372,5 +487,7 @@ export const dataService = new DataService();
 // Export specific arrays for direct access if needed
 export {
   busStops,
-  busStudents
+  busStudents,
+  rooms,
+  classSchedules
 };

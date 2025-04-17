@@ -1,49 +1,43 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { MainLayout } from "./components/layout/MainLayout";
-import Dashboard from "./pages/Dashboard";
-import Students from "./pages/Students";
-import StudentRegister from "./pages/StudentRegister";
-import Teachers from "./pages/Teachers";
-import Attendance from "./pages/Attendance";
-import Transport from "./pages/Transport";
-import Reports from "./pages/Reports";
-import Notifications from "./pages/Notifications";
-import Settings from "./pages/Settings";
-import Admin from "./pages/Admin";
-import NotFound from "./pages/NotFound";
+import MainLayout from "@/components/layout/MainLayout";
+import Dashboard from "@/pages/Dashboard";
+import Index from "@/pages/Index";
+import Students from "@/pages/Students";
+import Teachers from "@/pages/Teachers";
+import Reports from "@/pages/Reports";
+import Settings from "@/pages/Settings";
+import Admin from "@/pages/Admin";
+import StudentRegister from "@/pages/StudentRegister";
+import Transport from "@/pages/Transport";
+import Notifications from "@/pages/Notifications";
+import Attendance from "@/pages/Attendance";
+import NotFound from "@/pages/NotFound";
+import ClassroomLogin from "@/pages/ClassroomLogin";
 
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route element={<MainLayout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/students" element={<Students />} />
-            <Route path="/students/register" element={<StudentRegister />} />
-            <Route path="/teachers" element={<Teachers />} />
-            <Route path="/attendance" element={<Attendance />} />
-            <Route path="/transport" element={<Transport />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/admin" element={<Admin />} />
-          </Route>
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Index />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/students" element={<Students />} />
+          <Route path="/students/register" element={<StudentRegister />} />
+          <Route path="/teachers" element={<Teachers />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/transport" element={<Transport />} />
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/attendance" element={<Attendance />} />
+          <Route path="/attendance/scan/:roomId/:teacherId" element={<Attendance />} />
+          <Route path="/classroom-login/:roomId" element={<ClassroomLogin />} />
           <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
 
 export default App;

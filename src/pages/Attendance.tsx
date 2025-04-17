@@ -1,5 +1,7 @@
+
 import { useState, useEffect } from "react";
-import { Check, QrCode, RefreshCw, Clock } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Check, QrCode, RefreshCw, Clock, Calendar, User, Users, BookOpen, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,18 +10,47 @@ import { toast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { dataService, ClassInfo, BusRoute, ScanRecord } from "@/services/dataService";
+import { dataService, ClassInfo, BusRoute, ScanRecord, Room, Teacher } from "@/services/dataService";
 
 export default function Attendance() {
+  const { roomId, teacherId } = useParams();
+  const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [activeTab, setActiveTab] = useState("classroom");
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedBus, setSelectedBus] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [recentScans, setRecentScans] = useState<ScanRecord[]>([]);
+  const [teacher, setTeacher] = useState<Teacher | null>(null);
+  const [room, setRoom] = useState<Room | null>(null);
   
   const classes = dataService.getClasses();
   const busRoutes = dataService.getBusRoutes();
+
+  // Load teacher and room data if IDs are provided
+  useEffect(() => {
+    if (roomId) {
+      const foundRoom = dataService.getRoom(roomId);
+      if (foundRoom) {
+        setRoom(foundRoom);
+      }
+    }
+    
+    if (teacherId) {
+      const teacher = dataService.getTeachers().find(t => t.id === teacherId);
+      if (teacher) {
+        setTeacher(teacher);
+      } else {
+        // If teacher doesn't exist, redirect back to login
+        toast({
+          title: "Error",
+          description: "Teacher not found",
+          variant: "destructive",
+        });
+        navigate("/");
+      }
+    }
+  }, [roomId, teacherId, navigate]);
 
   // Update the time every second
   useEffect(() => {
@@ -119,6 +150,220 @@ export default function Attendance() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
 
+  // Handle logout (for classroom device mode)
+  const handleLogout = () => {
+    navigate("/");
+  };
+
+  // If in classroom device mode with teacher login
+  if (roomId && teacherId && teacher) {
+    // Get today's schedule for this room
+    const todaySchedules = dataService.getRoomScheduleForToday(roomId);
+    
+    // Get teacher's classes
+    const teacherClasses = classes.filter(c => c.teacher === teacher.name);
+    
+    return (
+      <div className="space-y-6 py-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Classroom Attendance</h2>
+            <p className="text-muted-foreground">
+              {room?.name} - Logged in as {teacher.name}
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 bg-muted p-2 rounded-md">
+              <Clock className="h-5 w-5 text-school-primary" />
+              <span className="font-mono">{formatTime(currentTime)}</span>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" /> Logout
+            </Button>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Today's Schedule
+                </CardTitle>
+                <CardDescription>
+                  {currentTime.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {todaySchedules.length > 0 ? (
+                  todaySchedules.map((schedule, index) => (
+                    <div 
+                      key={index} 
+                      className={`border rounded-md p-3 ${schedule.teacherId === teacherId ? 'bg-primary/10 border-primary/30' : ''}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-muted rounded-full w-8 h-8 flex items-center justify-center">
+                            {schedule.period}
+                          </div>
+                          <div>
+                            <p className="font-medium">{schedule.className}</p>
+                            <p className="text-xs text-muted-foreground">Teacher: {schedule.teacherName}</p>
+                          </div>
+                        </div>
+                        {schedule.teacherId === teacherId && (
+                          <Badge>Your Class</Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-6 text-center">
+                    <Calendar className="h-10 w-10 text-muted-foreground mb-2" />
+                    <p className="text-muted-foreground">No classes scheduled for today</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="md:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Student Attendance Scanner</CardTitle>
+                <CardDescription>
+                  Select your class and scan student IDs
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="class-select">Select Your Class</Label>
+                  <Select value={selectedClass} onValueChange={setSelectedClass}>
+                    <SelectTrigger id="class-select">
+                      <SelectValue placeholder="Select a class" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teacherClasses.map((classItem) => (
+                        <SelectItem key={classItem.id} value={classItem.id}>
+                          {classItem.name} - {classItem.subject}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {selectedClass && (
+                  <div className="rounded-lg border p-4 space-y-2">
+                    <h4 className="font-semibold">Class Information</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Subject:</p>
+                        <p>{classes.find(c => c.id === selectedClass)?.subject}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Room Number:</p>
+                        <p>{classes.find(c => c.id === selectedClass)?.room}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {!isScanning ? (
+                  <Button 
+                    className="w-full bg-school-primary hover:bg-school-secondary" 
+                    onClick={handleStartScan}
+                    disabled={!selectedClass}
+                  >
+                    <QrCode className="mr-2 h-4 w-4" />
+                    Start Scanning
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={handleStopScan}
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Stop Scanning
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+            
+            {isScanning && (
+              <Card className="mt-4 bg-muted/50 border-school-primary">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <RefreshCw className="h-5 w-5 animate-spin text-school-primary" />
+                    Scanner Active
+                  </CardTitle>
+                  <CardDescription>
+                    Scanning for Class: {classes.find(c => c.id === selectedClass)?.name}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pb-2">
+                  <Alert>
+                    <QrCode className="h-4 w-4" />
+                    <AlertTitle>Ready to scan</AlertTitle>
+                    <AlertDescription>
+                      Scan student ID cards or bracelets to record attendance.
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
+            )}
+            
+            {recentScans.length > 0 && (
+              <Card className="mt-4">
+                <CardHeader>
+                  <CardTitle>Recent Scans</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {recentScans.map((scan, index) => (
+                      <div 
+                        key={index} 
+                        className={`flex items-center justify-between rounded-lg border p-3 ${
+                          scan.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {scan.success ? (
+                            <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                              <Check className="h-4 w-4 text-school-success" />
+                            </div>
+                          ) : (
+                            <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
+                              <QrCode className="h-4 w-4 text-school-danger" />
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-medium">{scan.name}</p>
+                            <p className="text-xs text-muted-foreground">ID: {scan.id}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <Badge variant={scan.success ? "default" : "outline"} className={scan.success ? "bg-school-success" : "text-school-danger"}>
+                            {scan.success ? "Checked In" : "Failed"}
+                          </Badge>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatTime(scan.time)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Standard attendance page (original behavior)
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -180,6 +425,24 @@ export default function Attendance() {
                   </div>
                 </div>
               )}
+              
+              <div className="rounded-lg border p-4 space-y-2 bg-muted/50">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <User className="h-4 w-4 text-primary" />
+                  Classroom Device Mode
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  Set up a dedicated device in each classroom for attendance tracking:
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="mt-2"
+                  onClick={() => navigate("/classroom-login/RM001")}
+                >
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Open Classroom Device
+                </Button>
+              </div>
             </CardContent>
             <CardFooter>
               {!isScanning ? (

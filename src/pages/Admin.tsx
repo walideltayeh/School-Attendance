@@ -7,16 +7,17 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { dataService, Teacher, BusRoute } from "@/services/dataService";
-import { PlusCircle, Trash, Save, BookOpen, Edit, X, MapPin } from "lucide-react";
+import { dataService, Teacher, BusRoute, ClassInfo, Room, ClassSchedule } from "@/services/dataService";
+import { PlusCircle, Trash, Save, BookOpen, Edit, X, MapPin, Calendar, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ClassAssignment {
   grade: string;
   section: string;
   subject: string;
-  room: string; // Add room field to track classroom for attendance
+  room: string;
 }
 
 interface AddTeacherFormProps {
@@ -30,15 +31,16 @@ const AddTeacherForm = ({ onSubmit, initialValues, isEditing = false, onCancel }
   const [name, setName] = useState(initialValues?.name || "");
   const [email, setEmail] = useState(initialValues?.email || "");
   const [phone, setPhone] = useState(initialValues?.phone || "");
+  const [username, setUsername] = useState(initialValues?.username || "");
+  const [password, setPassword] = useState(initialValues?.password || "");
+  const [showPassword, setShowPassword] = useState(false);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(initialValues?.subjects || []);
   const [classAssignments, setClassAssignments] = useState<ClassAssignment[]>(() => {
     if (initialValues?.classes?.length) {
       return initialValues.classes.map(cls => {
-        // Parse the class string to extract information
         const match = cls.match(/(Grade \d+) - Section ([A-E]) \((.*)\)/);
         if (match) {
           const [, grade, section, subject] = match;
-          // Find the room associated with this class
           const classInfo = dataService.getClasses().find(c => 
             c.name === `${grade} - Section ${section}` && 
             c.subject === subject);
@@ -77,6 +79,10 @@ const AddTeacherForm = ({ onSubmit, initialValues, isEditing = false, onCancel }
   const classOptions = ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"];
   const sectionOptions = ["A", "B", "C", "D", "E"];
 
+  const validateRoomName = (roomName: string): boolean => {
+    return dataService.isValidRoomName(roomName);
+  };
+
   const handleAddClassAssignment = () => {
     setClassAssignments([...classAssignments, { grade: "", section: "", subject: "", room: "" }]);
   };
@@ -107,7 +113,15 @@ const AddTeacherForm = ({ onSubmit, initialValues, isEditing = false, onCancel }
       return;
     }
 
-    // Check if at least one class assignment is complete
+    if (!username || !password) {
+      toast({
+        title: "Error",
+        description: "Please provide a username and password for teacher login",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const hasCompleteAssignment = classAssignments.some(a => a.grade && a.section && a.subject && a.room);
     if (!hasCompleteAssignment) {
       toast({
@@ -118,7 +132,19 @@ const AddTeacherForm = ({ onSubmit, initialValues, isEditing = false, onCancel }
       return;
     }
 
-    // Format class assignments as strings
+    const invalidRooms = classAssignments
+      .filter(a => a.room)
+      .filter(a => !validateRoomName(a.room));
+      
+    if (invalidRooms.length > 0) {
+      toast({
+        title: "Invalid Room Name",
+        description: "Room names must be in the format 'Room XX' where XX is a number between 01 and 100",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const formattedClasses = classAssignments
       .filter(a => a.grade && a.section && a.subject)
       .map(a => `${a.grade} - Section ${a.section} (${a.subject})`);
@@ -127,19 +153,22 @@ const AddTeacherForm = ({ onSubmit, initialValues, isEditing = false, onCancel }
       name,
       email,
       phone,
-      subject: selectedSubjects[0] || "", // Primary subject is the first one selected
+      username,
+      password,
+      subject: selectedSubjects[0] || "",
       subjects: selectedSubjects,
       classes: formattedClasses,
-      students: initialValues?.students || 0 // Keep the original student count if editing
+      students: initialValues?.students || 0
     };
     
     onSubmit(newTeacher, classAssignments);
     
-    // Reset form if not editing
     if (!isEditing) {
       setName("");
       setEmail("");
       setPhone("");
+      setUsername("");
+      setPassword("");
       setSelectedSubjects([]);
       setClassAssignments([{ grade: "", section: "", subject: "", room: "" }]);
     }
@@ -149,7 +178,6 @@ const AddTeacherForm = ({ onSubmit, initialValues, isEditing = false, onCancel }
       description: isEditing ? "Teacher updated successfully" : "Teacher added successfully",
     });
 
-    // If we're editing and there's a cancel handler, call it
     if (isEditing && onCancel) {
       onCancel();
     }
@@ -194,6 +222,36 @@ const AddTeacherForm = ({ onSubmit, initialValues, isEditing = false, onCancel }
             onChange={setSelectedSubjects}
             placeholder="Select subjects"
           />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="username">Username (for login)</Label>
+          <Input
+            id="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="jdoe"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm" 
+              className="absolute right-2 top-1/2 transform -translate-y-1/2"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
       </div>
       
@@ -283,8 +341,12 @@ const AddTeacherForm = ({ onSubmit, initialValues, isEditing = false, onCancel }
                   id={`room-${index}`}
                   value={assignment.room}
                   onChange={(e) => updateClassAssignment(index, "room", e.target.value)}
-                  placeholder="Room 101"
+                  placeholder="Room 01"
+                  className={!validateRoomName(assignment.room) && assignment.room ? "border-destructive" : ""}
                 />
+                {!validateRoomName(assignment.room) && assignment.room && (
+                  <p className="text-xs text-destructive">Must be between Room 01 and Room 100</p>
+                )}
               </div>
             </div>
             
@@ -356,7 +418,6 @@ const AddBusRouteForm = ({ onSubmit }: AddBusRouteFormProps) => {
     
     onSubmit(newRoute);
     
-    // Reset form
     setRouteName("");
     setDriverName("");
     setPhone("");
@@ -449,37 +510,266 @@ const AddBusRouteForm = ({ onSubmit }: AddBusRouteFormProps) => {
   );
 };
 
+interface ClassScheduleFormProps {
+  onSubmit: (schedule: any) => void;
+}
+
+const ClassScheduleForm = ({ onSubmit }: ClassScheduleFormProps) => {
+  const [selectedTeacher, setSelectedTeacher] = useState("");
+  const [selectedClass, setSelectedClass] = useState("");
+  const [selectedRoom, setSelectedRoom] = useState("");
+  const [selectedDay, setSelectedDay] = useState<string>("Monday");
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("1");
+  const [weekSchedule, setWeekSchedule] = useState<number[]>([1]);
+  const [applyToAllWeeks, setApplyToAllWeeks] = useState(false);
+  
+  const teachers = dataService.getTeachers();
+  const rooms = dataService.getRooms();
+  
+  const teacherClasses = selectedTeacher 
+    ? teachers.find(t => t.id === selectedTeacher)?.classes.map(c => {
+        const match = c.match(/(.*) \((.*)\)/);
+        return match ? { name: match[1], subject: match[2] } : null;
+      }).filter(Boolean) || []
+    : [];
+  
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+  const periods = Array.from({ length: 10 }, (_, i) => String(i + 1));
+  const weeks = [1, 2, 3, 4];
+  
+  const handleWeekChange = (week: number) => {
+    if (applyToAllWeeks) {
+      setWeekSchedule([1, 2, 3, 4]);
+    } else {
+      setWeekSchedule(prev => 
+        prev.includes(week) 
+          ? prev.filter(w => w !== week) 
+          : [...prev, week]
+      );
+    }
+  };
+  
+  useEffect(() => {
+    if (applyToAllWeeks) {
+      setWeekSchedule([1, 2, 3, 4]);
+    } else {
+      setWeekSchedule([1]);
+    }
+  }, [applyToAllWeeks]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedTeacher || !selectedClass || !selectedRoom || !selectedDay || !selectedPeriod || weekSchedule.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const teacher = teachers.find(t => t.id === selectedTeacher);
+    const selectedClassObj = teacherClasses.find(c => c?.name === selectedClass);
+    const room = rooms.find(r => r.id === selectedRoom);
+    
+    if (!teacher || !selectedClassObj || !room) {
+      toast({
+        title: "Error",
+        description: "Invalid selection - please try again",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const schedules = weekSchedule.map(week => ({
+      teacherId: teacher.id,
+      teacherName: teacher.name,
+      classId: selectedClass,
+      className: selectedClass,
+      roomId: room.id,
+      roomName: room.name,
+      day: selectedDay,
+      period: parseInt(selectedPeriod),
+      week: week
+    }));
+    
+    schedules.forEach(schedule => {
+      onSubmit(schedule);
+    });
+    
+    setSelectedTeacher("");
+    setSelectedClass("");
+    setSelectedRoom("");
+    setSelectedDay("Monday");
+    setSelectedPeriod("1");
+    if (!applyToAllWeeks) {
+      setWeekSchedule([1]);
+    }
+
+    toast({
+      title: "Success",
+      description: `Class schedule added for ${schedules.length} week(s)`,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="teacher">Teacher</Label>
+          <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
+            <SelectTrigger id="teacher">
+              <SelectValue placeholder="Select teacher" />
+            </SelectTrigger>
+            <SelectContent>
+              {teachers.map((teacher) => (
+                <SelectItem key={teacher.id} value={teacher.id}>
+                  {teacher.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="class">Class</Label>
+          <Select 
+            value={selectedClass} 
+            onValueChange={setSelectedClass}
+            disabled={!selectedTeacher || teacherClasses.length === 0}
+          >
+            <SelectTrigger id="class">
+              <SelectValue placeholder={!selectedTeacher ? "Select a teacher first" : "Select class"} />
+            </SelectTrigger>
+            <SelectContent>
+              {teacherClasses.map((classObj, index) => (
+                <SelectItem key={index} value={classObj?.name || ""}>
+                  {classObj?.name} ({classObj?.subject})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="room">Room</Label>
+          <Select value={selectedRoom} onValueChange={setSelectedRoom}>
+            <SelectTrigger id="room">
+              <SelectValue placeholder="Select room" />
+            </SelectTrigger>
+            <SelectContent>
+              {rooms.map((room) => (
+                <SelectItem key={room.id} value={room.id}>
+                  {room.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="day">Day</Label>
+          <Select value={selectedDay} onValueChange={setSelectedDay}>
+            <SelectTrigger id="day">
+              <SelectValue placeholder="Select day" />
+            </SelectTrigger>
+            <SelectContent>
+              {days.map((day) => (
+                <SelectItem key={day} value={day}>
+                  {day}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="period">Period</Label>
+          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+            <SelectTrigger id="period">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              {periods.map((period) => (
+                <SelectItem key={period} value={period}>
+                  Period {period}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      
+      <div className="space-y-2 border rounded-md p-4">
+        <div className="flex items-center space-x-2 mb-4">
+          <Checkbox 
+            id="applyToAll" 
+            checked={applyToAllWeeks} 
+            onCheckedChange={(checked) => setApplyToAllWeeks(checked === true)}
+          />
+          <Label htmlFor="applyToAll" className="font-medium">
+            Apply to all weeks (2, 3, 4 same as Week 1)
+          </Label>
+        </div>
+        
+        {!applyToAllWeeks && (
+          <div className="space-y-2">
+            <Label className="block mb-2">Select weeks for this schedule:</Label>
+            <div className="flex flex-wrap gap-2">
+              {weeks.map((week) => (
+                <Button
+                  key={week}
+                  type="button"
+                  variant={weekSchedule.includes(week) ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleWeekChange(week)}
+                  className={weekSchedule.includes(week) ? "bg-primary" : ""}
+                >
+                  Week {week}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      
+      <Button type="submit" className="w-full">
+        <Save className="h-4 w-4 mr-2" /> Add Schedule
+      </Button>
+    </form>
+  );
+};
+
 const Admin = () => {
   const navigate = useNavigate();
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [schedules, setSchedules] = useState<ClassSchedule[]>([]);
   
   useEffect(() => {
-    // Load teachers when the component mounts
     setTeachers(dataService.getTeachers());
+    setSchedules(dataService.getClassSchedules());
   }, []);
 
   const handleAddTeacher = (teacher: Omit<Teacher, "id">, classAssignments: ClassAssignment[]) => {
     const addedTeacher = dataService.addTeacher(teacher);
     console.log("Added teacher:", addedTeacher);
     
-    // Add teacher's classes to the class list
     if (teacher.classes && teacher.classes.length > 0) {
       teacher.classes.forEach(className => {
-        // Extract the subject from the end of the class name
         const match = className.match(/(.*) \((.*)\)$/);
         if (match) {
           const [, classNameWithoutSubject, subject] = match;
           const teacherName = addedTeacher.name;
           
-          // Find the matching class assignment to get the room
           const classAssignment = classAssignments.find(ca => 
             `${ca.grade} - Section ${ca.section}` === classNameWithoutSubject && 
             ca.subject === subject
           );
           
-          const room = classAssignment?.room || "Room " + Math.floor(Math.random() * 300 + 100); // Use assignment room or random
+          const room = classAssignment?.room || "Room " + Math.floor(Math.random() * 300 + 100);
           
           dataService.addClass({
             name: classNameWithoutSubject,
@@ -491,7 +781,6 @@ const Admin = () => {
       });
     }
     
-    // Refresh the teachers list
     setTeachers(dataService.getTeachers());
     
     toast({
@@ -507,14 +796,11 @@ const Admin = () => {
 
   const handleUpdateTeacher = (updatedTeacherData: Omit<Teacher, "id">, classAssignments: ClassAssignment[]) => {
     if (selectedTeacher) {
-      // In a real application, you would update the teacher in the database
       const updatedTeacher = { 
         ...updatedTeacherData, 
         id: selectedTeacher.id 
       };
       
-      // This is a simplified update that doesn't handle class changes
-      // In a real app, you would need to also update classes
       const updatedTeachers = teachers.map(t => 
         t.id === selectedTeacher.id ? updatedTeacher : t
       );
@@ -540,6 +826,12 @@ const Admin = () => {
     });
   };
 
+  const handleAddSchedule = (schedule: Omit<ClassSchedule, "id">) => {
+    const addedSchedule = dataService.addClassSchedule(schedule);
+    console.log("Added schedule:", addedSchedule);
+    setSchedules(dataService.getClassSchedules());
+  };
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
@@ -560,9 +852,10 @@ const Admin = () => {
       </div>
       
       <Tabs defaultValue="teachers" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="teachers">Manage Teachers</TabsTrigger>
           <TabsTrigger value="buses">Manage Bus Routes</TabsTrigger>
+          <TabsTrigger value="calendar">School Calendar</TabsTrigger>
         </TabsList>
         
         <TabsContent value="teachers">
@@ -593,6 +886,9 @@ const Admin = () => {
                       <div>
                         <h3 className="font-medium">{teacher.name}</h3>
                         <p className="text-sm text-muted-foreground">{teacher.email} | {teacher.subjects.join(", ")}</p>
+                        {teacher.username && (
+                          <p className="text-xs text-muted-foreground">Username: {teacher.username}</p>
+                        )}
                       </div>
                       <Button variant="outline" size="sm" onClick={() => handleEditTeacher(teacher)}>
                         <Edit className="h-4 w-4 mr-2" /> Edit
@@ -618,9 +914,51 @@ const Admin = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        
+        <TabsContent value="calendar">
+          <Card>
+            <CardHeader>
+              <CardTitle>Class Scheduling</CardTitle>
+              <CardDescription>
+                Create and manage the school timetable
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ClassScheduleForm onSubmit={handleAddSchedule} />
+            </CardContent>
+          </Card>
+          
+          {schedules.length > 0 && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Current Schedules</CardTitle>
+                <CardDescription>
+                  View and manage classroom assignments
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {schedules.map((schedule, index) => (
+                    <div key={index} className="border rounded-md p-3 hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Calendar className="h-4 w-4 text-primary" />
+                        <span className="font-medium">{schedule.day} - Period {schedule.period}</span>
+                        <span className="text-xs bg-secondary px-2 py-0.5 rounded-full ml-auto">Week {schedule.week}</span>
+                      </div>
+                      <div className="text-sm space-y-1 mt-2">
+                        <p><span className="text-muted-foreground">Teacher:</span> {schedule.teacherName}</p>
+                        <p><span className="text-muted-foreground">Class:</span> {schedule.className}</p>
+                        <p><span className="text-muted-foreground">Room:</span> {schedule.roomName}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
       </Tabs>
       
-      {/* Edit Teacher Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[800px]">
           <DialogHeader>
