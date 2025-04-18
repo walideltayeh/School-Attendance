@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { dataService, ClassInfo, BusRoute, ScanRecord, Room, Teacher } from "@/services/dataService";
+import { AttendanceScanner } from "@/components/attendance/AttendanceScanner";
 
 export default function Attendance() {
   const { roomId, teacherId } = useParams();
@@ -155,6 +156,17 @@ export default function Attendance() {
     navigate("/");
   };
 
+  // Get the selected item name for display
+  const getSelectedItemName = () => {
+    if (activeTab === "classroom") {
+      const classItem = classes.find(c => c.id === selectedClass);
+      return classItem ? classItem.name : "";
+    } else {
+      const busRoute = busRoutes.find(b => b.id === selectedBus);
+      return busRoute ? busRoute.name : "";
+    }
+  };
+
   // If in classroom device mode with teacher login
   if (roomId && teacherId && teacher) {
     // Get today's schedule for this room
@@ -291,72 +303,14 @@ export default function Attendance() {
               </CardContent>
             </Card>
             
-            {isScanning && (
-              <Card className="mt-4 bg-muted/50 border-school-primary">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2">
-                    <RefreshCw className="h-5 w-5 animate-spin text-school-primary" />
-                    Scanner Active
-                  </CardTitle>
-                  <CardDescription>
-                    Scanning for Class: {classes.find(c => c.id === selectedClass)?.name}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pb-2">
-                  <Alert>
-                    <QrCode className="h-4 w-4" />
-                    <AlertTitle>Ready to scan</AlertTitle>
-                    <AlertDescription>
-                      Scan student ID cards or bracelets to record attendance.
-                    </AlertDescription>
-                  </Alert>
-                </CardContent>
-              </Card>
-            )}
-            
-            {recentScans.length > 0 && (
-              <Card className="mt-4">
-                <CardHeader>
-                  <CardTitle>Recent Scans</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {recentScans.map((scan, index) => (
-                      <div 
-                        key={index} 
-                        className={`flex items-center justify-between rounded-lg border p-3 ${
-                          scan.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          {scan.success ? (
-                            <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                              <Check className="h-4 w-4 text-school-success" />
-                            </div>
-                          ) : (
-                            <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
-                              <QrCode className="h-4 w-4 text-school-danger" />
-                            </div>
-                          )}
-                          <div>
-                            <p className="font-medium">{scan.name}</p>
-                            <p className="text-xs text-muted-foreground">ID: {scan.id}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <Badge variant={scan.success ? "default" : "outline"} className={scan.success ? "bg-school-success" : "text-school-danger"}>
-                            {scan.success ? "Checked In" : "Failed"}
-                          </Badge>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {formatTime(scan.time)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            <AttendanceScanner
+              type="classroom"
+              selectedItemName={classes.find(c => c.id === selectedClass)?.name || ""}
+              isScanning={isScanning}
+              onStartScan={handleStartScan}
+              onStopScan={handleStopScan}
+              recentScans={recentScans}
+            />
           </div>
         </div>
       </div>
@@ -530,78 +484,14 @@ export default function Attendance() {
         </TabsContent>
       </Tabs>
       
-      {isScanning && (
-        <Card className="bg-muted/50 border-school-primary">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2">
-              <RefreshCw className="h-5 w-5 animate-spin text-school-primary" />
-              Scanner Active
-            </CardTitle>
-            <CardDescription>
-              {activeTab === "classroom" 
-                ? `Scanning for Class: ${classes.find(c => c.id === selectedClass)?.name}`
-                : `Scanning for Bus Route: ${busRoutes.find(b => b.id === selectedBus)?.name}`
-              }
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pb-2">
-            <Alert>
-              <QrCode className="h-4 w-4" />
-              <AlertTitle>Ready to scan</AlertTitle>
-              <AlertDescription>
-                Scan student ID cards or bracelets to record attendance.
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
-      )}
-      
-      {recentScans.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Scans</CardTitle>
-            <CardDescription>
-              History of recent attendance scans
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {recentScans.map((scan, index) => (
-                <div 
-                  key={index} 
-                  className={`flex items-center justify-between rounded-lg border p-3 ${
-                    scan.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    {scan.success ? (
-                      <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                        <Check className="h-4 w-4 text-school-success" />
-                      </div>
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
-                        <QrCode className="h-4 w-4 text-school-danger" />
-                      </div>
-                    )}
-                    <div>
-                      <p className="font-medium">{scan.name}</p>
-                      <p className="text-xs text-muted-foreground">ID: {scan.id}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <Badge variant={scan.success ? "default" : "outline"} className={scan.success ? "bg-school-success" : "text-school-danger"}>
-                      {scan.success ? "Checked In" : "Failed"}
-                    </Badge>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatTime(scan.time)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <AttendanceScanner
+        type={activeTab as "classroom" | "bus"}
+        selectedItemName={getSelectedItemName()}
+        isScanning={isScanning}
+        onStartScan={handleStartScan}
+        onStopScan={handleStopScan}
+        recentScans={recentScans}
+      />
     </div>
   );
 }

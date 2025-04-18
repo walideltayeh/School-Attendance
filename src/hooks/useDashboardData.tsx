@@ -52,12 +52,14 @@ export function useDashboardData(): DashboardData {
   const [attendanceData, setAttendanceData] = useState([]);
 
   useEffect(() => {
+    // Load data from dataService
     const students = dataService.getStudents();
     const teachers = dataService.getTeachers();
     const busRoutes = dataService.getBusRoutes().filter(route => route.status === "active");
     const attendanceStats = dataService.getAttendanceData();
     const activities = dataService.getRecentActivities();
     
+    // Calculate attendance percentage
     let attendancePercentage = "0%";
     if (attendanceStats.length > 0) {
       const latestDay = attendanceStats[attendanceStats.length - 1];
@@ -67,6 +69,7 @@ export function useDashboardData(): DashboardData {
       }
     }
     
+    // Calculate attendance trend
     let attendanceTrend = "0%";
     let trendType: "positive" | "negative" | "neutral" = "neutral";
     
@@ -82,6 +85,7 @@ export function useDashboardData(): DashboardData {
       trendType = trendValue > 0 ? "positive" : trendValue < 0 ? "negative" : "neutral";
     }
     
+    // Update stats with real data
     setStats([
       {
         title: "Total Students",
@@ -113,8 +117,10 @@ export function useDashboardData(): DashboardData {
       },
     ]);
     
+    // Set activities data
     setRecentActivities(activities);
     
+    // Format attendance data for chart
     const chartData = attendanceStats.map(day => ({
       date: new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       present: day.present,
