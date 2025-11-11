@@ -50,33 +50,46 @@ export default function Auth() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log("Sign up form submitted", { signUpEmail, signUpFullName });
+    
     if (!signUpEmail || !signUpPassword || !signUpFullName || !signUpConfirmPassword) {
       toast.error("Please fill in all fields");
+      console.log("Validation failed: missing fields");
       return;
     }
     
     if (signUpPassword !== signUpConfirmPassword) {
       toast.error("Passwords do not match");
+      console.log("Validation failed: passwords don't match");
       return;
     }
     
     if (signUpPassword.length < 6) {
       toast.error("Password must be at least 6 characters");
+      console.log("Validation failed: password too short");
       return;
     }
     
     setIsLoading(true);
+    console.log("Calling signUp function...");
     
-    const { error } = await signUp(signUpEmail, signUpPassword, signUpFullName);
-    
-    if (error) {
-      if (error.message.includes("already registered")) {
-        toast.error("This email is already registered");
+    try {
+      const { error } = await signUp(signUpEmail, signUpPassword, signUpFullName);
+      
+      if (error) {
+        console.error("Sign up error:", error);
+        if (error.message.includes("already registered")) {
+          toast.error("This email is already registered");
+        } else {
+          toast.error(error.message || "Failed to sign up");
+        }
       } else {
-        toast.error(error.message || "Failed to sign up");
+        console.log("Sign up successful!");
+        toast.success("Account created successfully!");
       }
-    } else {
-      toast.success("Account created successfully!");
+    } catch (err) {
+      console.error("Unexpected error during sign up:", err);
+      toast.error("An unexpected error occurred");
     }
     
     setIsLoading(false);
