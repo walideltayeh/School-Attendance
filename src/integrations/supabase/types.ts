@@ -14,16 +14,541 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      attendance_records: {
+        Row: {
+          class_id: string
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          recorded_by: string
+          scanned_at: string | null
+          status: string
+          student_id: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          date: string
+          id?: string
+          notes?: string | null
+          recorded_by: string
+          scanned_at?: string | null
+          status: string
+          student_id: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string
+          scanned_at?: string | null
+          status?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bus_assignments: {
+        Row: {
+          assigned_at: string
+          id: string
+          route_id: string
+          status: Database["public"]["Enums"]["user_status"] | null
+          stop_id: string
+          student_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          id?: string
+          route_id: string
+          status?: Database["public"]["Enums"]["user_status"] | null
+          stop_id: string
+          student_id: string
+        }
+        Update: {
+          assigned_at?: string
+          id?: string
+          route_id?: string
+          status?: Database["public"]["Enums"]["user_status"] | null
+          stop_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bus_assignments_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "bus_routes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bus_assignments_stop_id_fkey"
+            columns: ["stop_id"]
+            isOneToOne: false
+            referencedRelation: "bus_stops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bus_assignments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bus_routes: {
+        Row: {
+          created_at: string
+          departure_time: string
+          driver_name: string
+          driver_phone: string
+          id: string
+          name: string
+          return_time: string
+          route_code: string
+          status: Database["public"]["Enums"]["user_status"] | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          departure_time: string
+          driver_name: string
+          driver_phone: string
+          id?: string
+          name: string
+          return_time: string
+          route_code: string
+          status?: Database["public"]["Enums"]["user_status"] | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          departure_time?: string
+          driver_name?: string
+          driver_phone?: string
+          id?: string
+          name?: string
+          return_time?: string
+          route_code?: string
+          status?: Database["public"]["Enums"]["user_status"] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bus_stops: {
+        Row: {
+          arrival_time: string
+          created_at: string
+          id: string
+          location: string
+          name: string
+          route_id: string
+          stop_order: number
+        }
+        Insert: {
+          arrival_time: string
+          created_at?: string
+          id?: string
+          location: string
+          name: string
+          route_id: string
+          stop_order: number
+        }
+        Update: {
+          arrival_time?: string
+          created_at?: string
+          id?: string
+          location?: string
+          name?: string
+          route_id?: string
+          stop_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bus_stops_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "bus_routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_enrollments: {
+        Row: {
+          class_id: string
+          enrolled_at: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          class_id: string
+          enrolled_at?: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          class_id?: string
+          enrolled_at?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_enrollments_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_enrollments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_schedules: {
+        Row: {
+          class_id: string
+          created_at: string
+          day: Database["public"]["Enums"]["day_of_week"]
+          id: string
+          period_id: string
+          week_number: number
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          day: Database["public"]["Enums"]["day_of_week"]
+          id?: string
+          period_id: string
+          week_number?: number
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          day?: Database["public"]["Enums"]["day_of_week"]
+          id?: string
+          period_id?: string
+          week_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_schedules_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_schedules_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      classes: {
+        Row: {
+          created_at: string
+          grade: string
+          id: string
+          name: string
+          room_number: string
+          section: string
+          subject: string
+          teacher_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          grade: string
+          id?: string
+          name: string
+          room_number: string
+          section: string
+          subject: string
+          teacher_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          grade?: string
+          id?: string
+          name?: string
+          room_number?: string
+          section?: string
+          subject?: string
+          teacher_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "classes_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          read?: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      periods: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          period_number: number
+          start_time: string
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          period_number: number
+          start_time: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          period_number?: number
+          start_time?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      students: {
+        Row: {
+          allergies: boolean | null
+          allergies_details: string | null
+          blood_type: Database["public"]["Enums"]["blood_type"] | null
+          created_at: string
+          full_name: string
+          grade: string
+          id: string
+          section: string
+          status: Database["public"]["Enums"]["user_status"] | null
+          student_code: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          allergies?: boolean | null
+          allergies_details?: string | null
+          blood_type?: Database["public"]["Enums"]["blood_type"] | null
+          created_at?: string
+          full_name: string
+          grade: string
+          id?: string
+          section: string
+          status?: Database["public"]["Enums"]["user_status"] | null
+          student_code: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          allergies?: boolean | null
+          allergies_details?: string | null
+          blood_type?: Database["public"]["Enums"]["blood_type"] | null
+          created_at?: string
+          full_name?: string
+          grade?: string
+          id?: string
+          section?: string
+          status?: Database["public"]["Enums"]["user_status"] | null
+          student_code?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teachers: {
+        Row: {
+          created_at: string
+          id: string
+          subjects: string[]
+          teacher_code: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          subjects?: string[]
+          teacher_code: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          subjects?: string[]
+          teacher_code?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teachers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_student_id: { Args: { _user_id: string }; Returns: string }
+      get_user_teacher_id: { Args: { _user_id: string }; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "teacher" | "student" | "parent"
+      blood_type: "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-"
+      day_of_week: "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday"
+      user_status: "active" | "inactive"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +675,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "teacher", "student", "parent"],
+      blood_type: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+      day_of_week: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      user_status: ["active", "inactive"],
+    },
   },
 } as const
