@@ -4,14 +4,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { dataService, Teacher, BusRoute, ClassSchedule } from "@/services/dataService";
-import { PlusCircle, Edit, X, Calendar, Pencil, Trash } from "lucide-react";
+import { dataService, Teacher, BusRoute, ClassSchedule, ClassInfo } from "@/services/dataService";
+import { PlusCircle, Edit, X, Calendar, Pencil, Trash, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ClassPeriodsForm } from "@/components/admin/ClassPeriodsForm";
 import { ClassScheduleForm } from "@/components/admin/ClassScheduleForm";
 import { AddTeacherForm } from "@/components/admin/AddTeacherForm";
 import { AddBusRouteForm } from "@/components/admin/AddBusRouteForm";
+import { AddClassForm } from "@/components/admin/AddClassForm";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -21,10 +22,14 @@ const Admin = () => {
   const [schedules, setSchedules] = useState<ClassSchedule[]>([]);
   const [selectedSchedule, setSelectedSchedule] = useState<ClassSchedule | null>(null);
   const [isScheduleEditDialogOpen, setIsScheduleEditDialogOpen] = useState(false);
+  const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
+  const [isClassEditDialogOpen, setIsClassEditDialogOpen] = useState(false);
   
   useEffect(() => {
     setTeachers(dataService.getTeachers());
     setSchedules(dataService.getClassSchedules());
+    setClasses(dataService.getClasses());
   }, []);
 
   const handleAddTeacher = (teacher: Omit<Teacher, "id">, classAssignments: any[]) => {
@@ -132,13 +137,53 @@ const Admin = () => {
   };
 
   const handleDeleteSchedule = (scheduleId: string) => {
-    // Filter out the schedule to be deleted
     const updatedSchedules = schedules.filter(s => s.id !== scheduleId);
     setSchedules(updatedSchedules);
     
     toast({
       title: "Schedule Deleted",
       description: "The schedule has been removed",
+    });
+  };
+
+  const handleAddClass = (classData: any) => {
+    const addedClass = dataService.addClass(classData);
+    setClasses(dataService.getClasses());
+    
+    toast({
+      title: "Class Added",
+      description: `${classData.name} (${classData.subject}) has been created`,
+    });
+  };
+
+  const handleEditClass = (classInfo: ClassInfo) => {
+    setSelectedClass(classInfo);
+    setIsClassEditDialogOpen(true);
+  };
+
+  const handleUpdateClass = (updatedClassData: any) => {
+    if (selectedClass) {
+      const updatedClasses = classes.map(c => 
+        c.id === selectedClass.id ? { ...updatedClassData, id: selectedClass.id } : c
+      );
+      setClasses(updatedClasses);
+      setIsClassEditDialogOpen(false);
+      setSelectedClass(null);
+      
+      toast({
+        title: "Class Updated",
+        description: "Class information has been updated",
+      });
+    }
+  };
+
+  const handleDeleteClass = (classId: string) => {
+    const updatedClasses = classes.filter(c => c.id !== classId);
+    setClasses(updatedClasses);
+    
+    toast({
+      title: "Class Deleted",
+      description: "The class has been removed",
     });
   };
 
@@ -164,13 +209,66 @@ const Admin = () => {
         </Button>
       </div>
       
-      <Tabs defaultValue="teachers" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-6">
+      <Tabs defaultValue="classes" className="w-full">
+        <TabsList className="grid w-full grid-cols-5 mb-6">
+          <TabsTrigger value="classes">
+            <BookOpen className="h-4 w-4 mr-2" />
+            Manage Classes
+          </TabsTrigger>
           <TabsTrigger value="teachers">Manage Teachers</TabsTrigger>
-          <TabsTrigger value="buses">Manage Bus Routes</TabsTrigger>
-          <TabsTrigger value="calendar">School Calendar</TabsTrigger>
-          <TabsTrigger value="periods">Class Periods</TabsTrigger>
+          <TabsTrigger value="buses">Bus Routes</TabsTrigger>
+          <TabsTrigger value="calendar">Calendar</TabsTrigger>
+          <TabsTrigger value="periods">Periods</TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="classes">
+          <Card>
+            <CardHeader>
+              <CardTitle>Add New Class</CardTitle>
+              <CardDescription>
+                Create classes by selecting grade, section, subject, and room
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AddClassForm onSubmit={handleAddClass} />
+            </CardContent>
+          </Card>
+          
+          {classes.length > 0 && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Class List</CardTitle>
+                <CardDescription>
+                  Manage existing classes, grades, sections, and subjects
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {classes.map(classInfo => (
+                    <div key={classInfo.id} className="flex justify-between items-center p-4 border rounded-md hover:bg-muted/50 transition-colors">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-lg">{classInfo.name}</h3>
+                        <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
+                          <span><strong>Subject:</strong> {classInfo.subject}</span>
+                          <span><strong>Room:</strong> {classInfo.room}</span>
+                          <span><strong>Teacher:</strong> {classInfo.teacher}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleEditClass(classInfo)}>
+                          <Edit className="h-4 w-4 mr-2" /> Edit
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteClass(classInfo.id)}>
+                          <Trash className="h-4 w-4 mr-2" /> Delete
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
         
         <TabsContent value="teachers">
           <Card>
@@ -341,6 +439,30 @@ const Admin = () => {
               onSubmit={handleUpdateSchedule} 
               editingSchedule={selectedSchedule}
               onCancelEdit={() => setIsScheduleEditDialogOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isClassEditDialogOpen} onOpenChange={setIsClassEditDialogOpen}>
+        <DialogContent className="sm:max-w-[800px]">
+          <DialogHeader>
+            <DialogTitle>Edit Class</DialogTitle>
+          </DialogHeader>
+          {selectedClass && (
+            <AddClassForm 
+              onSubmit={handleUpdateClass} 
+              initialValues={{
+                id: selectedClass.id,
+                name: selectedClass.name,
+                grade: selectedClass.name.split(' - ')[0],
+                section: selectedClass.name.split('Section ')[1],
+                subject: selectedClass.subject,
+                room: selectedClass.room,
+                teacherName: selectedClass.teacher
+              }}
+              isEditing={true}
+              onCancel={() => setIsClassEditDialogOpen(false)}
             />
           )}
         </DialogContent>
