@@ -64,7 +64,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: A
       section,
       subject,
       room,
-      teacherId: teacherId || undefined,
+      teacherId: teacherId && teacherId !== "unassigned" ? teacherId : undefined,
       teacherName: selectedTeacher?.name || "Unassigned",
     });
 
@@ -73,7 +73,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: A
       setSection("");
       setSubject("");
       setRoom("");
-      setTeacherId("");
+      setTeacherId("unassigned");
     }
   };
 
@@ -145,7 +145,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: A
               <SelectValue placeholder="Select teacher" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Unassigned</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
               {teachers.map((teacher) => (
                 <SelectItem key={teacher.id} value={teacher.id}>
                   {teacher.name} - {teacher.subjects.join(", ")}
