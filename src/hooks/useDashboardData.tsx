@@ -14,6 +14,39 @@ interface DashboardData {
     late: number;
   }>;
   recentActivities: any[];
+  attendanceOverview: {
+    present: number;
+    absent: number;
+    late: number;
+    total: number;
+    presentPercent: number;
+    absentPercent: number;
+    trend: string;
+  };
+  classroomAttendance: Array<{
+    grade: string;
+    section: string;
+    present: number;
+    absent: number;
+    total: number;
+    percentage: number;
+  }>;
+  busAttendance: Array<{
+    route: string;
+    present: number;
+    absent: number;
+    total: number;
+    percentage: number;
+  }>;
+  weekdayData: Array<{
+    day: string;
+    present: number;
+    absent: number;
+  }>;
+  hourlyData: Array<{
+    time: string;
+    count: number;
+  }>;
 }
 
 export function useDashboardData(): DashboardData {
@@ -50,6 +83,19 @@ export function useDashboardData(): DashboardData {
   
   const [recentActivities, setRecentActivities] = useState([]);
   const [attendanceData, setAttendanceData] = useState([]);
+  const [attendanceOverview, setAttendanceOverview] = useState({
+    present: 0,
+    absent: 0,
+    late: 0,
+    total: 0,
+    presentPercent: 0,
+    absentPercent: 0,
+    trend: "0%"
+  });
+  const [classroomAttendance, setClassroomAttendance] = useState([]);
+  const [busAttendance, setBusAttendance] = useState([]);
+  const [weekdayData, setWeekdayData] = useState([]);
+  const [hourlyData, setHourlyData] = useState([]);
 
   useEffect(() => {
     // Load data from dataService
@@ -129,11 +175,122 @@ export function useDashboardData(): DashboardData {
     }));
     
     setAttendanceData(chartData);
+    
+    // Calculate attendance overview
+    if (attendanceStats.length > 0) {
+      let totalPresent = 0;
+      let totalAbsent = 0;
+      let totalLate = 0;
+      
+      attendanceStats.forEach(day => {
+        totalPresent += day.present;
+        totalAbsent += day.absent;
+        totalLate += day.late || 0;
+      });
+      
+      const total = totalPresent + totalAbsent + totalLate;
+      const presentPercent = total > 0 ? parseFloat(((totalPresent / total) * 100).toFixed(1)) : 0;
+      const absentPercent = total > 0 ? parseFloat(((totalAbsent / total) * 100).toFixed(1)) : 0;
+      
+      let trendValue = "0%";
+      if (attendanceStats.length >= 2) {
+        const latest = attendanceStats[attendanceStats.length - 1];
+        const previous = attendanceStats[attendanceStats.length - 2];
+        
+        const latestRate = latest.present / (latest.present + latest.absent + (latest.late || 0));
+        const previousRate = previous.present / (previous.present + previous.absent + (previous.late || 0));
+        
+        trendValue = `${((latestRate - previousRate) * 100).toFixed(1)}%`;
+        if (latestRate > previousRate) {
+          trendValue = "+" + trendValue;
+        }
+      }
+      
+      setAttendanceOverview({
+        present: totalPresent,
+        absent: totalAbsent,
+        late: totalLate,
+        total,
+        presentPercent,
+        absentPercent,
+        trend: trendValue
+      });
+    }
+    
+    // Generate classroom attendance data
+    const classes = dataService.getClasses();
+    const mockClassroomData = classes.map(cls => {
+      const total = Math.floor(Math.random() * 10) + 20;
+      const absent = Math.floor(Math.random() * 3);
+      const present = total - absent;
+      const percentage = parseFloat(((present / total) * 100).toFixed(1));
+      
+      return {
+        grade: cls.name.split(" - ")[0],
+        section: cls.name.split(" - ")[1],
+        present,
+        absent,
+        total,
+        percentage
+      };
+    });
+    setClassroomAttendance(mockClassroomData);
+    
+    // Generate bus attendance data
+    const busRoutes2 = dataService.getBusRoutes();
+    const mockBusData = busRoutes2.map(route => {
+      const total = route.students;
+      const absent = Math.floor(Math.random() * 3);
+      const present = total - absent;
+      const percentage = parseFloat(((present / total) * 100).toFixed(1));
+      
+      return {
+        route: route.name,
+        present,
+        absent,
+        total,
+        percentage
+      };
+    });
+    setBusAttendance(mockBusData);
+    
+    // Generate weekday pattern data
+    const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const mockWeekdayData = weekdays.map((day, index) => {
+      const present = 96 - (index * 2.3);
+      return {
+        day,
+        present: parseFloat(present.toFixed(1)),
+        absent: parseFloat((100 - present).toFixed(1))
+      };
+    });
+    setWeekdayData(mockWeekdayData);
+    
+    // Generate hourly check-in data
+    const hours = [
+      '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM',
+      '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM'
+    ];
+    const mockHourlyData = hours.map(time => {
+      let count;
+      if (time === '8:00 AM' || time === '3:00 PM') {
+        count = Math.floor(Math.random() * 100) + 300;
+      } else {
+        count = Math.floor(Math.random() * 50) + 10;
+      }
+      return { time, count };
+    });
+    setHourlyData(mockHourlyData);
   }, []);
 
   return {
     stats,
     attendanceData,
-    recentActivities
+    recentActivities,
+    attendanceOverview,
+    classroomAttendance,
+    busAttendance,
+    weekdayData,
+    hourlyData
   };
 }
