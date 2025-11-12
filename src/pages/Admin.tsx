@@ -13,6 +13,7 @@ import { ClassScheduleForm } from "@/components/admin/ClassScheduleForm";
 import { AddTeacherForm } from "@/components/admin/AddTeacherForm";
 import { AddBusRouteForm } from "@/components/admin/AddBusRouteForm";
 import { AddClassForm } from "@/components/admin/AddClassForm";
+import { SubjectManagement } from "@/components/admin/SubjectManagement";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -222,11 +223,13 @@ const Admin = () => {
         </TabsList>
         
         <TabsContent value="classes">
-          <Card>
+          <SubjectManagement />
+          
+          <Card className="mt-6">
             <CardHeader>
               <CardTitle>Add New Class</CardTitle>
               <CardDescription>
-                Create classes by selecting grade, section, subject, and room
+                Create classes by selecting grade, section, and subjects
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -248,10 +251,8 @@ const Admin = () => {
                     <div key={classInfo.id} className="flex justify-between items-center p-4 border rounded-md hover:bg-muted/50 transition-colors">
                       <div className="flex-1">
                         <h3 className="font-medium text-lg">{classInfo.name}</h3>
-                        <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
+                        <div className="mt-2 text-sm text-muted-foreground">
                           <span><strong>Subject:</strong> {classInfo.subject}</span>
-                          <span><strong>Room:</strong> {classInfo.room}</span>
-                          <span><strong>Teacher:</strong> {classInfo.teacher}</span>
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -457,9 +458,7 @@ const Admin = () => {
                 name: selectedClass.name,
                 grade: selectedClass.name.split(' - ')[0],
                 section: selectedClass.name.split('Section ')[1],
-                subject: selectedClass.subject,
-                room: selectedClass.room,
-                teacherName: selectedClass.teacher
+                subjects: [selectedClass.subject]
               }}
               isEditing={true}
               onCancel={() => setIsClassEditDialogOpen(false)}

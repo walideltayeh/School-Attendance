@@ -1,30 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { dataService, Teacher } from "@/services/dataService";
 import { toast } from "@/hooks/use-toast";
+import { getAvailableSubjects } from "./SubjectManagement";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 
 interface AddClassFormProps {
   onSubmit: (classData: {
     name: string;
     grade: string;
     section: string;
-    subject: string;
-    room: string;
-    teacherId?: string;
-    teacherName?: string;
+    subjects: string[];
   }) => void;
   initialValues?: {
     id: string;
     name: string;
     grade: string;
     section: string;
-    subject: string;
-    room: string;
-    teacherId?: string;
-    teacherName?: string;
+    subjects: string[];
   };
   isEditing?: boolean;
   onCancel?: () => void;
@@ -32,48 +28,64 @@ interface AddClassFormProps {
 
 const GRADES = ["KG1", "KG2", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"];
 const SECTIONS = ["A", "B", "C", "D", "E", "F"];
-const SUBJECTS = ["Math", "Science", "English", "Arabic", "Social Studies", "Art", "Music", "PE", "Computer Science", "French", "Spanish"];
 
 export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: AddClassFormProps) {
   const [grade, setGrade] = useState(initialValues?.grade || "");
   const [section, setSection] = useState(initialValues?.section || "");
-  const [subject, setSubject] = useState(initialValues?.subject || "");
-  const [room, setRoom] = useState(initialValues?.room || "");
-  const [teacherId, setTeacherId] = useState(initialValues?.teacherId || "");
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(initialValues?.subjects || []);
+  const [currentSubject, setCurrentSubject] = useState("");
+  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
 
-  const teachers = dataService.getTeachers();
+  useEffect(() => {
+    setAvailableSubjects(getAvailableSubjects());
+  }, []);
+
+  const handleAddSubject = () => {
+    if (!currentSubject) return;
+    
+    if (selectedSubjects.includes(currentSubject)) {
+      toast({
+        title: "Subject Already Added",
+        description: "This subject is already in the list",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedSubjects([...selectedSubjects, currentSubject]);
+    setCurrentSubject("");
+  };
+
+  const handleRemoveSubject = (subject: string) => {
+    setSelectedSubjects(selectedSubjects.filter(s => s !== subject));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!grade || !section || !subject || !room) {
+    if (!grade || !section || selectedSubjects.length === 0) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields",
+        description: "Please select grade, section, and at least one subject",
         variant: "destructive",
       });
       return;
     }
 
     const className = `${grade} - Section ${section}`;
-    const selectedTeacher = teachers.find(t => t.id === teacherId);
 
     onSubmit({
       name: className,
       grade,
       section,
-      subject,
-      room,
-      teacherId: teacherId && teacherId !== "unassigned" ? teacherId : undefined,
-      teacherName: selectedTeacher?.name || "Unassigned",
+      subjects: selectedSubjects,
     });
 
     if (!isEditing) {
       setGrade("");
       setSection("");
-      setSubject("");
-      setRoom("");
-      setTeacherId("unassigned");
+      setSelectedSubjects([]);
+      setCurrentSubject("");
     }
   };
 
@@ -112,47 +124,44 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: A
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="subject">Subject *</Label>
-          <Select value={subject} onValueChange={setSubject}>
-            <SelectTrigger id="subject">
-              <SelectValue placeholder="Select subject" />
-            </SelectTrigger>
-            <SelectContent>
-              {SUBJECTS.map((subj) => (
-                <SelectItem key={subj} value={subj}>
-                  {subj}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="room">Room Number *</Label>
-          <Input
-            id="room"
-            value={room}
-            onChange={(e) => setRoom(e.target.value)}
-            placeholder="e.g., Room 101"
-          />
-        </div>
-
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="teacher">Assign Teacher (Optional)</Label>
-          <Select value={teacherId} onValueChange={setTeacherId}>
-            <SelectTrigger id="teacher">
-              <SelectValue placeholder="Select teacher" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="unassigned">Unassigned</SelectItem>
-              {teachers.map((teacher) => (
-                <SelectItem key={teacher.id} value={teacher.id}>
-                  {teacher.name} - {teacher.subjects.join(", ")}
-                </SelectItem>
+          <Label htmlFor="subject">Subjects *</Label>
+          <div className="flex gap-2">
+            <Select value={currentSubject} onValueChange={setCurrentSubject}>
+              <SelectTrigger id="subject">
+                <SelectValue placeholder="Select subjects to add" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableSubjects
+                  .filter(subj => !selectedSubjects.includes(subj))
+                  .map((subj) => (
+                    <SelectItem key={subj} value={subj}>
+                      {subj}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <Button type="button" onClick={handleAddSubject} disabled={!currentSubject}>
+              Add
+            </Button>
+          </div>
+          
+          {selectedSubjects.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {selectedSubjects.map((subject) => (
+                <Badge key={subject} variant="secondary" className="text-sm py-2 px-3">
+                  {subject}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSubject(subject)}
+                    className="ml-2 hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
               ))}
-            </SelectContent>
-          </Select>
+            </div>
+          )}
         </div>
       </div>
 
