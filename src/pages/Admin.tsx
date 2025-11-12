@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { dataService, Teacher, BusRoute, ClassSchedule, ClassInfo } from "@/services/dataService";
 import { PlusCircle, Edit, X, Calendar, Pencil, Trash, BookOpen } from "lucide-react";
@@ -147,13 +148,30 @@ const Admin = () => {
     });
   };
 
-  const handleAddClass = (classData: any) => {
-    const addedClass = dataService.addClass(classData);
+  const handleAddClass = (classData: { grades: string[]; sections: string[]; subjects: string[] }) => {
+    // Create a class for each combination of grade, section, and subject
+    const createdClasses: string[] = [];
+    
+    classData.grades.forEach(grade => {
+      classData.sections.forEach(section => {
+        const className = `${grade} - Section ${section}`;
+        classData.subjects.forEach(subject => {
+          dataService.addClass({
+            name: className,
+            teacher: "Unassigned",
+            room: "TBD",
+            subject: subject
+          });
+          createdClasses.push(`${className} (${subject})`);
+        });
+      });
+    });
+    
     setClasses(dataService.getClasses());
     
     toast({
-      title: "Class Added",
-      description: `${classData.name} (${classData.subject}) has been created`,
+      title: "Classes Created",
+      description: `Created ${createdClasses.length} class${createdClasses.length > 1 ? 'es' : ''} successfully`,
     });
   };
 
@@ -246,21 +264,18 @@ const Admin = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {classes.map(classInfo => (
-                    <div key={classInfo.id} className="flex justify-between items-center p-4 border rounded-md hover:bg-muted/50 transition-colors">
+                    <div key={classInfo.id} className="flex justify-between items-center p-3 border rounded-md hover:bg-muted/50 transition-colors">
                       <div className="flex-1">
-                        <h3 className="font-medium text-lg">{classInfo.name}</h3>
-                        <div className="mt-2 text-sm text-muted-foreground">
-                          <span><strong>Subject:</strong> {classInfo.subject}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium">{classInfo.name}</span>
+                          <Badge variant="secondary">{classInfo.subject}</Badge>
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEditClass(classInfo)}>
-                          <Edit className="h-4 w-4 mr-2" /> Edit
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteClass(classInfo.id)}>
-                          <Trash className="h-4 w-4 mr-2" /> Delete
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteClass(classInfo.id)}>
+                          <Trash className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
