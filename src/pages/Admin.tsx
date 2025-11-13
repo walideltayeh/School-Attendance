@@ -9,6 +9,7 @@ import { dataService, Teacher, BusRoute, ClassSchedule, ClassInfo } from "@/serv
 import { PlusCircle, Edit, X, Calendar, Pencil, Trash, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ClassPeriodsForm } from "@/components/admin/ClassPeriodsForm";
 import { ClassScheduleForm } from "@/components/admin/ClassScheduleForm";
 import { AddTeacherForm } from "@/components/admin/AddTeacherForm";
@@ -27,6 +28,9 @@ const Admin = () => {
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
   const [isClassEditDialogOpen, setIsClassEditDialogOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [classGroupToDelete, setClassGroupToDelete] = useState<string | null>(null);
+  const [editingClassName, setEditingClassName] = useState<string | null>(null);
   
   useEffect(() => {
     setTeachers(dataService.getTeachers());
@@ -178,39 +182,29 @@ const Admin = () => {
     });
   };
 
-  const handleEditClass = (classInfo: ClassInfo) => {
-    setSelectedClass(classInfo);
-    setIsClassEditDialogOpen(true);
-  };
-
-  const handleUpdateClass = (updatedClassData: any) => {
-    if (selectedClass) {
-      const updatedClasses = classes.map(c => 
-        c.id === selectedClass.id ? { ...updatedClassData, id: selectedClass.id } : c
-      );
-      setClasses(updatedClasses);
-      setIsClassEditDialogOpen(false);
-      setSelectedClass(null);
-      
-      toast({
-        title: "Class Updated",
-        description: "Class information has been updated",
-      });
-    }
-  };
-
   const handleDeleteClassGroup = (className: string) => {
-    const classesToDelete = classes.filter(c => c.name === className);
-    const updatedClasses = classes.filter(c => c.name !== className);
+    setClassGroupToDelete(className);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteClassGroup = () => {
+    if (!classGroupToDelete) return;
+    
+    const classesToDelete = classes.filter(c => c.name === classGroupToDelete);
+    const updatedClasses = classes.filter(c => c.name !== classGroupToDelete);
     setClasses(updatedClasses);
     
     toast({
       title: "Class Group Deleted",
-      description: `${className} with ${classesToDelete.length} subject(s) removed`,
+      description: `${classGroupToDelete} with ${classesToDelete.length} subject(s) removed`,
     });
+    
+    setDeleteConfirmOpen(false);
+    setClassGroupToDelete(null);
   };
 
   const handleEditClassGroup = (className: string) => {
+    setEditingClassName(className);
     const classGroup = classes.filter(c => c.name === className);
     if (classGroup.length > 0) {
       const firstClass = classGroup[0];
@@ -224,6 +218,40 @@ const Admin = () => {
       });
       setIsClassEditDialogOpen(true);
     }
+  };
+
+  const handleUpdateClassGroup = (updatedData: { grades: string[]; sections: string[]; subjects: string[] }) => {
+    if (!editingClassName) return;
+    
+    // Remove old classes for this group
+    const updatedClasses = classes.filter(c => c.name !== editingClassName);
+    
+    // Add new classes with updated subjects
+    const newClasses: ClassInfo[] = [];
+    updatedData.grades.forEach(grade => {
+      updatedData.sections.forEach(section => {
+        const className = `${grade} - Section ${section}`;
+        updatedData.subjects.forEach(subject => {
+          newClasses.push({
+            id: `${Date.now()}-${Math.random()}`,
+            name: className,
+            teacher: "Unassigned",
+            room: "TBD",
+            subject: subject
+          });
+        });
+      });
+    });
+    
+    setClasses([...updatedClasses, ...newClasses]);
+    setIsClassEditDialogOpen(false);
+    setEditingClassName(null);
+    setSelectedClass(null);
+    
+    toast({
+      title: "Class Group Updated",
+      description: `Updated subjects for ${editingClassName}`,
+    });
   };
 
   return (
@@ -533,24 +561,50 @@ const Admin = () => {
       <Dialog open={isClassEditDialogOpen} onOpenChange={setIsClassEditDialogOpen}>
         <DialogContent className="sm:max-w-[800px]">
           <DialogHeader>
-            <DialogTitle>Edit Class</DialogTitle>
+            <DialogTitle>Edit Class Group - {editingClassName}</DialogTitle>
           </DialogHeader>
-          {selectedClass && (
+          {selectedClass && editingClassName && (
             <AddClassForm 
-              onSubmit={handleUpdateClass} 
+              onSubmit={handleUpdateClassGroup} 
               initialValues={{
                 id: selectedClass.id,
                 name: selectedClass.name,
-                grade: selectedClass.name.split(' - ')[0],
-                section: selectedClass.name.split('Section ')[1],
-                subjects: [selectedClass.subject]
+                grade: editingClassName.split(' - ')[0],
+                section: editingClassName.split('Section ')[1],
+                subjects: classes.filter(c => c.name === editingClassName).map(c => c.subject)
               }}
               isEditing={true}
-              onCancel={() => setIsClassEditDialogOpen(false)}
+              onCancel={() => {
+                setIsClassEditDialogOpen(false);
+                setEditingClassName(null);
+                setSelectedClass(null);
+              }}
             />
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete {classGroupToDelete} and all {classes.filter(c => c.name === classGroupToDelete).length} subject(s) assigned to it. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setDeleteConfirmOpen(false);
+              setClassGroupToDelete(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteClassGroup} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
