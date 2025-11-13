@@ -17,7 +17,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
-import { dataService, Teacher, ClassInfo, BusRoute } from "@/services/dataService";
+import { dataService, ClassInfo, BusRoute } from "@/services/dataService";
 import { getAvailableGrades, getAvailableSections } from "@/utils/classHelpers";
 
 export default function StudentRegister() {
@@ -34,24 +34,19 @@ export default function StudentRegister() {
   const [allergyDetails, setAllergyDetails] = useState("");
   const [grade, setGrade] = useState("");
   const [section, setSection] = useState("");
-  const [teacher, setTeacher] = useState("");
   const [busRoute, setBusRoute] = useState("");
   
   // Loaded data
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [busRoutes, setBusRoutes] = useState<BusRoute[]>([]);
   const [availableGrades, setAvailableGrades] = useState<string[]>([]);
   const [availableSections, setAvailableSections] = useState<string[]>([]);
-  const [filteredTeachers, setFilteredTeachers] = useState<Teacher[]>([]);
 
   // Load data on component mount
   useEffect(() => {
-    const loadedTeachers = dataService.getTeachers();
     const loadedClasses = dataService.getClasses();
     const loadedBusRoutes = dataService.getBusRoutes();
     
-    setTeachers(loadedTeachers);
     setClasses(loadedClasses);
     setBusRoutes(loadedBusRoutes);
     
@@ -64,45 +59,14 @@ export default function StudentRegister() {
     if (grade) {
       // Get available sections from existing classes only
       getAvailableSections(grade).then(sections => setAvailableSections(sections));
-      
-      // Reset teacher when grade changes
-      setTeacher("");
-      
-      // Update filtered teachers for this grade
-      updateFilteredTeachers(grade, "");
     }
   }, [grade, classes]);
-
-  // Update available teachers when grade and section change
-  useEffect(() => {
-    if (grade && section) {
-      updateFilteredTeachers(grade, section);
-    }
-  }, [section, teachers]);
-
-  // Function to update filtered teachers based on grade and section
-  const updateFilteredTeachers = (selectedGrade: string, selectedSection: string) => {
-    const className = selectedSection 
-      ? `${selectedGrade} - Section ${selectedSection}`
-      : selectedGrade;
-    
-    const teachersForClass = teachers.filter(t => 
-      t.classes.some(cls => cls.includes(className))
-    );
-    
-    setFilteredTeachers(teachersForClass);
-    
-    // If a teacher is selected but not available for this class, reset selection
-    if (teacher && !teachersForClass.some(t => t.name === teacher)) {
-      setTeacher("");
-    }
-  };
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     
     // Form validation
-    if (!firstName || !lastName || !grade || !section || !teacher || !bloodType) {
+    if (!firstName || !lastName || !grade || !section || !bloodType) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -134,7 +98,6 @@ export default function StudentRegister() {
       name: `${firstName} ${lastName}`,
       grade: grade,
       section: section,
-      teacher: teacher,
       bloodType: bloodType,
       allergies: hasAllergies,
       busRoute: requiresBus ? busRoute : "",
@@ -365,7 +328,7 @@ export default function StudentRegister() {
               <CardDescription>
                 {availableGrades.length === 0 
                   ? "No classes available. Please go to Admin → Manage Classes to create classes first."
-                  : "Select a grade, section, and teacher"}
+                  : "Select a grade and section"}
               </CardDescription>
             </CardHeader>
             
@@ -401,24 +364,6 @@ export default function StudentRegister() {
                       {availableSections.map((section) => (
                         <SelectItem key={section} value={section}>
                           Section {section}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="teacher" className="text-right">
-                    Teacher
-                  </Label>
-                  <Select onValueChange={setTeacher} value={teacher} disabled={!grade || !section}>
-                    <SelectTrigger id="teacher" className="col-span-3">
-                      <SelectValue placeholder={grade && section ? "Select teacher" : "Select grade and section first"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredTeachers.map((teacher) => (
-                        <SelectItem key={teacher.id} value={teacher.name}>
-                          {teacher.name} - {teacher.subjects.join(", ")}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -504,10 +449,6 @@ export default function StudentRegister() {
                 <div className="grid grid-cols-3 text-sm">
                   <span className="font-medium">Grade:</span>
                   <span className="col-span-2">{grade || "Not Assigned"}</span>
-                </div>
-                <div className="grid grid-cols-3 text-sm">
-                  <span className="font-medium">Teacher:</span>
-                  <span className="col-span-2">{teacher || "Not Assigned"}</span>
                 </div>
                 <div className="grid grid-cols-3 text-sm">
                   <span className="font-medium">Blood Type:</span>

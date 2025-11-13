@@ -4,7 +4,7 @@ export interface Student {
   name: string;
   grade: string;
   section: string;
-  teacher: string;
+  teacher?: string;
   bloodType: string;
   allergies: boolean;
   busRoute?: string;
