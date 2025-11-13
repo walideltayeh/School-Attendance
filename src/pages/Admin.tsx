@@ -267,22 +267,46 @@ const Admin = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {classes.map(classInfo => (
-                    <div key={classInfo.id} className="flex justify-between items-center p-3 border rounded-md hover:bg-muted/50 transition-colors">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <span className="font-medium">{classInfo.name}</span>
-                          <Badge variant="secondary">{classInfo.subject}</Badge>
+                <div className="space-y-4">
+                  {(() => {
+                    // Group classes by grade-section combination
+                    const grouped = classes.reduce((acc, classInfo) => {
+                      const key = classInfo.name; // e.g., "Grade 1 - Section A"
+                      if (!acc[key]) {
+                        acc[key] = [];
+                      }
+                      acc[key].push(classInfo);
+                      return acc;
+                    }, {} as Record<string, typeof classes>);
+
+                    return Object.entries(grouped)
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([className, classGroup]) => (
+                        <div key={className} className="border rounded-lg p-4 bg-card">
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-semibold text-lg">{className}</h3>
+                            <Badge variant="outline">{classGroup.length} subject{classGroup.length > 1 ? 's' : ''}</Badge>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {classGroup.map(classInfo => (
+                              <Badge 
+                                key={classInfo.id} 
+                                variant="secondary" 
+                                className="text-sm py-2 px-3 flex items-center gap-2"
+                              >
+                                {classInfo.subject}
+                                <button
+                                  onClick={() => handleDeleteClass(classInfo.id)}
+                                  className="ml-1 hover:text-destructive transition-colors"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleDeleteClass(classInfo.id)}>
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                      ));
+                  })()}
                 </div>
               </CardContent>
             </Card>
