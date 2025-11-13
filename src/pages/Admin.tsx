@@ -250,6 +250,9 @@ const Admin = () => {
     
     console.log("Classes created successfully:", data);
     
+    // Reload classes to update UI
+    await loadClasses();
+    
     toast({
       title: "Classes Created",
       description: `Created ${classesToInsert.length} class${classesToInsert.length > 1 ? 'es' : ''} successfully`,
