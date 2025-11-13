@@ -8,6 +8,7 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import { toast } from "@/hooks/use-toast";
 import { dataService, Teacher } from "@/services/dataService";
 import { PlusCircle, Trash, Save, BookOpen, Eye, EyeOff } from "lucide-react";
+import { getAvailableGrades, getAvailableSections, getAvailableSubjects } from "@/utils/classHelpers";
 
 interface ClassAssignment {
   grade: string;
@@ -66,31 +67,12 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
     { label: "Music", value: "Music" },
   ];
 
-  // Get available classes from the classes created in Manage Classes
-  const availableClasses = dataService.getClasses();
+  // Get available grades, sections, and subjects from created classes
+  const availableGrades = getAvailableGrades();
   
-  // Get unique grades and sections from available classes
-  const getAvailableGrades = () => {
-    const grades = new Set(availableClasses.map(c => c.name.split(' - ')[0]));
-    return Array.from(grades).sort();
-  };
+  const getGradeSections = (grade: string) => getAvailableSections(grade);
   
-  const getAvailableSections = (grade: string) => {
-    const sections = new Set(
-      availableClasses
-        .filter(c => c.name.startsWith(grade))
-        .map(c => c.name.split('Section ')[1])
-    );
-    return Array.from(sections).sort();
-  };
-  
-  const getAvailableSubjects = (grade: string, section: string) => {
-    const className = `${grade} - Section ${section}`;
-    const subjects = availableClasses
-      .filter(c => c.name === className)
-      .map(c => c.subject);
-    return subjects;
-  };
+  const getGradeSubjects = (grade: string, section: string) => getAvailableSubjects(grade, section);
 
   const handleAddClassAssignment = () => {
     setClassAssignments([...classAssignments, { grade: "", section: "", subject: "" }]);
@@ -285,10 +267,10 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
                   }}
                 >
                   <SelectTrigger id={`class-${index}`}>
-                    <SelectValue placeholder="Select class" />
+                    <SelectValue placeholder={availableGrades.length === 0 ? "No classes available" : "Select class"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {getAvailableGrades().map((grade) => (
+                    {availableGrades.map((grade) => (
                       <SelectItem key={grade} value={grade}>
                         {grade}
                       </SelectItem>
@@ -311,7 +293,7 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
                     <SelectValue placeholder="Select section" />
                   </SelectTrigger>
                   <SelectContent>
-                    {assignment.grade && getAvailableSections(assignment.grade).map((section) => (
+                    {assignment.grade && getGradeSections(assignment.grade).map((section) => (
                       <SelectItem key={section} value={section}>
                         Section {section}
                       </SelectItem>
@@ -331,7 +313,7 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
                     <SelectValue placeholder="Select subject" />
                   </SelectTrigger>
                   <SelectContent>
-                    {assignment.grade && assignment.section && getAvailableSubjects(assignment.grade, assignment.section).map((subject) => (
+                    {assignment.grade && assignment.section && getGradeSubjects(assignment.grade, assignment.section).map((subject) => (
                       <SelectItem key={subject} value={subject}>
                         {subject}
                       </SelectItem>

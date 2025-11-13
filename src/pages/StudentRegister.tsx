@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import { dataService, Teacher, ClassInfo, BusRoute } from "@/services/dataService";
+import { getAvailableGrades, getAvailableSections } from "@/utils/classHelpers";
 
 export default function StudentRegister() {
   const navigate = useNavigate();
@@ -54,29 +55,15 @@ export default function StudentRegister() {
     setClasses(loadedClasses);
     setBusRoutes(loadedBusRoutes);
     
-    // Extract unique grades
-    const grades = Array.from(new Set(loadedClasses.map(c => c.name.split(" - ")[0])));
-    if (grades.length === 0) {
-      // Fallback grades if no classes exist
-      setAvailableGrades(["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8"]);
-    } else {
-      setAvailableGrades(grades as string[]);
-    }
+    // Get available grades from existing classes only
+    setAvailableGrades(getAvailableGrades());
   }, []);
 
   // Update available sections when grade changes
   useEffect(() => {
     if (grade) {
-      const sectionsForGrade = classes
-        .filter(c => c.name.startsWith(grade))
-        .map(c => c.name.split(" - ")[1].replace("Section ", ""));
-      
-      if (sectionsForGrade.length === 0) {
-        // Fallback sections if no sections exist for this grade
-        setAvailableSections(["A", "B", "C"]);
-      } else {
-        setAvailableSections(sectionsForGrade);
-      }
+      // Get available sections from existing classes only
+      setAvailableSections(getAvailableSections(grade));
       
       // Reset teacher when grade changes
       setTeacher("");
@@ -376,8 +363,9 @@ export default function StudentRegister() {
             <CardHeader>
               <CardTitle>Class Assignment</CardTitle>
               <CardDescription>
-                Select a grade, section, and teacher
-                {availableGrades.length === 0 && " (No classes available, please add teachers and classes first)"}
+                {availableGrades.length === 0 
+                  ? "No classes available. Please go to Admin → Manage Classes to create classes first."
+                  : "Select a grade, section, and teacher"}
               </CardDescription>
             </CardHeader>
             
@@ -387,9 +375,9 @@ export default function StudentRegister() {
                   <Label htmlFor="grade" className="text-right">
                     Grade
                   </Label>
-                  <Select onValueChange={setGrade} value={grade}>
+                  <Select onValueChange={setGrade} value={grade} disabled={availableGrades.length === 0}>
                     <SelectTrigger id="grade" className="col-span-3">
-                      <SelectValue placeholder="Select grade" />
+                      <SelectValue placeholder={availableGrades.length === 0 ? "No classes available" : "Select grade"} />
                     </SelectTrigger>
                     <SelectContent>
                       {availableGrades.map((grade) => (

@@ -8,6 +8,7 @@ import { getAvailableSubjects } from "./SubjectManagement";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ALL_GRADES, ALL_SECTIONS } from "@/utils/classHelpers";
 
 interface AddClassFormProps {
   onSubmit: (classData: {
@@ -26,8 +27,6 @@ interface AddClassFormProps {
   onCancel?: () => void;
 }
 
-const GRADES = ["KG1", "KG2", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"];
-const SECTIONS = ["A", "B", "C", "D", "E", "F"];
 
 export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: AddClassFormProps) {
   const [selectedGrades, setSelectedGrades] = useState<string[]>(initialValues?.grade ? [initialValues.grade] : []);
@@ -94,7 +93,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: A
         <div className="space-y-2">
           <Label>Grades * (Select multiple)</Label>
           <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
-            {GRADES.map((grade) => (
+            {ALL_GRADES.map((grade) => (
               <div key={grade} className="flex items-center space-x-2">
                 <Checkbox
                   id={`grade-${grade}`}
@@ -124,7 +123,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: A
         <div className="space-y-2">
           <Label>Sections * (Select multiple)</Label>
           <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
-            {SECTIONS.map((section) => (
+            {ALL_SECTIONS.map((section) => (
               <div key={section} className="flex items-center space-x-2">
                 <Checkbox
                   id={`section-${section}`}
