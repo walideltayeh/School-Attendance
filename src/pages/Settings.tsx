@@ -61,7 +61,7 @@ export default function Settings() {
     try {
       console.log("Starting data deletion process from Supabase...");
       
-      // Delete data from all tables in the correct order (respecting foreign key constraints)
+      // Delete data from all tables except subjects (respecting foreign key constraints)
       await supabase.from('attendance_records').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       await supabase.from('notifications').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       await supabase.from('class_schedules').delete().neq('id', '00000000-0000-0000-0000-000000000000');
@@ -71,7 +71,7 @@ export default function Settings() {
       await supabase.from('bus_routes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       await supabase.from('periods').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       await supabase.from('classes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('subjects').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      // Skip deleting subjects - keep predefined subjects
       await supabase.from('teachers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       await supabase.from('students').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       
@@ -80,7 +80,7 @@ export default function Settings() {
       
       toast({
         title: "All data deleted",
-        description: "All system data has been successfully deleted.",
+        description: "All system data has been successfully deleted (subjects preserved).",
         variant: "destructive",
       });
       
