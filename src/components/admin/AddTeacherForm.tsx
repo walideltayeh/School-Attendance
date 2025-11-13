@@ -13,7 +13,6 @@ interface ClassAssignment {
   grade: string;
   section: string;
   subject: string;
-  room: string;
 }
 
 interface AddTeacherFormProps {
@@ -37,25 +36,20 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
         const match = cls.match(/(Grade \d+) - Section ([A-E]) \((.*)\)/);
         if (match) {
           const [, grade, section, subject] = match;
-          const classInfo = dataService.getClasses().find(c => 
-            c.name === `${grade} - Section ${section}` && 
-            c.subject === subject);
           
           return { 
             grade, 
             section, 
-            subject,
-            room: classInfo?.room || "" 
+            subject
           };
         }
-        return { grade: "", section: "", subject: "", room: "" };
+        return { grade: "", section: "", subject: "" };
       }).filter(a => a.grade !== "");
     }
     return [{
       grade: "",
       section: "",
-      subject: "",
-      room: ""
+      subject: ""
     }];
   });
 
@@ -72,15 +66,34 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
     { label: "Music", value: "Music" },
   ];
 
-  const classOptions = ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"];
-  const sectionOptions = ["A", "B", "C", "D", "E"];
-
-  const validateRoomName = (roomName: string): boolean => {
-    return dataService.isValidRoomName(roomName);
+  // Get available classes from the classes created in Manage Classes
+  const availableClasses = dataService.getClasses();
+  
+  // Get unique grades and sections from available classes
+  const getAvailableGrades = () => {
+    const grades = new Set(availableClasses.map(c => c.name.split(' - ')[0]));
+    return Array.from(grades).sort();
+  };
+  
+  const getAvailableSections = (grade: string) => {
+    const sections = new Set(
+      availableClasses
+        .filter(c => c.name.startsWith(grade))
+        .map(c => c.name.split('Section ')[1])
+    );
+    return Array.from(sections).sort();
+  };
+  
+  const getAvailableSubjects = (grade: string, section: string) => {
+    const className = `${grade} - Section ${section}`;
+    const subjects = availableClasses
+      .filter(c => c.name === className)
+      .map(c => c.subject);
+    return subjects;
   };
 
   const handleAddClassAssignment = () => {
-    setClassAssignments([...classAssignments, { grade: "", section: "", subject: "", room: "" }]);
+    setClassAssignments([...classAssignments, { grade: "", section: "", subject: "" }]);
   };
 
   const handleRemoveClassAssignment = (index: number) => {
@@ -118,24 +131,11 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
       return;
     }
 
-    const hasCompleteAssignment = classAssignments.some(a => a.grade && a.section && a.subject && a.room);
+    const hasCompleteAssignment = classAssignments.some(a => a.grade && a.section && a.subject);
     if (!hasCompleteAssignment) {
       toast({
         title: "Error",
-        description: "Please assign at least one class with grade, section, subject and room",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const invalidRooms = classAssignments
-      .filter(a => a.room)
-      .filter(a => !validateRoomName(a.room));
-      
-    if (invalidRooms.length > 0) {
-      toast({
-        title: "Invalid Room Name",
-        description: "Room names must be in the format 'Room XX' where XX is a number between 01 and 100",
+        description: "Please assign at least one class with grade, section, and subject",
         variant: "destructive",
       });
       return;
@@ -166,7 +166,7 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
       setUsername("");
       setPassword("");
       setSelectedSubjects([]);
-      setClassAssignments([{ grade: "", section: "", subject: "", room: "" }]);
+      setClassAssignments([{ grade: "", section: "", subject: "" }]);
     }
 
     toast({
@@ -273,37 +273,22 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
               </Label>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor={`subject-${index}`}>Subject</Label>
-                <Select 
-                  value={assignment.subject} 
-                  onValueChange={(value) => updateClassAssignment(index, "subject", value)}
-                >
-                  <SelectTrigger id={`subject-${index}`}>
-                    <SelectValue placeholder="Select subject" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {selectedSubjects.map((subject) => (
-                      <SelectItem key={subject} value={subject}>
-                        {subject}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor={`class-${index}`}>Class</Label>
                 <Select 
                   value={assignment.grade} 
-                  onValueChange={(value) => updateClassAssignment(index, "grade", value)}
+                  onValueChange={(value) => {
+                    updateClassAssignment(index, "grade", value);
+                    updateClassAssignment(index, "section", "");
+                    updateClassAssignment(index, "subject", "");
+                  }}
                 >
                   <SelectTrigger id={`class-${index}`}>
                     <SelectValue placeholder="Select class" />
                   </SelectTrigger>
                   <SelectContent>
-                    {classOptions.map((grade) => (
+                    {getAvailableGrades().map((grade) => (
                       <SelectItem key={grade} value={grade}>
                         {grade}
                       </SelectItem>
@@ -316,13 +301,17 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
                 <Label htmlFor={`section-${index}`}>Section</Label>
                 <Select 
                   value={assignment.section} 
-                  onValueChange={(value) => updateClassAssignment(index, "section", value)}
+                  onValueChange={(value) => {
+                    updateClassAssignment(index, "section", value);
+                    updateClassAssignment(index, "subject", "");
+                  }}
+                  disabled={!assignment.grade}
                 >
                   <SelectTrigger id={`section-${index}`}>
                     <SelectValue placeholder="Select section" />
                   </SelectTrigger>
                   <SelectContent>
-                    {sectionOptions.map((section) => (
+                    {assignment.grade && getAvailableSections(assignment.grade).map((section) => (
                       <SelectItem key={section} value={section}>
                         Section {section}
                       </SelectItem>
@@ -332,17 +321,23 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor={`room-${index}`}>Room</Label>
-                <Input
-                  id={`room-${index}`}
-                  value={assignment.room}
-                  onChange={(e) => updateClassAssignment(index, "room", e.target.value)}
-                  placeholder="Room 01"
-                  className={!validateRoomName(assignment.room) && assignment.room ? "border-destructive" : ""}
-                />
-                {!validateRoomName(assignment.room) && assignment.room && (
-                  <p className="text-xs text-destructive">Must be between Room 01 and Room 100</p>
-                )}
+                <Label htmlFor={`subject-${index}`}>Subject</Label>
+                <Select 
+                  value={assignment.subject} 
+                  onValueChange={(value) => updateClassAssignment(index, "subject", value)}
+                  disabled={!assignment.grade || !assignment.section}
+                >
+                  <SelectTrigger id={`subject-${index}`}>
+                    <SelectValue placeholder="Select subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assignment.grade && assignment.section && getAvailableSubjects(assignment.grade, assignment.section).map((subject) => (
+                      <SelectItem key={subject} value={subject}>
+                        {subject}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             
