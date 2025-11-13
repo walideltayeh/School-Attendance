@@ -40,6 +40,7 @@ const Admin = () => {
   const [duplicateTargetSection, setDuplicateTargetSection] = useState("");
   
   useEffect(() => {
+    console.log('Admin component mounted, loading data...');
     setTeachers(dataService.getTeachers());
     setSchedules(dataService.getClassSchedules());
     loadClasses();
@@ -61,8 +62,20 @@ const Admin = () => {
       )
       .subscribe();
 
+    // Also reload when component becomes visible again
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('Page became visible, reloading classes...');
+        loadClasses();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
+      console.log('Admin component unmounting...');
       supabase.removeChannel(channel);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
@@ -448,7 +461,17 @@ const Admin = () => {
         </Button>
       </div>
       
-      <Tabs defaultValue="classes" className="w-full">
+      <Tabs 
+        defaultValue="classes" 
+        className="w-full"
+        onValueChange={(value) => {
+          console.log('Tab changed to:', value);
+          if (value === 'classes') {
+            console.log('Reloading classes after tab switch...');
+            loadClasses();
+          }
+        }}
+      >
         <TabsList className="grid w-full grid-cols-5 mb-6">
           <TabsTrigger value="classes">
             <BookOpen className="h-4 w-4 mr-2" />
