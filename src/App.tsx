@@ -7,6 +7,7 @@ import Dashboard from "@/pages/Dashboard";
 import Index from "@/pages/Index";
 import Students from "@/pages/Students";
 import Teachers from "@/pages/Teachers";
+import TeacherProfile from "@/pages/TeacherProfile";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import Admin from "@/pages/Admin";
@@ -31,6 +32,7 @@ function App() {
             <Route path="/students" element={<Students />} />
             <Route path="/students/register" element={<StudentRegister />} />
             <Route path="/teachers" element={<Teachers />} />
+            <Route path="/teachers/:teacherId" element={<TeacherProfile />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/reports" element={<Reports />} />

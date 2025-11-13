@@ -9,7 +9,8 @@ import {
   MoreHorizontal,
   BookOpen,
   GraduationCap,
-  Layers
+  Layers,
+  Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -253,9 +254,13 @@ export default function Teachers() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => navigate(`/teachers/${teacher.id}`)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Full Profile
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleViewDetails(teacher)}>
                           <User className="mr-2 h-4 w-4" />
-                          View Profile
+                          Quick View
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEditTeacher(teacher)}>
                           <Pencil className="mr-2 h-4 w-4" />
