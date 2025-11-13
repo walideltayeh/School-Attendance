@@ -253,12 +253,19 @@ const Admin = () => {
     if (!classGroupToDelete) return;
     
     const classesToDelete = classes.filter(c => c.name === classGroupToDelete);
-    const updatedClasses = classes.filter(c => c.name !== classGroupToDelete);
-    setClasses(updatedClasses);
+    
+    // Delete each class using dataService to ensure syncing
+    classesToDelete.forEach(classItem => {
+      dataService.deleteClass(classItem.id);
+    });
+    
+    // Refresh classes and teachers from dataService
+    setClasses(dataService.getClasses());
+    setTeachers(dataService.getTeachers());
     
     toast({
       title: "Class Group Deleted",
-      description: `${classGroupToDelete} with ${classesToDelete.length} subject(s) removed`,
+      description: `${classGroupToDelete} with ${classesToDelete.length} subject(s) removed - synced to teachers`,
     });
     
     setDeleteConfirmOpen(false);
@@ -285,34 +292,66 @@ const Admin = () => {
   const handleUpdateClassGroup = (updatedData: { grades: string[]; sections: string[]; subjects: string[] }) => {
     if (!editingClassName) return;
     
-    // Remove old classes for this group
-    const updatedClasses = classes.filter(c => c.name !== editingClassName);
+    const newClassName = `${updatedData.grades[0]} - Section ${updatedData.sections[0]}`;
+    const oldClasses = classes.filter(c => c.name === editingClassName);
     
-    // Add new classes with updated subjects
-    const newClasses: ClassInfo[] = [];
-    updatedData.grades.forEach(grade => {
-      updatedData.sections.forEach(section => {
-        const className = `${grade} - Section ${section}`;
-        updatedData.subjects.forEach(subject => {
-          newClasses.push({
-            id: `${Date.now()}-${Math.random()}`,
-            name: className,
+    // Determine which subjects to keep, update, or add
+    const oldSubjects = oldClasses.map(c => c.subject);
+    const newSubjects = updatedData.subjects;
+    
+    // Update existing classes if grade/section changed
+    if (editingClassName !== newClassName) {
+      oldClasses.forEach(classItem => {
+        if (newSubjects.includes(classItem.subject)) {
+          dataService.updateClass(classItem.id, { name: newClassName });
+        } else {
+          dataService.deleteClass(classItem.id);
+        }
+      });
+      
+      // Add new subjects
+      newSubjects.forEach(subject => {
+        if (!oldSubjects.includes(subject)) {
+          dataService.addClass({
+            name: newClassName,
             teacher: "Unassigned",
             room: "TBD",
             subject: subject
           });
-        });
+        }
       });
-    });
+    } else {
+      // Only subjects changed, same grade/section
+      // Delete removed subjects
+      oldClasses.forEach(classItem => {
+        if (!newSubjects.includes(classItem.subject)) {
+          dataService.deleteClass(classItem.id);
+        }
+      });
+      
+      // Add new subjects
+      newSubjects.forEach(subject => {
+        if (!oldSubjects.includes(subject)) {
+          dataService.addClass({
+            name: newClassName,
+            teacher: "Unassigned",
+            room: "TBD",
+            subject: subject
+          });
+        }
+      });
+    }
     
-    setClasses([...updatedClasses, ...newClasses]);
+    // Refresh classes and teachers from dataService
+    setClasses(dataService.getClasses());
+    setTeachers(dataService.getTeachers());
     setIsClassEditDialogOpen(false);
     setEditingClassName(null);
     setSelectedClass(null);
     
     toast({
       title: "Class Group Updated",
-      description: `Updated subjects for ${editingClassName}`,
+      description: `Updated ${newClassName} - changes synced to teachers and students`,
     });
   };
 

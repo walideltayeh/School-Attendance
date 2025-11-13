@@ -351,6 +351,61 @@ class DataService {
     return newClass;
   }
 
+  updateClass(classId: string, updatedClass: Partial<ClassInfo>): ClassInfo | null {
+    const index = classes.findIndex(c => c.id === classId);
+    if (index === -1) return null;
+    
+    const oldClass = { ...classes[index] };
+    const newClass = { ...classes[index], ...updatedClass };
+    classes[index] = newClass;
+    
+    // Update teacher's classes array if the class name changed
+    if (oldClass.name !== newClass.name || oldClass.subject !== newClass.subject) {
+      const oldClassName = `${oldClass.name} (${oldClass.subject})`;
+      const newClassName = `${newClass.name} (${newClass.subject})`;
+      
+      teachers.forEach(teacher => {
+        const classIndex = teacher.classes.findIndex(cls => cls === oldClassName);
+        if (classIndex !== -1) {
+          teacher.classes[classIndex] = newClassName;
+        }
+      });
+    }
+    
+    // Update students if grade or section changed
+    if (oldClass.name !== newClass.name) {
+      const oldGrade = oldClass.name.split(' - ')[0];
+      const oldSection = oldClass.name.split('Section ')[1];
+      const newGrade = newClass.name.split(' - ')[0];
+      const newSection = newClass.name.split('Section ')[1];
+      
+      students.forEach(student => {
+        if (student.grade === oldGrade && student.section === oldSection) {
+          student.grade = newGrade;
+          student.section = newSection;
+        }
+      });
+    }
+    
+    return newClass;
+  }
+
+  deleteClass(classId: string): boolean {
+    const index = classes.findIndex(c => c.id === classId);
+    if (index === -1) return false;
+    
+    const deletedClass = classes[index];
+    classes.splice(index, 1);
+    
+    // Remove from teacher's classes array
+    const className = `${deletedClass.name} (${deletedClass.subject})`;
+    teachers.forEach(teacher => {
+      teacher.classes = teacher.classes.filter(cls => cls !== className);
+    });
+    
+    return true;
+  }
+
   // Bus methods
   getBusRoutes(): BusRoute[] {
     return busRoutes;
