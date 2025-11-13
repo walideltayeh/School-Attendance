@@ -161,26 +161,24 @@ const Admin = () => {
   const handleAddClass = (classData: { grades: string[]; sections: string[]; subjects: string[] }) => {
     // Create a class for each combination of grade, section, and subject
     const createdClasses: string[] = [];
-    const newClasses: any[] = [];
     
     classData.grades.forEach(grade => {
       classData.sections.forEach(section => {
         const className = `${grade} - Section ${section}`;
         classData.subjects.forEach(subject => {
-          const addedClass = dataService.addClass({
+          dataService.addClass({
             name: className,
             teacher: "Unassigned",
             room: "TBD",
             subject: subject
           });
-          newClasses.push(addedClass);
           createdClasses.push(`${className} (${subject})`);
         });
       });
     });
     
-    // Force immediate state update with the new classes
-    setClasses(prevClasses => [...prevClasses, ...newClasses]);
+    // Sync with data service as single source of truth
+    setClasses(dataService.getClasses());
     
     toast({
       title: "Classes Created",
