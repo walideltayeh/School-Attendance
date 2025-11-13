@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { dataService, Teacher, BusRoute, ClassSchedule, ClassInfo } from "@/services/dataService";
-import { PlusCircle, Edit, X, Calendar, Pencil, Trash, BookOpen } from "lucide-react";
+import { PlusCircle, Edit, X, Calendar, Pencil, Trash, BookOpen, Copy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { ClassPeriodsForm } from "@/components/admin/ClassPeriodsForm";
 import { ClassScheduleForm } from "@/components/admin/ClassScheduleForm";
 import { AddTeacherForm } from "@/components/admin/AddTeacherForm";
@@ -31,6 +33,10 @@ const Admin = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [classGroupToDelete, setClassGroupToDelete] = useState<string | null>(null);
   const [editingClassName, setEditingClassName] = useState<string | null>(null);
+  const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
+  const [duplicateSourceClass, setDuplicateSourceClass] = useState<string | null>(null);
+  const [duplicateTargetGrade, setDuplicateTargetGrade] = useState("");
+  const [duplicateTargetSection, setDuplicateTargetSection] = useState("");
   
   useEffect(() => {
     setTeachers(dataService.getTeachers());
@@ -180,6 +186,62 @@ const Admin = () => {
       title: "Classes Created",
       description: `Created ${createdClasses.length} class${createdClasses.length > 1 ? 'es' : ''} successfully`,
     });
+  };
+
+  const handleDuplicateClassGroup = (className: string) => {
+    setDuplicateSourceClass(className);
+    setIsDuplicateDialogOpen(true);
+  };
+
+  const confirmDuplicateClassGroup = () => {
+    if (!duplicateSourceClass || !duplicateTargetGrade || !duplicateTargetSection) {
+      toast({
+        title: "Error",
+        description: "Please select both target grade and section",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const targetClassName = `${duplicateTargetGrade} - Section ${duplicateTargetSection}`;
+    
+    // Check if target already exists
+    const existingTargetClasses = classes.filter(c => c.name === targetClassName);
+    if (existingTargetClasses.length > 0) {
+      toast({
+        title: "Error",
+        description: `${targetClassName} already exists. Please choose a different target.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Get subjects from source class
+    const sourceSubjects = classes
+      .filter(c => c.name === duplicateSourceClass)
+      .map(c => c.subject);
+
+    // Create new classes with same subjects
+    const newClasses: ClassInfo[] = sourceSubjects.map(subject => ({
+      id: `${Date.now()}-${Math.random()}`,
+      name: targetClassName,
+      teacher: "Unassigned",
+      room: "TBD",
+      subject: subject
+    }));
+
+    setClasses([...classes, ...newClasses]);
+    
+    toast({
+      title: "Class Group Duplicated",
+      description: `Created ${targetClassName} with ${sourceSubjects.length} subject(s)`,
+    });
+
+    // Reset state
+    setIsDuplicateDialogOpen(false);
+    setDuplicateSourceClass(null);
+    setDuplicateTargetGrade("");
+    setDuplicateTargetSection("");
   };
 
   const handleDeleteClassGroup = (className: string) => {
@@ -340,6 +402,13 @@ const Admin = () => {
                                 onClick={() => handleEditClassGroup(className)}
                               >
                                 <Pencil className="h-4 w-4 mr-1" /> Edit
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleDuplicateClassGroup(className)}
+                              >
+                                <Copy className="h-4 w-4 mr-1" /> Duplicate
                               </Button>
                               <Button 
                                 variant="ghost" 
@@ -605,6 +674,75 @@ const Admin = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isDuplicateDialogOpen} onOpenChange={setIsDuplicateDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Duplicate Class Group</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Source Class</Label>
+              <div className="p-3 bg-muted rounded-md">
+                <p className="font-medium">{duplicateSourceClass}</p>
+                <p className="text-sm text-muted-foreground">
+                  {classes.filter(c => c.name === duplicateSourceClass).length} subject(s) will be copied
+                </p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="target-grade">Target Grade</Label>
+                <Select value={duplicateTargetGrade} onValueChange={setDuplicateTargetGrade}>
+                  <SelectTrigger id="target-grade">
+                    <SelectValue placeholder="Select grade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["KG1", "KG2", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"].map((grade) => (
+                      <SelectItem key={grade} value={grade}>
+                        {grade}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="target-section">Target Section</Label>
+                <Select value={duplicateTargetSection} onValueChange={setDuplicateTargetSection}>
+                  <SelectTrigger id="target-section">
+                    <SelectValue placeholder="Select section" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["A", "B", "C", "D", "E", "F"].map((section) => (
+                      <SelectItem key={section} value={section}>
+                        Section {section}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsDuplicateDialogOpen(false);
+                setDuplicateSourceClass(null);
+                setDuplicateTargetGrade("");
+                setDuplicateTargetSection("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmDuplicateClassGroup}>
+              <Copy className="h-4 w-4 mr-2" /> Duplicate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
