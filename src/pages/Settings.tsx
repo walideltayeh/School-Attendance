@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { dataService } from "@/services/dataService";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Settings() {
   const [schoolName, setSchoolName] = useState("Valley High School");
@@ -58,7 +59,23 @@ export default function Settings() {
     setDeleteLoading(true);
     
     try {
-      console.log("Starting data deletion process...");
+      console.log("Starting data deletion process from Supabase...");
+      
+      // Delete data from all tables in the correct order (respecting foreign key constraints)
+      await supabase.from('attendance_records').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('notifications').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('class_schedules').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('class_enrollments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('bus_assignments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('bus_stops').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('bus_routes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('periods').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('classes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('subjects').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('teachers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('students').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      
+      // Also clear mock data
       await dataService.deleteAllData();
       
       toast({
