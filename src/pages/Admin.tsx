@@ -87,7 +87,7 @@ const Admin = () => {
     const transformedClasses = (data || []).map((cls: any) => ({
       id: cls.id,
       name: `${cls.grade} - Section ${cls.section}`,
-      teacher: cls.teacher || 'Unassigned',
+      teacher: 'Unassigned',
       room: cls.room_number || 'TBD',
       subject: cls.subject
     }));
