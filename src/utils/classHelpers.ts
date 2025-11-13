@@ -1,37 +1,58 @@
-import { dataService } from "@/services/dataService";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Gets available grades from existing classes
+ * Gets available grades from existing classes in database
  */
-export const getAvailableGrades = (): string[] => {
-  const classes = dataService.getClasses();
-  const grades = new Set(classes.map(c => c.name.split(' - ')[0]));
-  return Array.from(grades).sort();
+export const getAvailableGrades = async (): Promise<string[]> => {
+  const { data, error } = await supabase
+    .from('classes')
+    .select('grade')
+    .order('grade', { ascending: true });
+  
+  if (error) {
+    console.error('Error fetching grades:', error);
+    return [];
+  }
+
+  const uniqueGrades = [...new Set(data.map(c => c.grade))];
+  return uniqueGrades.sort();
 };
 
 /**
- * Gets available sections for a specific grade from existing classes
+ * Gets available sections for a specific grade from existing classes in database
  */
-export const getAvailableSections = (grade: string): string[] => {
-  const classes = dataService.getClasses();
-  const sections = new Set(
-    classes
-      .filter(c => c.name.startsWith(grade))
-      .map(c => c.name.split('Section ')[1]?.split(' ')[0])
-      .filter(Boolean)
-  );
-  return Array.from(sections).sort();
+export const getAvailableSections = async (grade: string): Promise<string[]> => {
+  const { data, error } = await supabase
+    .from('classes')
+    .select('section')
+    .eq('grade', grade)
+    .order('section', { ascending: true });
+  
+  if (error) {
+    console.error('Error fetching sections:', error);
+    return [];
+  }
+
+  const uniqueSections = [...new Set(data.map(c => c.section))];
+  return uniqueSections.sort();
 };
 
 /**
- * Gets available subjects for a specific grade-section combination
+ * Gets available subjects for a specific grade-section combination from database
  */
-export const getAvailableSubjects = (grade: string, section: string): string[] => {
-  const classes = dataService.getClasses();
-  const className = `${grade} - Section ${section}`;
-  return classes
-    .filter(c => c.name === className)
-    .map(c => c.subject);
+export const getAvailableSubjects = async (grade: string, section: string): Promise<string[]> => {
+  const { data, error } = await supabase
+    .from('classes')
+    .select('subject')
+    .eq('grade', grade)
+    .eq('section', section);
+  
+  if (error) {
+    console.error('Error fetching subjects:', error);
+    return [];
+  }
+
+  return data.map(c => c.subject);
 };
 
 /**

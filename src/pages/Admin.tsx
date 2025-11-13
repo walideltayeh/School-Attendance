@@ -18,6 +18,7 @@ import { AddTeacherForm } from "@/components/admin/AddTeacherForm";
 import { AddBusRouteForm } from "@/components/admin/AddBusRouteForm";
 import { AddClassForm } from "@/components/admin/AddClassForm";
 import { SubjectManagement } from "@/components/admin/SubjectManagement";
+import { supabase } from "@/integrations/supabase/client";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -41,8 +42,59 @@ const Admin = () => {
   useEffect(() => {
     setTeachers(dataService.getTeachers());
     setSchedules(dataService.getClassSchedules());
-    setClasses(dataService.getClasses());
+    loadClasses();
+
+    // Subscribe to real-time updates for classes
+    const channel = supabase
+      .channel('classes-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'classes'
+        },
+        () => {
+          console.log('Classes changed, reloading...');
+          loadClasses();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  const loadClasses = async () => {
+    const { data, error } = await supabase
+      .from('classes')
+      .select('*')
+      .order('grade', { ascending: true })
+      .order('section', { ascending: true });
+    
+    if (error) {
+      console.error('Error loading classes:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load classes",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Transform database format to match ClassInfo interface
+    const transformedClasses = (data || []).map((cls: any) => ({
+      id: cls.id,
+      name: `${cls.grade} - Section ${cls.section}`,
+      teacher: cls.teacher || 'Unassigned',
+      room: cls.room_number || 'TBD',
+      subject: cls.subject
+    }));
+
+    console.log('Loaded classes from database:', transformedClasses);
+    setClasses(transformedClasses);
+  };
 
   const handleAddTeacher = (teacher: Omit<Teacher, "id">, classAssignments: any[]) => {
     const addedTeacher = dataService.addTeacher(teacher);
@@ -158,36 +210,49 @@ const Admin = () => {
     });
   };
 
-  const handleAddClass = (classData: { grades: string[]; sections: string[]; subjects: string[] }) => {
+  const handleAddClass = async (classData: { grades: string[]; sections: string[]; subjects: string[] }) => {
     console.log("handleAddClass called with:", classData);
     
     // Create a class for each combination of grade, section, and subject
-    const createdClasses: string[] = [];
+    const classesToInsert = [];
     
-    classData.grades.forEach(grade => {
-      classData.sections.forEach(section => {
-        const className = `${grade} - Section ${section}`;
-        classData.subjects.forEach(subject => {
-          const addedClass = dataService.addClass({
-            name: className,
+    for (const grade of classData.grades) {
+      for (const section of classData.sections) {
+        for (const subject of classData.subjects) {
+          classesToInsert.push({
+            name: `${grade} - Section ${section}`,
+            grade: grade,
+            section: section,
             teacher: "Unassigned",
-            room: "TBD",
+            room_number: "TBD",
             subject: subject
           });
-          console.log("Added class:", addedClass);
-          createdClasses.push(`${className} (${subject})`);
-        });
-      });
-    });
+        }
+      }
+    }
     
-    // Sync with data service as single source of truth
-    const allClasses = dataService.getClasses();
-    console.log("All classes after add:", allClasses);
-    setClasses(allClasses);
+    console.log("Inserting classes:", classesToInsert);
+    
+    const { data, error } = await supabase
+      .from('classes')
+      .insert(classesToInsert)
+      .select();
+    
+    if (error) {
+      console.error("Error adding classes:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create classes: " + error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    console.log("Classes created successfully:", data);
     
     toast({
       title: "Classes Created",
-      description: `Created ${createdClasses.length} class${createdClasses.length > 1 ? 'es' : ''} successfully`,
+      description: `Created ${classesToInsert.length} class${classesToInsert.length > 1 ? 'es' : ''} successfully`,
     });
   };
 

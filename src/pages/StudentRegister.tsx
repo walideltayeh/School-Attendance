@@ -56,14 +56,14 @@ export default function StudentRegister() {
     setBusRoutes(loadedBusRoutes);
     
     // Get available grades from existing classes only
-    setAvailableGrades(getAvailableGrades());
+    getAvailableGrades().then(grades => setAvailableGrades(grades));
   }, []);
 
   // Update available sections when grade changes
   useEffect(() => {
     if (grade) {
       // Get available sections from existing classes only
-      setAvailableSections(getAvailableSections(grade));
+      getAvailableSections(grade).then(sections => setAvailableSections(sections));
       
       // Reset teacher when grade changes
       setTeacher("");
