@@ -33,10 +33,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: A
   const [selectedGrades, setSelectedGrades] = useState<string[]>(initialValues?.grade ? [initialValues.grade] : []);
   const [selectedSections, setSelectedSections] = useState<string[]>(initialValues?.section ? [initialValues.section] : []);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(initialValues?.subjects || []);
-  const [currentSubject, setCurrentSubject] = useState("");
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
-  const [showGradeSelect, setShowGradeSelect] = useState(false);
-  const [showSectionSelect, setShowSectionSelect] = useState(false);
 
   useEffect(() => {
     setAvailableSubjects(getAvailableSubjects());
@@ -58,24 +55,12 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: A
     }
   };
 
-  const handleAddSubject = () => {
-    if (!currentSubject) return;
-    
-    if (selectedSubjects.includes(currentSubject)) {
-      toast({
-        title: "Subject Already Added",
-        description: "This subject is already in the list",
-        variant: "destructive",
-      });
-      return;
+  const handleSubjectToggle = (subject: string) => {
+    if (selectedSubjects.includes(subject)) {
+      setSelectedSubjects(selectedSubjects.filter(s => s !== subject));
+    } else {
+      setSelectedSubjects([...selectedSubjects, subject]);
     }
-
-    setSelectedSubjects([...selectedSubjects, currentSubject]);
-    setCurrentSubject("");
-  };
-
-  const handleRemoveSubject = (subject: string) => {
-    setSelectedSubjects(selectedSubjects.filter(s => s !== subject));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -100,7 +85,6 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: A
       setSelectedGrades([]);
       setSelectedSections([]);
       setSelectedSubjects([]);
-      setCurrentSubject("");
     }
   };
 
@@ -168,39 +152,29 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: A
         </div>
 
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="subject">Subjects *</Label>
-          <div className="flex gap-2">
-            <Select value={currentSubject} onValueChange={setCurrentSubject}>
-              <SelectTrigger id="subject">
-                <SelectValue placeholder="Select subjects to add" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableSubjects
-                  .filter(subj => !selectedSubjects.includes(subj))
-                  .map((subj) => (
-                    <SelectItem key={subj} value={subj}>
-                      {subj}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-            <Button type="button" onClick={handleAddSubject} disabled={!currentSubject}>
-              Add
-            </Button>
-          </div>
-          
-          {selectedSubjects.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {selectedSubjects.map((subject) => (
-                <Badge key={subject} variant="secondary" className="text-sm py-2 px-3">
+          <Label>Subjects * (Select multiple)</Label>
+          <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
+            {availableSubjects.map((subject) => (
+              <div key={subject} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`subject-${subject}`}
+                  checked={selectedSubjects.includes(subject)}
+                  onCheckedChange={() => handleSubjectToggle(subject)}
+                />
+                <label
+                  htmlFor={`subject-${subject}`}
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
                   {subject}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveSubject(subject)}
-                    className="ml-2 hover:text-destructive"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
+                </label>
+              </div>
+            ))}
+          </div>
+          {selectedSubjects.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {selectedSubjects.map((subject) => (
+                <Badge key={subject} variant="secondary" className="text-xs">
+                  {subject}
                 </Badge>
               ))}
             </div>
