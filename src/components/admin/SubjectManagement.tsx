@@ -6,41 +6,51 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { X, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-
-const DEFAULT_SUBJECTS = [
-  "Math",
-  "Science",
-  "English",
-  "Arabic",
-  "Social Studies",
-  "Art",
-  "Music",
-  "PE",
-  "Computer Science",
-  "ICT",
-  "French",
-  "Spanish",
-  "Islamic Studies",
-  "History",
-  "Geography"
-];
+import { supabase } from "@/integrations/supabase/client";
 
 export function SubjectManagement() {
   const [subjects, setSubjects] = useState<string[]>([]);
   const [newSubject, setNewSubject] = useState("");
 
   useEffect(() => {
-    // Load subjects from localStorage or use defaults
-    const stored = localStorage.getItem("school_subjects");
-    if (stored) {
-      setSubjects(JSON.parse(stored));
-    } else {
-      setSubjects(DEFAULT_SUBJECTS);
-      localStorage.setItem("school_subjects", JSON.stringify(DEFAULT_SUBJECTS));
-    }
+    loadSubjects();
+
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('subjects-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'subjects'
+        },
+        () => {
+          loadSubjects();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  const handleAddSubject = () => {
+  const loadSubjects = async () => {
+    const { data, error } = await supabase
+      .from('subjects')
+      .select('name')
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('Error loading subjects:', error);
+      return;
+    }
+
+    setSubjects(data?.map(s => s.name) || []);
+  };
+
+  const handleAddSubject = async () => {
     if (!newSubject.trim()) {
       toast({
         title: "Error",
@@ -59,9 +69,19 @@ export function SubjectManagement() {
       return;
     }
 
-    const updatedSubjects = [...subjects, newSubject.trim()];
-    setSubjects(updatedSubjects);
-    localStorage.setItem("school_subjects", JSON.stringify(updatedSubjects));
+    const { error } = await supabase
+      .from('subjects')
+      .insert({ name: newSubject.trim() });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add subject: " + error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setNewSubject("");
     
     toast({
@@ -70,10 +90,20 @@ export function SubjectManagement() {
     });
   };
 
-  const handleRemoveSubject = (subject: string) => {
-    const updatedSubjects = subjects.filter(s => s !== subject);
-    setSubjects(updatedSubjects);
-    localStorage.setItem("school_subjects", JSON.stringify(updatedSubjects));
+  const handleRemoveSubject = async (subject: string) => {
+    const { error } = await supabase
+      .from('subjects')
+      .delete()
+      .eq('name', subject);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove subject: " + error.message,
+        variant: "destructive",
+      });
+      return;
+    }
     
     toast({
       title: "Subject Removed",
@@ -128,7 +158,16 @@ export function SubjectManagement() {
   );
 }
 
-export function getAvailableSubjects(): string[] {
-  const stored = localStorage.getItem("school_subjects");
-  return stored ? JSON.parse(stored) : DEFAULT_SUBJECTS;
+export async function getAvailableSubjects(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('subjects')
+    .select('name')
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.error('Error loading subjects:', error);
+    return [];
+  }
+
+  return data?.map(s => s.name) || [];
 }

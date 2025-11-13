@@ -4,11 +4,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { dataService, Teacher } from "@/services/dataService";
 import { toast } from "@/hooks/use-toast";
-import { getAvailableSubjects } from "./SubjectManagement";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ALL_GRADES, ALL_SECTIONS } from "@/utils/classHelpers";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AddClassFormProps {
   onSubmit: (classData: {
@@ -35,10 +35,44 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: A
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
 
   useEffect(() => {
-    const subjects = getAvailableSubjects();
+    loadSubjects();
+
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('subjects-changes-form')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'subjects'
+        },
+        () => {
+          loadSubjects();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const loadSubjects = async () => {
+    const { data, error } = await supabase
+      .from('subjects')
+      .select('name')
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('Error loading subjects:', error);
+      return;
+    }
+
+    const subjects = data?.map(s => s.name) || [];
     console.log("AddClassForm loaded subjects:", subjects);
     setAvailableSubjects(subjects);
-  }, []);
+  };
 
   const handleGradeToggle = (grade: string) => {
     if (selectedGrades.includes(grade)) {
