@@ -30,7 +30,6 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
   const [username, setUsername] = useState(initialValues?.username || "");
   const [password, setPassword] = useState(initialValues?.password || "");
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(initialValues?.subjects || []);
   const [availableGrades, setAvailableGrades] = useState<string[]>([]);
   const [classAssignments, setClassAssignments] = useState<ClassAssignment[]>(() => {
     if (initialValues?.classes?.length) {
@@ -59,19 +58,6 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
   useEffect(() => {
     getAvailableGrades().then(grades => setAvailableGrades(grades));
   }, []);
-
-  const subjectOptions = [
-    { label: "All", value: "All" },
-    { label: "Mathematics", value: "Mathematics" },
-    { label: "Science", value: "Science" },
-    { label: "English", value: "English" },
-    { label: "History", value: "History" },
-    { label: "Geography", value: "Geography" },
-    { label: "Computer Science", value: "Computer Science" },
-    { label: "Physical Education", value: "Physical Education" },
-    { label: "Art", value: "Art" },
-    { label: "Music", value: "Music" },
-  ];
 
   // Helper functions for getting sections and subjects (now async)
   const [gradeSections, setGradeSections] = useState<Record<string, string[]>>({});
@@ -124,7 +110,7 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name || !email || !phone || selectedSubjects.length === 0) {
+    if (!name || !email || !phone) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -162,8 +148,8 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
       phone,
       username,
       password,
-      subject: selectedSubjects[0] || "",
-      subjects: selectedSubjects,
+      subject: "",
+      subjects: [],
       classes: formattedClasses,
       students: initialValues?.students || 0
     };
@@ -176,7 +162,6 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
       setPhone("");
       setUsername("");
       setPassword("");
-      setSelectedSubjects([]);
       setClassAssignments([{ grade: "", section: "", subject: "" }]);
     }
 
@@ -219,15 +204,6 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="(123) 456-7890"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Subjects</Label>
-          <MultiSelect
-            options={subjectOptions}
-            selected={selectedSubjects}
-            onChange={setSelectedSubjects}
-            placeholder="Select subjects"
           />
         </div>
         <div className="space-y-2">
