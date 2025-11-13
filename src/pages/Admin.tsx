@@ -223,7 +223,7 @@ const Admin = () => {
             name: `${grade} - Section ${section}`,
             grade: grade,
             section: section,
-            teacher: "Unassigned",
+            teacher_id: null,
             room_number: "TBD",
             subject: subject
           });
