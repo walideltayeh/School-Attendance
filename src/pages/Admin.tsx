@@ -199,14 +199,31 @@ const Admin = () => {
     }
   };
 
-  const handleDeleteClass = (classId: string) => {
-    const updatedClasses = classes.filter(c => c.id !== classId);
+  const handleDeleteClassGroup = (className: string) => {
+    const classesToDelete = classes.filter(c => c.name === className);
+    const updatedClasses = classes.filter(c => c.name !== className);
     setClasses(updatedClasses);
     
     toast({
-      title: "Class Deleted",
-      description: "The class has been removed",
+      title: "Class Group Deleted",
+      description: `${className} with ${classesToDelete.length} subject(s) removed`,
     });
+  };
+
+  const handleEditClassGroup = (className: string) => {
+    const classGroup = classes.filter(c => c.name === className);
+    if (classGroup.length > 0) {
+      const firstClass = classGroup[0];
+      const [grade, sectionPart] = firstClass.name.split(' - Section ');
+      const subjects = classGroup.map(c => c.subject);
+      
+      setSelectedClass({
+        ...firstClass,
+        name: className,
+        subject: subjects.join(', ')
+      });
+      setIsClassEditDialogOpen(true);
+    }
   };
 
   return (
@@ -284,8 +301,27 @@ const Admin = () => {
                       .map(([className, classGroup]) => (
                         <div key={className} className="border rounded-lg p-4 bg-card">
                           <div className="flex items-center justify-between mb-3">
-                            <h3 className="font-semibold text-lg">{className}</h3>
-                            <Badge variant="outline">{classGroup.length} subject{classGroup.length > 1 ? 's' : ''}</Badge>
+                            <div className="flex items-center gap-3">
+                              <h3 className="font-semibold text-lg">{className}</h3>
+                              <Badge variant="outline">{classGroup.length} subject{classGroup.length > 1 ? 's' : ''}</Badge>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleEditClassGroup(className)}
+                              >
+                                <Pencil className="h-4 w-4 mr-1" /> Edit
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => handleDeleteClassGroup(className)}
+                              >
+                                <Trash className="h-4 w-4 mr-1" /> Delete
+                              </Button>
+                            </div>
                           </div>
                           <div className="flex flex-wrap gap-2">
                             {classGroup.map(classInfo => (
@@ -296,7 +332,14 @@ const Admin = () => {
                               >
                                 {classInfo.subject}
                                 <button
-                                  onClick={() => handleDeleteClass(classInfo.id)}
+                                  onClick={() => {
+                                    const updatedClasses = classes.filter(c => c.id !== classInfo.id);
+                                    setClasses(updatedClasses);
+                                    toast({
+                                      title: "Subject Removed",
+                                      description: `${classInfo.subject} removed from ${className}`,
+                                    });
+                                  }}
                                   className="ml-1 hover:text-destructive transition-colors"
                                 >
                                   <X className="h-3 w-3" />
