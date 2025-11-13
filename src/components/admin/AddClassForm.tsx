@@ -35,7 +35,9 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: A
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
 
   useEffect(() => {
-    setAvailableSubjects(getAvailableSubjects());
+    const subjects = getAvailableSubjects();
+    console.log("AddClassForm loaded subjects:", subjects);
+    setAvailableSubjects(subjects);
   }, []);
 
   const handleGradeToggle = (grade: string) => {
@@ -65,6 +67,13 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: A
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    console.log("Form submission attempt:", {
+      grades: selectedGrades,
+      sections: selectedSections,
+      subjects: selectedSubjects,
+      availableSubjects
+    });
+
     if (selectedGrades.length === 0 || selectedSections.length === 0 || selectedSubjects.length === 0) {
       toast({
         title: "Validation Error",
@@ -74,6 +83,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: A
       return;
     }
 
+    console.log("Calling onSubmit with data");
     onSubmit({
       grades: selectedGrades,
       sections: selectedSections,

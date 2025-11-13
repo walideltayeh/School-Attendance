@@ -159,6 +159,8 @@ const Admin = () => {
   };
 
   const handleAddClass = (classData: { grades: string[]; sections: string[]; subjects: string[] }) => {
+    console.log("handleAddClass called with:", classData);
+    
     // Create a class for each combination of grade, section, and subject
     const createdClasses: string[] = [];
     
@@ -166,19 +168,22 @@ const Admin = () => {
       classData.sections.forEach(section => {
         const className = `${grade} - Section ${section}`;
         classData.subjects.forEach(subject => {
-          dataService.addClass({
+          const addedClass = dataService.addClass({
             name: className,
             teacher: "Unassigned",
             room: "TBD",
             subject: subject
           });
+          console.log("Added class:", addedClass);
           createdClasses.push(`${className} (${subject})`);
         });
       });
     });
     
     // Sync with data service as single source of truth
-    setClasses(dataService.getClasses());
+    const allClasses = dataService.getClasses();
+    console.log("All classes after add:", allClasses);
+    setClasses(allClasses);
     
     toast({
       title: "Classes Created",
