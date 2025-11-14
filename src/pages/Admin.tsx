@@ -172,7 +172,7 @@ const Admin = () => {
           full_name: teacher.name,
           email: teacher.email,
           phone: teacher.phone || null
-        })
+        } as any)
         .select()
         .single();
 
