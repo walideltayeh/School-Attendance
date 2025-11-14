@@ -19,6 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import { dataService, ClassInfo, BusRoute } from "@/services/dataService";
 import { getAvailableGrades, getAvailableSections } from "@/utils/classHelpers";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function StudentRegister() {
   const navigate = useNavigate();
@@ -62,7 +63,7 @@ export default function StudentRegister() {
     }
   }, [grade, classes]);
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
     // Form validation
@@ -93,45 +94,76 @@ export default function StudentRegister() {
       return;
     }
     
-    // Create student object
-    const newStudent = {
-      name: `${firstName} ${lastName}`,
-      grade: grade,
-      section: section,
-      bloodType: bloodType,
-      allergies: hasAllergies,
-      busRoute: requiresBus ? busRoute : "",
-      status: "active" as const
-    };
-    
-    // Add student to the database
-    const addedStudent = dataService.addStudent(newStudent);
-    
-    // If student uses bus, add them to bus students
-    if (requiresBus && busRoute) {
-      const busRouteName = busRoutes.find(route => route.id === busRoute)?.name || "";
-      dataService.addBusStudent({
-        studentId: addedStudent.id,
-        name: `${firstName} ${lastName}`,
-        grade: grade,
-        stop: "", // This would need to be set in a more detailed form
-        status: "active"
+    try {
+      // Create student record in Supabase
+      const { data: newStudent, error: studentError } = await supabase
+        .from('students')
+        .insert({
+          student_code: barcodeValue,
+          full_name: `${firstName} ${lastName}`,
+          grade: grade,
+          section: section,
+          blood_type: bloodType,
+          allergies: hasAllergies,
+          allergies_details: hasAllergies ? allergyDetails : null,
+          status: 'active'
+        } as any)
+        .select()
+        .single();
+
+      if (studentError) {
+        console.error('Error creating student:', studentError);
+        toast({
+          title: "Error",
+          description: "Failed to register student",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // If student uses bus, create bus assignment
+      if (requiresBus && busRoute && newStudent) {
+        const { error: busError } = await supabase
+          .from('bus_assignments')
+          .insert({
+            student_id: newStudent.id,
+            route_id: busRoute,
+            stop_id: busRoute, // This should be updated when you have stops
+            status: 'active'
+          } as any);
+
+        if (busError) {
+          console.error('Error assigning bus:', busError);
+          toast({
+            title: "Warning",
+            description: "Student registered but bus assignment failed",
+            variant: "default"
+          });
+        } else {
+          const busRouteName = busRoutes.find(route => route.id === busRoute)?.name || "";
+          toast({
+            title: "Bus Assignment",
+            description: `Student assigned to bus route: ${busRouteName}`,
+          });
+        }
+      }
+      
+      // Show success toast
+      toast({
+        title: "Student Registered Successfully",
+        description: "The student information has been saved to the system.",
       });
       
+      // Navigate back to students page
+      navigate("/students");
+    } catch (error) {
+      console.error('Error registering student:', error);
       toast({
-        title: "Bus Assignment",
-        description: `Student assigned to bus route: ${busRouteName}`,
+        title: "Error",
+        description: "Failed to register student",
+        variant: "destructive"
       });
     }
-    
-    // Show success toast
-    toast({
-      title: "Student Registered Successfully",
-      description: "The student information has been saved to the system.",
-    });
-    
-    // Navigate back to students page
-    navigate("/students");
   };
 
   const generateNewBarcode = () => {
