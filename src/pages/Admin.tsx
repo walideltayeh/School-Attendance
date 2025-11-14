@@ -277,7 +277,7 @@ const Admin = () => {
     setIsDuplicateDialogOpen(true);
   };
 
-  const confirmDuplicateClassGroup = () => {
+  const confirmDuplicateClassGroup = async () => {
     if (!duplicateSourceClass || !duplicateTargetGrade || !duplicateTargetSection) {
       toast({
         title: "Error",
@@ -305,16 +305,29 @@ const Admin = () => {
       .filter(c => c.name === duplicateSourceClass)
       .map(c => c.subject);
 
-    // Create new classes with same subjects
-    const newClasses: ClassInfo[] = sourceSubjects.map(subject => ({
-      id: `${Date.now()}-${Math.random()}`,
+    // Create new classes with same subjects in Supabase
+    const classesToInsert = sourceSubjects.map(subject => ({
       name: targetClassName,
-      teacher: "Unassigned",
-      room: "TBD",
+      grade: duplicateTargetGrade,
+      section: duplicateTargetSection,
+      teacher_id: null,
+      room_number: "TBD",
       subject: subject
     }));
 
-    setClasses([...classes, ...newClasses]);
+    const { error } = await supabase
+      .from('classes')
+      .insert(classesToInsert);
+
+    if (error) {
+      console.error("Error duplicating classes:", error);
+      toast({
+        title: "Error",
+        description: "Failed to duplicate class group",
+        variant: "destructive"
+      });
+      return;
+    }
     
     toast({
       title: "Class Group Duplicated",
@@ -333,23 +346,31 @@ const Admin = () => {
     setDeleteConfirmOpen(true);
   };
 
-  const confirmDeleteClassGroup = () => {
+  const confirmDeleteClassGroup = async () => {
     if (!classGroupToDelete) return;
     
     const classesToDelete = classes.filter(c => c.name === classGroupToDelete);
+    const classIds = classesToDelete.map(c => c.id);
     
-    // Delete each class using dataService to ensure syncing
-    classesToDelete.forEach(classItem => {
-      dataService.deleteClass(classItem.id);
-    });
-    
-    // Refresh classes and teachers from dataService
-    setClasses(dataService.getClasses());
-    setTeachers(dataService.getTeachers());
+    // Delete from Supabase
+    const { error } = await supabase
+      .from('classes')
+      .delete()
+      .in('id', classIds);
+
+    if (error) {
+      console.error("Error deleting classes:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete class group",
+        variant: "destructive"
+      });
+      return;
+    }
     
     toast({
       title: "Class Group Deleted",
-      description: `${classGroupToDelete} with ${classesToDelete.length} subject(s) removed - synced to teachers`,
+      description: `${classGroupToDelete} with ${classesToDelete.length} subject(s) removed`,
     });
     
     setDeleteConfirmOpen(false);
@@ -373,70 +394,110 @@ const Admin = () => {
     }
   };
 
-  const handleUpdateClassGroup = (updatedData: { grades: string[]; sections: string[]; subjects: string[] }) => {
+  const handleUpdateClassGroup = async (updatedData: { grades: string[]; sections: string[]; subjects: string[] }) => {
     if (!editingClassName) return;
     
-    const newClassName = `${updatedData.grades[0]} - Section ${updatedData.sections[0]}`;
+    const newGrade = updatedData.grades[0];
+    const newSection = updatedData.sections[0];
+    const newClassName = `${newGrade} - Section ${newSection}`;
     const oldClasses = classes.filter(c => c.name === editingClassName);
     
     // Determine which subjects to keep, update, or add
     const oldSubjects = oldClasses.map(c => c.subject);
     const newSubjects = updatedData.subjects;
     
-    // Update existing classes if grade/section changed
-    if (editingClassName !== newClassName) {
-      oldClasses.forEach(classItem => {
-        if (newSubjects.includes(classItem.subject)) {
-          dataService.updateClass(classItem.id, { name: newClassName });
-        } else {
-          dataService.deleteClass(classItem.id);
+    try {
+      // Update existing classes if grade/section changed
+      if (editingClassName !== newClassName) {
+        // Update classes that should remain
+        const classesToUpdate = oldClasses.filter(c => newSubjects.includes(c.subject));
+        if (classesToUpdate.length > 0) {
+          const { error: updateError } = await supabase
+            .from('classes')
+            .update({ 
+              name: newClassName,
+              grade: newGrade,
+              section: newSection
+            })
+            .in('id', classesToUpdate.map(c => c.id));
+
+          if (updateError) throw updateError;
         }
-      });
+
+        // Delete classes with removed subjects
+        const classesToDelete = oldClasses.filter(c => !newSubjects.includes(c.subject));
+        if (classesToDelete.length > 0) {
+          const { error: deleteError } = await supabase
+            .from('classes')
+            .delete()
+            .in('id', classesToDelete.map(c => c.id));
+
+          if (deleteError) throw deleteError;
+        }
+        
+        // Add new subjects
+        const subjectsToAdd = newSubjects.filter(s => !oldSubjects.includes(s));
+        if (subjectsToAdd.length > 0) {
+          const { error: insertError } = await supabase
+            .from('classes')
+            .insert(subjectsToAdd.map(subject => ({
+              name: newClassName,
+              grade: newGrade,
+              section: newSection,
+              teacher_id: null,
+              room_number: "TBD",
+              subject: subject
+            })));
+
+          if (insertError) throw insertError;
+        }
+      } else {
+        // Only subjects changed, same grade/section
+        // Delete removed subjects
+        const classesToDelete = oldClasses.filter(c => !newSubjects.includes(c.subject));
+        if (classesToDelete.length > 0) {
+          const { error: deleteError } = await supabase
+            .from('classes')
+            .delete()
+            .in('id', classesToDelete.map(c => c.id));
+
+          if (deleteError) throw deleteError;
+        }
+        
+        // Add new subjects
+        const subjectsToAdd = newSubjects.filter(s => !oldSubjects.includes(s));
+        if (subjectsToAdd.length > 0) {
+          const { error: insertError } = await supabase
+            .from('classes')
+            .insert(subjectsToAdd.map(subject => ({
+              name: newClassName,
+              grade: newGrade,
+              section: newSection,
+              teacher_id: null,
+              room_number: "TBD",
+              subject: subject
+            })));
+
+          if (insertError) throw insertError;
+        }
+      }
       
-      // Add new subjects
-      newSubjects.forEach(subject => {
-        if (!oldSubjects.includes(subject)) {
-          dataService.addClass({
-            name: newClassName,
-            teacher: "Unassigned",
-            room: "TBD",
-            subject: subject
-          });
-        }
-      });
-    } else {
-      // Only subjects changed, same grade/section
-      // Delete removed subjects
-      oldClasses.forEach(classItem => {
-        if (!newSubjects.includes(classItem.subject)) {
-          dataService.deleteClass(classItem.id);
-        }
-      });
+      setIsClassEditDialogOpen(false);
+      setEditingClassName(null);
+      setSelectedClass(null);
       
-      // Add new subjects
-      newSubjects.forEach(subject => {
-        if (!oldSubjects.includes(subject)) {
-          dataService.addClass({
-            name: newClassName,
-            teacher: "Unassigned",
-            room: "TBD",
-            subject: subject
-          });
-        }
+      toast({
+        title: "Class Group Updated",
+        description: `Updated ${newClassName}`,
+      });
+    } catch (error) {
+      console.error("Error updating class group:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update class group",
+        variant: "destructive"
       });
     }
-    
-    // Refresh classes and teachers from dataService
-    setClasses(dataService.getClasses());
-    setTeachers(dataService.getTeachers());
-    setIsClassEditDialogOpen(false);
-    setEditingClassName(null);
-    setSelectedClass(null);
-    
-    toast({
-      title: "Class Group Updated",
-      description: `Updated ${newClassName} - changes synced to teachers and students`,
-    });
   };
 
   return (
