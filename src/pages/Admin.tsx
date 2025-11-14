@@ -131,16 +131,7 @@ const Admin = () => {
   const loadTeachers = async () => {
     const { data, error } = await supabase
       .from('teachers')
-      .select(`
-        id,
-        teacher_code,
-        subjects,
-        profiles:user_id (
-          full_name,
-          email,
-          phone
-        )
-      `)
+      .select('id, teacher_code, subjects, full_name, email, phone')
       .order('created_at', { ascending: false });
     
     if (error) {
@@ -155,9 +146,9 @@ const Admin = () => {
 
     const transformedTeachers: Teacher[] = (data || []).map((teacher: any) => ({
       id: teacher.id,
-      name: teacher.profiles?.full_name || 'Unknown',
-      email: teacher.profiles?.email || '',
-      phone: teacher.profiles?.phone || '',
+      name: teacher.full_name || 'Unknown',
+      email: teacher.email || '',
+      phone: teacher.phone || '',
       username: teacher.teacher_code,
       password: '',
       subject: teacher.subjects?.[0] || '',
@@ -172,13 +163,15 @@ const Admin = () => {
 
   const handleAddTeacher = async (teacher: Omit<Teacher, "id">, classAssignments: any[]) => {
     try {
-      // Create teacher record directly without auth
-      const { error: teacherError } = await supabase
+      // Create teacher record directly with all info
+      const { data: newTeacher, error: teacherError } = await supabase
         .from('teachers')
         .insert({
-          user_id: null, // No auth user for now
           teacher_code: teacher.username,
-          subjects: classAssignments.map(ca => ca.subject).filter(Boolean)
+          subjects: classAssignments.map(ca => ca.subject).filter(Boolean),
+          full_name: teacher.name,
+          email: teacher.email,
+          phone: teacher.phone || null
         })
         .select()
         .single();
@@ -192,16 +185,6 @@ const Admin = () => {
         });
         return;
       }
-
-      // Create profile record for the teacher
-      await supabase
-        .from('profiles')
-        .insert({
-          id: crypto.randomUUID(),
-          full_name: teacher.name,
-          email: teacher.email,
-          phone: teacher.phone || null
-        });
 
       toast({
         title: "Teacher Added",
