@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Bus, 
   User, 
@@ -34,22 +34,156 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { dataService, BusRoute, busStops, busStudents } from "@/services/dataService";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Transport() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [busRoutes, setBusRoutes] = useState<BusRoute[]>(dataService.getBusRoutes());
+  const [busRoutes, setBusRoutes] = useState<any[]>([]);
+  const [busStops, setBusStops] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [assignedStudents, setAssignedStudents] = useState<any[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [selectedStopId, setSelectedStopId] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchBusRoutes();
+    fetchStudents();
+  }, []);
+
+  useEffect(() => {
+    if (selectedRoute) {
+      fetchRouteDetails(selectedRoute);
+    }
+  }, [selectedRoute]);
+
+  const fetchBusRoutes = async () => {
+    const { data, error } = await supabase
+      .from('bus_routes')
+      .select('*')
+      .order('name');
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load bus routes",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setBusRoutes(data || []);
+  };
+
+  const fetchStudents = async () => {
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('status', 'active')
+      .order('full_name');
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load students",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setStudents(data || []);
+  };
+
+  const fetchRouteDetails = async (routeId: string) => {
+    // Fetch bus stops for this route
+    const { data: stopsData, error: stopsError } = await supabase
+      .from('bus_stops')
+      .select('*')
+      .eq('route_id', routeId)
+      .order('stop_order');
+    
+    if (stopsError) {
+      toast({
+        title: "Error",
+        description: "Failed to load bus stops",
+        variant: "destructive",
+      });
+    } else {
+      setBusStops(stopsData || []);
+    }
+
+    // Fetch assigned students for this route
+    const { data: assignmentsData, error: assignmentsError } = await supabase
+      .from('bus_assignments')
+      .select(`
+        *,
+        student:students(*),
+        stop:bus_stops(*)
+      `)
+      .eq('route_id', routeId)
+      .eq('status', 'active');
+    
+    if (assignmentsError) {
+      toast({
+        title: "Error",
+        description: "Failed to load assigned students",
+        variant: "destructive",
+      });
+    } else {
+      setAssignedStudents(assignmentsData || []);
+    }
+  };
+
+  const handleAssignStudent = async () => {
+    if (!selectedStudentId || !selectedStopId || !selectedRoute) {
+      toast({
+        title: "Error",
+        description: "Please select both a student and a bus stop",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('bus_assignments')
+      .insert({
+        student_id: selectedStudentId,
+        route_id: selectedRoute,
+        stop_id: selectedStopId,
+        status: 'active'
+      });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to assign student to bus route",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Success",
+      description: "Student assigned to bus route successfully",
+    });
+
+    setAssignDialogOpen(false);
+    setSelectedStudentId("");
+    setSelectedStopId("");
+    fetchRouteDetails(selectedRoute);
+  };
   
-  const filteredRoutes = busRoutes.filter(route => 
+  const filteredRoutes = busRoutes.filter(route =>
     route.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    route.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    route.driver.toLowerCase().includes(searchQuery.toLowerCase())
+    route.route_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    route.driver_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleRouteSelect = (routeId: string) => {
@@ -58,18 +192,17 @@ export default function Transport() {
   
   const handleExport = () => {
     // Create CSV content for bus routes
-    const headers = ["ID", "Name", "Driver", "Phone", "Departure", "Return", "Students", "Stops", "Status"];
+    const headers = ["ID", "Name", "Code", "Driver", "Phone", "Departure", "Return", "Status"];
     const csvContent = [
       headers.join(','),
       ...filteredRoutes.map(route => [
         route.id,
         route.name,
-        route.driver,
-        route.phone,
-        route.departureTime,
-        route.returnTime,
-        route.students,
-        route.stops,
+        route.route_code,
+        route.driver_name,
+        route.driver_phone,
+        route.departure_time,
+        route.return_time,
         route.status
       ].join(','))
     ].join('\n');
@@ -152,23 +285,23 @@ export default function Transport() {
                       </div>
                       <div>
                         <p className="font-medium">{route.name}</p>
-                        <p className="text-xs text-muted-foreground">ID: {route.id}</p>
+                        <p className="text-xs text-muted-foreground">Code: {route.route_code}</p>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <p>{route.driver}</p>
-                    <p className="text-xs text-muted-foreground">{route.phone}</p>
+                    <p>{route.driver_name}</p>
+                    <p className="text-xs text-muted-foreground">{route.driver_phone}</p>
                   </TableCell>
                   <TableCell>
                     <div className="space-y-1">
                       <div className="flex items-center gap-1 text-sm">
                         <Clock className="h-3 w-3 text-green-600" />
-                        <span>Departs: {route.departureTime}</span>
+                        <span>Departs: {route.departure_time}</span>
                       </div>
                       <div className="flex items-center gap-1 text-sm">
                         <Clock className="h-3 w-3 text-orange-600" />
-                        <span>Returns: {route.returnTime}</span>
+                        <span>Returns: {route.return_time}</span>
                       </div>
                     </div>
                   </TableCell>
@@ -176,11 +309,11 @@ export default function Transport() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-1">
                         <User className="h-3 w-3 text-muted-foreground" />
-                        <span>{route.students} students</span>
+                        <span>{assignedStudents.filter(a => a.route_id === route.id).length} students</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <MapPin className="h-3 w-3 text-muted-foreground" />
-                        <span>{route.stops} stops</span>
+                        <span>{busStops.filter(s => s.route_id === route.id).length} stops</span>
                       </div>
                     </div>
                   </TableCell>
@@ -203,7 +336,10 @@ export default function Transport() {
                           <Route className="mr-2 h-4 w-4" />
                           {selectedRoute === route.id ? "Hide Details" : "View Details"}
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          setSelectedRoute(route.id);
+                          setAssignDialogOpen(true);
+                        }}>
                           <UserPlus className="mr-2 h-4 w-4" />
                           Assign Students
                         </DropdownMenuItem>
@@ -256,66 +392,74 @@ export default function Transport() {
                 </TabsList>
                 
                 <TabsContent value="stops" className="space-y-4">
-                  {busStops.map((stop) => (
-                    <div key={stop.id} className="flex items-center justify-between rounded-lg border p-3">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center">
-                          <MapPin className="h-4 w-4 text-amber-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{stop.name}</p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            <span>{stop.time}</span>
+                  {busStops.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">No bus stops configured for this route</p>
+                  ) : (
+                    busStops.map((stop) => (
+                      <div key={stop.id} className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center">
+                            <MapPin className="h-4 w-4 text-amber-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{stop.name}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              <span>{stop.arrival_time}</span>
+                            </div>
                           </div>
                         </div>
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          <span>{assignedStudents.filter(a => a.stop_id === stop.id).length}</span>
+                        </Badge>
                       </div>
-                      <Badge variant="outline" className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        <span>{stop.students}</span>
-                      </Badge>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </TabsContent>
                 
                 <TabsContent value="students">
-                  <div className="rounded-lg border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Student</TableHead>
-                          <TableHead>Grade</TableHead>
-                          <TableHead>Bus Stop</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {busStudents.map((student) => (
-                          <TableRow key={student.id}>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarFallback className="bg-school-accent text-school-dark">
-                                    {student.name.split(' ').map(n => n[0]).join('')}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <p className="font-medium">{student.name}</p>
-                                  <p className="text-xs text-muted-foreground">ID: {student.id}</p>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>{student.grade}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3 text-amber-600" />
-                                <span>{student.stop}</span>
-                              </div>
-                            </TableCell>
+                  {assignedStudents.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">No students assigned to this route yet</p>
+                  ) : (
+                    <div className="rounded-lg border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Student</TableHead>
+                            <TableHead>Grade</TableHead>
+                            <TableHead>Bus Stop</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                        </TableHeader>
+                        <TableBody>
+                          {assignedStudents.map((assignment) => (
+                            <TableRow key={assignment.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-3">
+                                  <Avatar>
+                                    <AvatarFallback>
+                                      {assignment.student?.full_name?.split(' ').map((n: string) => n[0]).join('') || '?'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="font-medium">{assignment.student?.full_name || 'Unknown'}</p>
+                                    <p className="text-xs text-muted-foreground">Code: {assignment.student?.student_code}</p>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>{assignment.student?.grade} - {assignment.student?.section}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-3 w-3 text-muted-foreground" />
+                                  <span>{assignment.stop?.name || 'N/A'}</span>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </CardContent>
@@ -371,6 +515,62 @@ export default function Transport() {
           </Card>
         </>
       )}
+
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Student to Bus Route</DialogTitle>
+            <DialogDescription>
+              Select a student and bus stop to assign to {busRoutes.find(r => r.id === selectedRoute)?.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Student</Label>
+              <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a student" />
+                </SelectTrigger>
+                <SelectContent>
+                  {students
+                    .filter(s => !assignedStudents.some(a => a.student_id === s.id))
+                    .map((student) => (
+                      <SelectItem key={student.id} value={student.id}>
+                        {student.full_name} - {student.grade} {student.section}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Bus Stop</Label>
+              <Select value={selectedStopId} onValueChange={setSelectedStopId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a bus stop" />
+                </SelectTrigger>
+                <SelectContent>
+                  {busStops.map((stop) => (
+                    <SelectItem key={stop.id} value={stop.id}>
+                      {stop.name} - {stop.arrival_time}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAssignStudent}>
+              Assign Student
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
