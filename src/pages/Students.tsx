@@ -87,19 +87,36 @@ export default function Students() {
         description: "Failed to load students",
         variant: "destructive"
       });
-    } else {
-      const mappedStudents: Student[] = (data || []).map((s: any) => ({
-        id: s.student_code,
-        name: s.full_name,
-        grade: s.grade,
-        section: s.section,
-        bloodType: s.blood_type || '',
-        allergies: s.allergies || false,
-        busRoute: undefined,
-        status: s.status as 'active' | 'inactive'
-      }));
-      setStudents(mappedStudents);
+      return;
     }
+
+    // Fetch bus assignments for all students
+    const { data: busAssignments, error: busError } = await supabase
+      .from('bus_assignments')
+      .select('student_id, route_id')
+      .eq('status', 'active');
+
+    if (busError) {
+      console.error('Error loading bus assignments:', busError);
+    }
+
+    // Create a map of student_id to route_id
+    const busAssignmentMap = new Map<string, string>();
+    (busAssignments || []).forEach((assignment: any) => {
+      busAssignmentMap.set(assignment.student_id, assignment.route_id);
+    });
+
+    const mappedStudents: Student[] = (data || []).map((s: any) => ({
+      id: s.student_code,
+      name: s.full_name,
+      grade: s.grade,
+      section: s.section,
+      bloodType: s.blood_type || '',
+      allergies: s.allergies || false,
+      busRoute: busAssignmentMap.get(s.id),
+      status: s.status as 'active' | 'inactive'
+    }));
+    setStudents(mappedStudents);
   };
 
   const loadBusRoutes = async () => {
