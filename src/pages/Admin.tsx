@@ -230,9 +230,33 @@ const Admin = () => {
     }
   };
 
-  const handleAddBusRoute = (route: Omit<BusRoute, "id">) => {
-    const addedRoute = dataService.addBusRoute(route);
-    console.log("Added bus route:", addedRoute);
+  const handleAddBusRoute = async (route: Omit<BusRoute, "id">) => {
+    console.log("Adding bus route:", route);
+    
+    const { data, error } = await supabase
+      .from('bus_routes')
+      .insert([{
+        name: route.name,
+        driver_name: route.driver,
+        driver_phone: route.phone,
+        departure_time: route.departureTime,
+        return_time: route.returnTime,
+        route_code: `RT-${Date.now()}`,
+        status: route.status
+      }])
+      .select();
+    
+    if (error) {
+      console.error("Error adding bus route:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add bus route: " + error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    console.log("Bus route created successfully:", data);
     
     toast({
       title: "Bus Route Added",
