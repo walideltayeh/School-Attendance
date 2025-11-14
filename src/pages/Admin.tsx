@@ -177,7 +177,7 @@ const Admin = () => {
         ? teacher.password 
         : `Teacher${Date.now()}`;
       
-      // Create auth user
+      // Try to create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: teacher.email,
         password: generatedPassword,
@@ -188,6 +188,16 @@ const Admin = () => {
         }
       });
 
+      // If user already exists, show clear error message
+      if (authError?.message === "User already registered") {
+        toast({
+          title: "Email Already Exists",
+          description: "This email is already registered in the system. Please use a different email address.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       if (authError || !authData.user) {
         console.error('Error creating auth user:', authError);
         toast({
