@@ -2,7 +2,7 @@
 import { Bell, Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -12,27 +12,12 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 
 interface HeaderProps {
   toggleSidebar: () => void;
 }
 
 export function Header({ toggleSidebar }: HeaderProps) {
-  const { user, signOut } = useAuth();
-  
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-  
-  const displayName = user?.user_metadata?.full_name || user?.email || "User";
-  const initials = getInitials(displayName);
-  
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
       <Button variant="outline" size="icon" onClick={toggleSidebar} className="shrink-0 md:hidden">
@@ -65,8 +50,7 @@ export function Header({ toggleSidebar }: HeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="rounded-full">
               <Avatar className="h-8 w-8">
-                <AvatarImage src="" alt={displayName} />
-                <AvatarFallback className="bg-school-primary text-white">{initials}</AvatarFallback>
+                <AvatarFallback className="bg-school-primary text-white">AD</AvatarFallback>
               </Avatar>
               <span className="sr-only">Toggle user menu</span>
             </Button>
@@ -74,8 +58,8 @@ export function Header({ toggleSidebar }: HeaderProps) {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{displayName}</p>
-                <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                <p className="text-sm font-medium leading-none">Admin</p>
+                <p className="text-xs leading-none text-muted-foreground">admin@school.com</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -84,10 +68,6 @@ export function Header({ toggleSidebar }: HeaderProps) {
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link to="/help">Support</Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={signOut} className="text-destructive">
-              Logout
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
