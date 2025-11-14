@@ -19,11 +19,9 @@ import { AddBusRouteForm } from "@/components/admin/AddBusRouteForm";
 import { AddClassForm } from "@/components/admin/AddClassForm";
 import { SubjectManagement } from "@/components/admin/SubjectManagement";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 
 const Admin = () => {
   const navigate = useNavigate();
-  const { refreshSession } = useAuth();
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -174,50 +172,16 @@ const Admin = () => {
 
   const handleAddTeacher = async (teacher: Omit<Teacher, "id">, classAssignments: any[]) => {
     try {
-      // Generate a secure password (minimum 6 characters required by Supabase)
-      const generatedPassword = teacher.password && teacher.password.length >= 6 
-        ? teacher.password 
-        : `Teacher${Date.now()}`;
-      
-      // Try to create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: teacher.email,
-        password: generatedPassword,
-        options: {
-          data: {
-            full_name: teacher.name
-          }
-        }
-      });
-
-      // If user already exists, show clear error message
-      if (authError?.message === "User already registered") {
-        toast({
-          title: "Email Already Exists",
-          description: "This email is already registered in the system. Please use a different email address.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      if (authError || !authData.user) {
-        console.error('Error creating auth user:', authError);
-        toast({
-          title: "Error",
-          description: authError?.message || "Failed to create teacher account",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Create teacher record
+      // Create teacher record directly without auth
       const { error: teacherError } = await supabase
         .from('teachers')
         .insert({
-          user_id: authData.user.id,
+          user_id: null, // No auth user for now
           teacher_code: teacher.username,
           subjects: classAssignments.map(ca => ca.subject).filter(Boolean)
-        });
+        })
+        .select()
+        .single();
 
       if (teacherError) {
         console.error('Error creating teacher:', teacherError);
@@ -229,20 +193,15 @@ const Admin = () => {
         return;
       }
 
-      // Assign teacher role
-      const { error: roleError } = await supabase
-        .from('user_roles')
+      // Create profile record for the teacher
+      await supabase
+        .from('profiles')
         .insert({
-          user_id: authData.user.id,
-          role: 'teacher'
+          id: crypto.randomUUID(),
+          full_name: teacher.name,
+          email: teacher.email,
+          phone: teacher.phone || null
         });
-
-      if (roleError) {
-        console.error('Error assigning role:', roleError);
-      }
-
-      // Refresh session to pick up new role permissions
-      await refreshSession();
 
       toast({
         title: "Teacher Added",
