@@ -19,9 +19,11 @@ import { AddBusRouteForm } from "@/components/admin/AddBusRouteForm";
 import { AddClassForm } from "@/components/admin/AddClassForm";
 import { SubjectManagement } from "@/components/admin/SubjectManagement";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Admin = () => {
   const navigate = useNavigate();
+  const { refreshSession } = useAuth();
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -238,6 +240,9 @@ const Admin = () => {
       if (roleError) {
         console.error('Error assigning role:', roleError);
       }
+
+      // Refresh session to pick up new role permissions
+      await refreshSession();
 
       toast({
         title: "Teacher Added",
