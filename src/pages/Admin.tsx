@@ -16,6 +16,7 @@ import { ClassPeriodsForm } from "@/components/admin/ClassPeriodsForm";
 import { ClassScheduleForm } from "@/components/admin/ClassScheduleForm";
 import { AddTeacherForm } from "@/components/admin/AddTeacherForm";
 import { AddBusRouteForm } from "@/components/admin/AddBusRouteForm";
+import { AddBusStopForm } from "@/components/admin/AddBusStopForm";
 import { AddClassForm } from "@/components/admin/AddClassForm";
 import { SubjectManagement } from "@/components/admin/SubjectManagement";
 import { supabase } from "@/integrations/supabase/client";
@@ -782,6 +783,18 @@ const Admin = () => {
             </CardHeader>
             <CardContent>
               <AddBusRouteForm onSubmit={handleAddBusRoute} />
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Add Bus Stop</CardTitle>
+              <CardDescription>
+                Add stops to existing bus routes with pickup/dropoff locations and times.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AddBusStopForm />
             </CardContent>
           </Card>
         </TabsContent>
