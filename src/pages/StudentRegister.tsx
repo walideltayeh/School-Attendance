@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { dataService, ClassInfo, BusRoute } from "@/services/dataService";
 import { getAvailableGrades, getAvailableSections } from "@/utils/classHelpers";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,13 +51,44 @@ export default function StudentRegister() {
   const [availableSections, setAvailableSections] = useState<string[]>([]);
 
   useEffect(() => {
-    const loadedClasses = dataService.getClasses();
-    const loadedBusRoutes = dataService.getBusRoutes();
+    const loadData = async () => {
+      const loadedClasses = dataService.getClasses();
+      setClasses(loadedClasses);
+      
+      // Fetch bus routes from Supabase
+      const { data: routes, error } = await supabase
+        .from('bus_routes')
+        .select('*')
+        .eq('status', 'active')
+        .order('name');
+      
+      if (error) {
+        console.error("Error loading bus routes:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load bus routes",
+          variant: "destructive"
+        });
+      } else {
+        // Map Supabase data to BusRoute type
+        const mappedRoutes = routes?.map(route => ({
+          id: route.id,
+          name: route.name,
+          driver: route.driver_name,
+          phone: route.driver_phone,
+          departureTime: route.departure_time,
+          returnTime: route.return_time,
+          students: 0,
+          stops: 0,
+          status: route.status
+        })) || [];
+        setBusRoutes(mappedRoutes);
+      }
+      
+      getAvailableGrades().then(grades => setAvailableGrades(grades));
+    };
     
-    setClasses(loadedClasses);
-    setBusRoutes(loadedBusRoutes);
-    
-    getAvailableGrades().then(grades => setAvailableGrades(grades));
+    loadData();
   }, []);
 
   useEffect(() => {
