@@ -41,12 +41,12 @@ const Admin = () => {
   
   useEffect(() => {
     console.log('Admin component mounted, loading data...');
-    setTeachers(dataService.getTeachers());
+    loadTeachers();
     setSchedules(dataService.getClassSchedules());
     loadClasses();
 
     // Subscribe to real-time updates for classes
-    const channel = supabase
+    const classesChannel = supabase
       .channel('classes-changes')
       .on(
         'postgres_changes',
@@ -62,11 +62,29 @@ const Admin = () => {
       )
       .subscribe();
 
+    // Subscribe to real-time updates for teachers
+    const teachersChannel = supabase
+      .channel('teachers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'teachers'
+        },
+        () => {
+          console.log('Teachers changed, reloading...');
+          loadTeachers();
+        }
+      )
+      .subscribe();
+
     // Also reload when component becomes visible again
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        console.log('Page became visible, reloading classes...');
+        console.log('Page became visible, reloading data...');
         loadClasses();
+        loadTeachers();
       }
     };
     
@@ -74,7 +92,8 @@ const Admin = () => {
 
     return () => {
       console.log('Admin component unmounting...');
-      supabase.removeChannel(channel);
+      supabase.removeChannel(classesChannel);
+      supabase.removeChannel(teachersChannel);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
@@ -109,40 +128,114 @@ const Admin = () => {
     setClasses(transformedClasses);
   };
 
-  const handleAddTeacher = (teacher: Omit<Teacher, "id">, classAssignments: any[]) => {
-    const addedTeacher = dataService.addTeacher(teacher);
-    console.log("Added teacher:", addedTeacher);
+  const loadTeachers = async () => {
+    const { data, error } = await supabase
+      .from('teachers')
+      .select(`
+        id,
+        teacher_code,
+        subjects,
+        profiles:user_id (
+          full_name,
+          email,
+          phone
+        )
+      `)
+      .order('created_at', { ascending: false });
     
-    if (teacher.classes && teacher.classes.length > 0) {
-      teacher.classes.forEach(className => {
-        const match = className.match(/(.*) \((.*)\)$/);
-        if (match) {
-          const [, classNameWithoutSubject, subject] = match;
-          const teacherName = addedTeacher.name;
-          
-          const classAssignment = classAssignments.find(ca => 
-            `${ca.grade} - Section ${ca.section}` === classNameWithoutSubject && 
-            ca.subject === subject
-          );
-          
-          const room = classAssignment?.room || "Room " + Math.floor(Math.random() * 300 + 100);
-          
-          dataService.addClass({
-            name: classNameWithoutSubject,
-            teacher: teacherName,
-            room: room,
-            subject: subject
-          });
+    if (error) {
+      console.error('Error loading teachers:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load teachers",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const transformedTeachers: Teacher[] = (data || []).map((teacher: any) => ({
+      id: teacher.id,
+      name: teacher.profiles?.full_name || 'Unknown',
+      email: teacher.profiles?.email || '',
+      phone: teacher.profiles?.phone || '',
+      username: teacher.teacher_code,
+      password: '',
+      subject: teacher.subjects?.[0] || '',
+      subjects: teacher.subjects || [],
+      classes: teacher.subjects || [],
+      students: 0
+    }));
+
+    console.log('Loaded teachers from database:', transformedTeachers);
+    setTeachers(transformedTeachers);
+  };
+
+  const handleAddTeacher = async (teacher: Omit<Teacher, "id">, classAssignments: any[]) => {
+    try {
+      // Create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: teacher.email,
+        password: teacher.password || `Teacher${Date.now()}`,
+        options: {
+          data: {
+            full_name: teacher.name
+          }
         }
       });
+
+      if (authError || !authData.user) {
+        console.error('Error creating auth user:', authError);
+        toast({
+          title: "Error",
+          description: authError?.message || "Failed to create teacher account",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Create teacher record
+      const { error: teacherError } = await supabase
+        .from('teachers')
+        .insert({
+          user_id: authData.user.id,
+          teacher_code: teacher.username,
+          subjects: classAssignments.map(ca => ca.subject).filter(Boolean)
+        });
+
+      if (teacherError) {
+        console.error('Error creating teacher:', teacherError);
+        toast({
+          title: "Error",
+          description: "Failed to create teacher record",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Assign teacher role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: authData.user.id,
+          role: 'teacher'
+        });
+
+      if (roleError) {
+        console.error('Error assigning role:', roleError);
+      }
+
+      toast({
+        title: "Teacher Added",
+        description: `${teacher.name} has been added successfully`,
+      });
+    } catch (error) {
+      console.error('Error adding teacher:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add teacher",
+        variant: "destructive"
+      });
     }
-    
-    setTeachers(dataService.getTeachers());
-    
-    toast({
-      title: "Teacher Added",
-      description: `${teacher.name} has been added with ${teacher.classes.length} class assignments`,
-    });
   };
 
   const handleEditTeacher = (teacher: Teacher) => {
