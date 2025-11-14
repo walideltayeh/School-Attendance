@@ -35,6 +35,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
@@ -51,6 +52,10 @@ export default function Transport() {
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState("");
   const [selectedStopId, setSelectedStopId] = useState("");
+  const [unassignDialogOpen, setUnassignDialogOpen] = useState(false);
+  const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState("");
+  const [reassignStopId, setReassignStopId] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -178,6 +183,72 @@ export default function Transport() {
     setSelectedStudentId("");
     setSelectedStopId("");
     fetchRouteDetails(selectedRoute);
+  };
+
+  const handleUnassignStudent = async () => {
+    if (!selectedAssignmentId) return;
+
+    const { error } = await supabase
+      .from('bus_assignments')
+      .update({ status: 'inactive' })
+      .eq('id', selectedAssignmentId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to unassign student",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Success",
+      description: "Student unassigned from bus route successfully",
+    });
+
+    setUnassignDialogOpen(false);
+    setSelectedAssignmentId("");
+    if (selectedRoute) {
+      fetchRouteDetails(selectedRoute);
+    }
+  };
+
+  const handleReassignStudent = async () => {
+    if (!selectedAssignmentId || !reassignStopId) {
+      toast({
+        title: "Error",
+        description: "Please select a bus stop",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('bus_assignments')
+      .update({ stop_id: reassignStopId })
+      .eq('id', selectedAssignmentId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reassign student",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Success",
+      description: "Student reassigned to new bus stop successfully",
+    });
+
+    setReassignDialogOpen(false);
+    setSelectedAssignmentId("");
+    setReassignStopId("");
+    if (selectedRoute) {
+      fetchRouteDetails(selectedRoute);
+    }
   };
   
   const filteredRoutes = busRoutes.filter(route =>
@@ -429,6 +500,7 @@ export default function Transport() {
                             <TableHead>Student</TableHead>
                             <TableHead>Grade</TableHead>
                             <TableHead>Bus Stop</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -453,6 +525,38 @@ export default function Transport() {
                                   <MapPin className="h-3 w-3 text-muted-foreground" />
                                   <span>{assignment.stop?.name || 'N/A'}</span>
                                 </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                      <span className="sr-only">Open menu</span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => {
+                                      setSelectedAssignmentId(assignment.id);
+                                      setReassignStopId(assignment.stop_id);
+                                      setReassignDialogOpen(true);
+                                    }}>
+                                      <Route className="mr-2 h-4 w-4" />
+                                      Reassign Stop
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                      className="text-destructive"
+                                      onClick={() => {
+                                        setSelectedAssignmentId(assignment.id);
+                                        setUnassignDialogOpen(true);
+                                      }}
+                                    >
+                                      <User className="mr-2 h-4 w-4" />
+                                      Unassign Student
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -567,6 +671,61 @@ export default function Transport() {
             </Button>
             <Button onClick={handleAssignStudent}>
               Assign Student
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={unassignDialogOpen} onOpenChange={setUnassignDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unassign Student</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to unassign this student from the bus route? This action can be reversed by reassigning the student.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleUnassignStudent}>
+              Unassign
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={reassignDialogOpen} onOpenChange={setReassignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reassign Student to Different Stop</DialogTitle>
+            <DialogDescription>
+              Select a new bus stop for this student on {busRoutes.find(r => r.id === selectedRoute)?.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>New Bus Stop</Label>
+              <Select value={reassignStopId} onValueChange={setReassignStopId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a bus stop" />
+                </SelectTrigger>
+                <SelectContent>
+                  {busStops.map((stop) => (
+                    <SelectItem key={stop.id} value={stop.id}>
+                      {stop.name} - {stop.arrival_time}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReassignDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleReassignStudent}>
+              Reassign Student
             </Button>
           </DialogFooter>
         </DialogContent>
