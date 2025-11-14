@@ -172,10 +172,15 @@ const Admin = () => {
 
   const handleAddTeacher = async (teacher: Omit<Teacher, "id">, classAssignments: any[]) => {
     try {
+      // Generate a secure password (minimum 6 characters required by Supabase)
+      const generatedPassword = teacher.password && teacher.password.length >= 6 
+        ? teacher.password 
+        : `Teacher${Date.now()}`;
+      
       // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: teacher.email,
-        password: teacher.password || `Teacher${Date.now()}`,
+        password: generatedPassword,
         options: {
           data: {
             full_name: teacher.name
