@@ -414,6 +414,7 @@ export type Database = {
       }
       students: {
         Row: {
+          address: string | null
           allergies: boolean | null
           allergies_details: string | null
           blood_type: Database["public"]["Enums"]["blood_type"] | null
@@ -421,6 +422,7 @@ export type Database = {
           full_name: string
           grade: string
           id: string
+          photo_url: string | null
           section: string
           status: Database["public"]["Enums"]["user_status"] | null
           student_code: string
@@ -428,6 +430,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          address?: string | null
           allergies?: boolean | null
           allergies_details?: string | null
           blood_type?: Database["public"]["Enums"]["blood_type"] | null
@@ -435,6 +438,7 @@ export type Database = {
           full_name: string
           grade: string
           id?: string
+          photo_url?: string | null
           section: string
           status?: Database["public"]["Enums"]["user_status"] | null
           student_code: string
@@ -442,6 +446,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          address?: string | null
           allergies?: boolean | null
           allergies_details?: string | null
           blood_type?: Database["public"]["Enums"]["blood_type"] | null
@@ -449,6 +454,7 @@ export type Database = {
           full_name?: string
           grade?: string
           id?: string
+          photo_url?: string | null
           section?: string
           status?: Database["public"]["Enums"]["user_status"] | null
           student_code?: string
@@ -486,27 +492,36 @@ export type Database = {
       teachers: {
         Row: {
           created_at: string
+          email: string | null
+          full_name: string | null
           id: string
+          phone: string | null
           subjects: string[]
           teacher_code: string
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
+          email?: string | null
+          full_name?: string | null
           id?: string
+          phone?: string | null
           subjects?: string[]
           teacher_code: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
+          email?: string | null
+          full_name?: string | null
           id?: string
+          phone?: string | null
           subjects?: string[]
           teacher_code?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
