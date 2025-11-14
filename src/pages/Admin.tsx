@@ -233,6 +233,9 @@ const Admin = () => {
         title: "Teacher Added",
         description: `${teacher.name} has been added successfully`,
       });
+      
+      // Reload teachers list to show the new teacher
+      await loadTeachers();
     } catch (error) {
       console.error('Error adding teacher:', error);
       toast({
