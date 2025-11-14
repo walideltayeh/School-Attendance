@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { QrCode, Save, ArrowLeft, User, FileDown } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,22 +22,24 @@ import { supabase } from "@/integrations/supabase/client";
 
 export default function StudentRegister() {
   const navigate = useNavigate();
-  const [barcodeValue, setBarcodeValue] = useState("STU" + Math.floor(Math.random() * 10000).toString().padStart(4, '0'));
-  const [hasAllergies, setHasAllergies] = useState(false);
-  const [requiresBus, setRequiresBus] = useState(false);
+  const location = useLocation();
+  const editStudent = location.state?.student;
+  const [barcodeValue, setBarcodeValue] = useState(editStudent?.student_code || "STU" + Math.floor(Math.random() * 10000).toString().padStart(4, '0'));
+  const [hasAllergies, setHasAllergies] = useState(editStudent?.allergies || false);
+  const [requiresBus, setRequiresBus] = useState(!!editStudent?.bus_route_id);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string>("");
+  const [photoPreview, setPhotoPreview] = useState<string>(editStudent?.photo_url || "");
   
   // Student form state
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [firstName, setFirstName] = useState(editStudent?.full_name?.split(' ')[0] || "");
+  const [lastName, setLastName] = useState(editStudent?.full_name?.split(' ').slice(1).join(' ') || "");
   const [gender, setGender] = useState("female");
-  const [bloodType, setBloodType] = useState("");
-  const [allergyDetails, setAllergyDetails] = useState("");
-  const [grade, setGrade] = useState("");
-  const [section, setSection] = useState("");
-  const [busRoute, setBusRoute] = useState("");
-  const [address, setAddress] = useState("");
+  const [bloodType, setBloodType] = useState(editStudent?.blood_type || "");
+  const [allergyDetails, setAllergyDetails] = useState(editStudent?.allergies_details || "");
+  const [grade, setGrade] = useState(editStudent?.grade || "");
+  const [section, setSection] = useState(editStudent?.section || "");
+  const [busRoute, setBusRoute] = useState(editStudent?.bus_route_id || "");
+  const [address, setAddress] = useState(editStudent?.address || "");
   
   // Guardian form state
   const [guardianName, setGuardianName] = useState("");
@@ -185,10 +187,12 @@ export default function StudentRegister() {
         }
       }
       
-      const { data: newStudent, error: studentError } = await supabase
-        .from('students')
-        .insert({
-          student_code: barcodeValue,
+      let newStudent;
+      let studentError;
+
+      if (editStudent) {
+        // Update existing student
+        const updateData: any = {
           full_name: `${firstName} ${lastName}`,
           grade: grade,
           section: section,
@@ -196,20 +200,66 @@ export default function StudentRegister() {
           allergies: hasAllergies,
           allergies_details: hasAllergies ? allergyDetails : null,
           address: address || null,
-          status: 'active',
-          photo_url: photoUrl
-        } as any)
-        .select()
-        .single();
+        };
+        
+        // Only update photo if new one was uploaded
+        if (photoUrl) {
+          updateData.photo_url = photoUrl;
+        }
+
+        const result = await supabase
+          .from('students')
+          .update(updateData)
+          .eq('id', editStudent.id)
+          .select()
+          .single();
+        
+        newStudent = result.data;
+        studentError = result.error;
+      } else {
+        // Insert new student
+        const result = await supabase
+          .from('students')
+          .insert({
+            student_code: barcodeValue,
+            full_name: `${firstName} ${lastName}`,
+            grade: grade,
+            section: section,
+            blood_type: bloodType,
+            allergies: hasAllergies,
+            allergies_details: hasAllergies ? allergyDetails : null,
+            address: address || null,
+            status: 'active',
+            photo_url: photoUrl
+          } as any)
+          .select()
+          .single();
+        
+        newStudent = result.data;
+        studentError = result.error;
+      }
 
       if (studentError) {
-        console.error('Error creating student:', studentError);
+        console.error('Error saving student:', studentError);
         toast({
           title: "Error",
-          description: "Failed to register student",
+          description: `Failed to ${editStudent ? 'update' : 'register'} student`,
           variant: "destructive"
         });
         return;
+      }
+
+      // Handle bus assignments
+      if (editStudent) {
+        // Delete existing bus assignment if user disabled bus or changed route
+        const { error: deleteError } = await supabase
+          .from('bus_assignments')
+          .delete()
+          .eq('student_id', newStudent.id);
+
+        if (deleteError) {
+          console.error('Error removing old bus assignment:', deleteError);
+        }
       }
 
       if (requiresBus && busRoute && newStudent && address) {
@@ -254,7 +304,7 @@ export default function StudentRegister() {
             console.error('Error creating bus stop:', stopError);
             toast({
               title: "Warning",
-              description: "Student registered but bus stop creation failed",
+              description: `Student ${editStudent ? 'updated' : 'registered'} but bus stop creation failed`,
               variant: "default"
             });
             return;
@@ -277,14 +327,14 @@ export default function StudentRegister() {
           console.error('Error assigning bus:', busError);
           toast({
             title: "Warning",
-            description: "Student registered but bus assignment failed",
+            description: `Student ${editStudent ? 'updated' : 'registered'} but bus assignment failed`,
             variant: "default"
           });
         }
       }
       
       toast({
-        title: "Student Registered Successfully",
+        title: editStudent ? "Student Updated Successfully" : "Student Registered Successfully",
         description: "The student information has been saved to the system.",
       });
       
@@ -313,9 +363,11 @@ export default function StudentRegister() {
             </Button>
           </Link>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Register New Student</h2>
+            <h2 className="text-2xl font-bold tracking-tight">
+              {editStudent ? "Edit Student" : "Register New Student"}
+            </h2>
             <p className="text-muted-foreground">
-              Enter student information and generate ID card/barcode
+              {editStudent ? "Update student information" : "Enter student information and generate ID card/barcode"}
             </p>
           </div>
         </div>
@@ -375,7 +427,12 @@ export default function StudentRegister() {
                     </Label>
                     <div className="col-span-3 flex gap-2">
                       <Input id="studentId" value={barcodeValue} readOnly className="bg-muted" />
-                      <Button type="button" variant="outline" onClick={generateNewBarcode}>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={generateNewBarcode}
+                        disabled={!!editStudent}
+                      >
                         <QrCode className="h-4 w-4" />
                       </Button>
                     </div>
