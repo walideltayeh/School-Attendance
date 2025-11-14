@@ -157,9 +157,37 @@ export default function Students() {
     setIsViewDialogOpen(true);
   };
 
-  const handleEditStudent = (student: Student) => {
-    // Navigate to register student page with pre-filled data
-    navigate("/students/register", { state: { editStudent: student } });
+  const handleEditStudent = async (student: Student) => {
+    // Fetch full student data from database
+    const { data: fullStudent, error } = await supabase
+      .from('students')
+      .select(`
+        *,
+        bus_assignments(route_id)
+      `)
+      .eq('student_code', student.id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching student:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load student data",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Navigate to register page with student data
+    navigate('/students/register', {
+      state: {
+        student: {
+          ...fullStudent,
+          bus_route_id: fullStudent.bus_assignments?.[0]?.route_id
+        }
+      }
+    });
+    
     toast({
       title: "Edit Student",
       description: `Editing ${student.name}'s details`,
