@@ -77,7 +77,7 @@ export default function Teachers() {
   const loadTeachers = async () => {
     const { data, error } = await supabase
       .from('teachers')
-      .select('id, teacher_code, subjects, user_id, profiles:user_id(full_name, email, phone)')
+      .select('id, teacher_code, subjects, full_name, email, phone')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -87,9 +87,9 @@ export default function Teachers() {
 
     const transformedTeachers: Teacher[] = (data || []).map((teacher: any) => ({
       id: teacher.teacher_code || teacher.id,
-      name: teacher.profiles?.full_name || 'Unknown',
-      email: teacher.profiles?.email || '',
-      phone: teacher.profiles?.phone || '',
+      name: teacher.full_name || 'Unknown',
+      email: teacher.email || '',
+      phone: teacher.phone || '',
       subject: teacher.subjects?.[0] || 'N/A',
       subjects: teacher.subjects || [],
       classes: [],
