@@ -34,20 +34,70 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { dataService, Teacher } from "@/services/dataService";
 import { toast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Teachers() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [teachers, setTeachers] = useState<Teacher[]>(dataService.getTeachers());
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [messageText, setMessageText] = useState("");
+
+  useEffect(() => {
+    loadTeachers();
+
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('teachers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'teachers'
+        },
+        () => {
+          loadTeachers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const loadTeachers = async () => {
+    const { data, error } = await supabase
+      .from('teachers')
+      .select('id, teacher_code, subjects, user_id, profiles:user_id(full_name, email, phone)')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading teachers:', error);
+      return;
+    }
+
+    const transformedTeachers: Teacher[] = (data || []).map((teacher: any) => ({
+      id: teacher.teacher_code || teacher.id,
+      name: teacher.profiles?.full_name || 'Unknown',
+      email: teacher.profiles?.email || '',
+      phone: teacher.profiles?.phone || '',
+      subject: teacher.subjects?.[0] || 'N/A',
+      subjects: teacher.subjects || [],
+      classes: [],
+      students: 0
+    }));
+
+    setTeachers(transformedTeachers);
+  };
 
   const filteredTeachers = teachers.filter(teacher => 
     teacher.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
