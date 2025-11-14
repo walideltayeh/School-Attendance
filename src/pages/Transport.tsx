@@ -642,6 +642,7 @@ export default function Transport() {
                     .map((student) => (
                       <SelectItem key={student.id} value={student.id}>
                         {student.full_name} - {student.grade} {student.section}
+                        {student.address && ` - ${student.address.substring(0, 30)}${student.address.length > 30 ? '...' : ''}`}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -650,18 +651,42 @@ export default function Transport() {
 
             <div className="space-y-2">
               <Label>Bus Stop</Label>
-              <Select value={selectedStopId} onValueChange={setSelectedStopId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a bus stop" />
-                </SelectTrigger>
-                <SelectContent>
-                  {busStops.map((stop) => (
-                    <SelectItem key={stop.id} value={stop.id}>
-                      {stop.name} - {stop.arrival_time}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {busStops.length === 0 ? (
+                <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4">
+                  <p className="text-sm text-destructive font-medium mb-2">No bus stops available</p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    To assign students, you need to add bus stops first. Bus stops are automatically created when you register a student with a home address and bus requirement enabled.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setAssignDialogOpen(false);
+                      navigate("/admin");
+                      toast({
+                        title: "Add Bus Stops",
+                        description: "Go to Bus Setup tab to add bus stops manually",
+                      });
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Bus Stops in Admin
+                  </Button>
+                </div>
+              ) : (
+                <Select value={selectedStopId} onValueChange={setSelectedStopId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a bus stop" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {busStops.map((stop) => (
+                      <SelectItem key={stop.id} value={stop.id}>
+                        {stop.name} - {stop.location} - {stop.arrival_time}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 
