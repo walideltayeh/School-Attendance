@@ -33,6 +33,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Students() {
   const navigate = useNavigate();
@@ -48,12 +49,90 @@ export default function Students() {
   
   // Fetch students when component mounts
   useEffect(() => {
-    setStudents(dataService.getStudents());
-    setBusRoutes(dataService.getBusRoutes());
+    loadStudents();
+    loadBusRoutes();
+
+    // Subscribe to realtime updates
+    const channel = supabase
+      .channel('students-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'students'
+        },
+        () => {
+          loadStudents();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  const loadStudents = async () => {
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('status', 'active')
+      .order('full_name');
+
+    if (error) {
+      console.error('Error loading students:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load students",
+        variant: "destructive"
+      });
+    } else {
+      const mappedStudents: Student[] = (data || []).map((s: any) => ({
+        id: s.student_code,
+        name: s.full_name,
+        grade: s.grade,
+        section: s.section,
+        bloodType: s.blood_type || '',
+        allergies: s.allergies || false,
+        busRoute: undefined,
+        status: s.status as 'active' | 'inactive'
+      }));
+      setStudents(mappedStudents);
+    }
+  };
+
+  const loadBusRoutes = async () => {
+    const { data, error } = await supabase
+      .from('bus_routes')
+      .select('*')
+      .eq('status', 'active')
+      .order('name');
+
+    if (error) {
+      console.error('Error loading bus routes:', error);
+    } else {
+      const mapped = (data || []).map(r => ({
+        id: r.id,
+        name: r.name,
+        driver: r.driver_name,
+        phone: r.driver_phone,
+        departureTime: r.departure_time,
+        returnTime: r.return_time,
+        students: 0,
+        stops: 0,
+        status: r.status
+      }));
+      setBusRoutes(mapped);
+    }
+  };
   
   const filteredStudents = searchQuery 
-    ? dataService.searchStudents(searchQuery)
+    ? students.filter(s => 
+        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        `${s.grade} ${s.section}`.toLowerCase().includes(searchQuery.toLowerCase())
+      )
     : students;
 
   const handleViewDetails = (student: Student) => {
