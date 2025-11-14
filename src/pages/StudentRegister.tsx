@@ -24,21 +24,27 @@ export default function StudentRegister() {
   const navigate = useNavigate();
   const location = useLocation();
   const editStudent = location.state?.student;
+  
+  // Extract bus assignment data if editing
+  const busAssignment = editStudent?.bus_assignments?.[0];
+  const busRouteId = busAssignment?.route_id;
+  const busStopId = busAssignment?.stop_id;
+  
   const [barcodeValue, setBarcodeValue] = useState(editStudent?.student_code || "STU" + Math.floor(Math.random() * 10000).toString().padStart(4, '0'));
   const [hasAllergies, setHasAllergies] = useState(editStudent?.allergies || false);
-  const [requiresBus, setRequiresBus] = useState(!!editStudent?.bus_route_id);
+  const [requiresBus, setRequiresBus] = useState(!!busRouteId);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>(editStudent?.photo_url || "");
   
   // Student form state
   const [firstName, setFirstName] = useState(editStudent?.full_name?.split(' ')[0] || "");
   const [lastName, setLastName] = useState(editStudent?.full_name?.split(' ').slice(1).join(' ') || "");
-  const [gender, setGender] = useState("female");
+  const [gender, setGender] = useState(editStudent?.gender || "female");
   const [bloodType, setBloodType] = useState(editStudent?.blood_type || "");
   const [allergyDetails, setAllergyDetails] = useState(editStudent?.allergies_details || "");
   const [grade, setGrade] = useState(editStudent?.grade || "");
   const [section, setSection] = useState(editStudent?.section || "");
-  const [busRoute, setBusRoute] = useState(editStudent?.bus_route_id || "");
+  const [busRoute, setBusRoute] = useState(busRouteId || "");
   const [address, setAddress] = useState(editStudent?.address || "");
   
   // Guardian form state
@@ -89,10 +95,27 @@ export default function StudentRegister() {
       }
       
       getAvailableGrades().then(grades => setAvailableGrades(grades));
+      
+      // Load guardian info if editing
+      if (editStudent?.id) {
+        const { data: guardians } = await supabase
+          .from('guardians')
+          .select('*')
+          .eq('student_id', editStudent.id)
+          .eq('is_primary', true)
+          .single();
+        
+        if (guardians) {
+          setGuardianName(guardians.full_name);
+          setGuardianEmail(guardians.email || "");
+          setGuardianPhone(guardians.phone);
+          setGuardianRelation(guardians.relation);
+        }
+      }
     };
     
     loadData();
-  }, []);
+  }, [editStudent?.id]);
 
   useEffect(() => {
     if (grade) {
@@ -194,6 +217,7 @@ export default function StudentRegister() {
         // Update existing student
         const updateData: any = {
           full_name: `${firstName} ${lastName}`,
+          gender: gender,
           grade: grade,
           section: section,
           blood_type: bloodType,
@@ -223,6 +247,7 @@ export default function StudentRegister() {
           .insert({
             student_code: barcodeValue,
             full_name: `${firstName} ${lastName}`,
+            gender: gender,
             grade: grade,
             section: section,
             blood_type: bloodType,
@@ -259,6 +284,43 @@ export default function StudentRegister() {
 
         if (deleteError) {
           console.error('Error removing old bus assignment:', deleteError);
+        }
+      }
+
+      // Handle guardian information
+      if (guardianName && guardianPhone && guardianRelation && newStudent) {
+        if (editStudent) {
+          // Update existing guardian
+          const { error: guardianError } = await supabase
+            .from('guardians')
+            .upsert({
+              student_id: newStudent.id,
+              full_name: guardianName,
+              email: guardianEmail || null,
+              phone: guardianPhone,
+              relation: guardianRelation,
+              is_primary: true
+            });
+
+          if (guardianError) {
+            console.error('Error saving guardian:', guardianError);
+          }
+        } else {
+          // Insert new guardian
+          const { error: guardianError } = await supabase
+            .from('guardians')
+            .insert({
+              student_id: newStudent.id,
+              full_name: guardianName,
+              email: guardianEmail || null,
+              phone: guardianPhone,
+              relation: guardianRelation,
+              is_primary: true
+            });
+
+          if (guardianError) {
+            console.error('Error saving guardian:', guardianError);
+          }
         }
       }
 
@@ -311,25 +373,6 @@ export default function StudentRegister() {
           }
 
           stopId = newStop.id;
-        }
-
-        // Assign student to the bus stop
-        const { error: busError } = await supabase
-          .from('bus_assignments')
-          .insert({
-            student_id: newStudent.id,
-            route_id: busRoute,
-            stop_id: stopId,
-            status: 'active'
-          } as any);
-
-        if (busError) {
-          console.error('Error assigning bus:', busError);
-          toast({
-            title: "Warning",
-            description: `Student ${editStudent ? 'updated' : 'registered'} but bus assignment failed`,
-            variant: "default"
-          });
         }
       }
       
