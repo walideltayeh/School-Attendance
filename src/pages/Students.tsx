@@ -158,12 +158,13 @@ export default function Students() {
   };
 
   const handleEditStudent = async (student: Student) => {
-    // Fetch full student data from database
+    // Fetch full student data including bus assignments and guardian info
     const { data: fullStudent, error } = await supabase
       .from('students')
       .select(`
         *,
-        bus_assignments(route_id)
+        bus_assignments(route_id, stop_id),
+        guardians(*)
       `)
       .eq('student_code', student.id)
       .single();
@@ -181,10 +182,7 @@ export default function Students() {
     // Navigate to register page with student data
     navigate('/students/register', {
       state: {
-        student: {
-          ...fullStudent,
-          bus_route_id: fullStudent.bus_assignments?.[0]?.route_id
-        }
+        student: fullStudent
       }
     });
     

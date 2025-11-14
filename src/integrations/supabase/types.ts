@@ -320,6 +320,50 @@ export type Database = {
           },
         ]
       }
+      guardians: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          is_primary: boolean | null
+          phone: string
+          relation: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          is_primary?: boolean | null
+          phone: string
+          relation: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_primary?: boolean | null
+          phone?: string
+          relation?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guardians_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -420,6 +464,7 @@ export type Database = {
           blood_type: Database["public"]["Enums"]["blood_type"] | null
           created_at: string
           full_name: string
+          gender: string | null
           grade: string
           id: string
           photo_url: string | null
@@ -436,6 +481,7 @@ export type Database = {
           blood_type?: Database["public"]["Enums"]["blood_type"] | null
           created_at?: string
           full_name: string
+          gender?: string | null
           grade: string
           id?: string
           photo_url?: string | null
@@ -452,6 +498,7 @@ export type Database = {
           blood_type?: Database["public"]["Enums"]["blood_type"] | null
           created_at?: string
           full_name?: string
+          gender?: string | null
           grade?: string
           id?: string
           photo_url?: string | null
