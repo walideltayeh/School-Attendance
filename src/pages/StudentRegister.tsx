@@ -37,6 +37,7 @@ export default function StudentRegister() {
   const [grade, setGrade] = useState("");
   const [section, setSection] = useState("");
   const [busRoute, setBusRoute] = useState("");
+  const [address, setAddress] = useState("");
   
   // Guardian form state
   const [guardianName, setGuardianName] = useState("");
@@ -149,10 +150,10 @@ export default function StudentRegister() {
       return;
     }
     
-    if (requiresBus && !busRoute) {
+    if (requiresBus && (!busRoute || !address)) {
       toast({
         title: "Missing Information",
-        description: "Please select a bus route.",
+        description: "Please select a bus route and provide an address for bus pickup.",
         variant: "destructive"
       });
       return;
@@ -194,6 +195,7 @@ export default function StudentRegister() {
           blood_type: bloodType,
           allergies: hasAllergies,
           allergies_details: hasAllergies ? allergyDetails : null,
+          address: address || null,
           status: 'active',
           photo_url: photoUrl
         } as any)
@@ -210,18 +212,74 @@ export default function StudentRegister() {
         return;
       }
 
-      if (requiresBus && busRoute && newStudent) {
+      if (requiresBus && busRoute && newStudent && address) {
+        // Check if a bus stop already exists at this address for this route
+        const { data: existingStops } = await supabase
+          .from('bus_stops')
+          .select('id')
+          .eq('route_id', busRoute)
+          .eq('location', address);
+
+        let stopId;
+
+        if (existingStops && existingStops.length > 0) {
+          // Use existing stop
+          stopId = existingStops[0].id;
+        } else {
+          // Create new bus stop at this address
+          const { data: stopsForRoute } = await supabase
+            .from('bus_stops')
+            .select('stop_order')
+            .eq('route_id', busRoute)
+            .order('stop_order', { ascending: false })
+            .limit(1);
+
+          const nextOrder = stopsForRoute && stopsForRoute.length > 0 
+            ? stopsForRoute[0].stop_order + 1 
+            : 1;
+
+          const { data: newStop, error: stopError } = await supabase
+            .from('bus_stops')
+            .insert({
+              route_id: busRoute,
+              name: `${firstName}'s Stop`,
+              location: address,
+              arrival_time: '07:00:00', // Default time, can be updated later
+              stop_order: nextOrder
+            })
+            .select()
+            .single();
+
+          if (stopError) {
+            console.error('Error creating bus stop:', stopError);
+            toast({
+              title: "Warning",
+              description: "Student registered but bus stop creation failed",
+              variant: "default"
+            });
+            return;
+          }
+
+          stopId = newStop.id;
+        }
+
+        // Assign student to the bus stop
         const { error: busError } = await supabase
           .from('bus_assignments')
           .insert({
             student_id: newStudent.id,
             route_id: busRoute,
-            stop_id: busRoute,
+            stop_id: stopId,
             status: 'active'
           } as any);
 
         if (busError) {
           console.error('Error assigning bus:', busError);
+          toast({
+            title: "Warning",
+            description: "Student registered but bus assignment failed",
+            variant: "default"
+          });
         }
       }
       
@@ -429,6 +487,25 @@ export default function StudentRegister() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="address" className="text-right">
+                      Home Address {requiresBus && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Textarea 
+                      id="address" 
+                      placeholder="123 Main Street, City, State" 
+                      className="col-span-3" 
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      required={requiresBus}
+                    />
+                    {requiresBus && (
+                      <p className="col-start-2 col-span-3 text-xs text-muted-foreground">
+                        This address will be used as the bus pickup/dropoff location
+                      </p>
+                    )}
                   </div>
                   
                   <div className="grid grid-cols-4 items-center gap-4">
