@@ -305,10 +305,10 @@ export default function Transport() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => navigate("/admin")}>
+          <Button variant="blue-outline" onClick={() => navigate("/admin")}>
             Go to Admin
           </Button>
-          <Button variant="outline" onClick={handleExport}>
+          <Button variant="blue-outline" onClick={handleExport}>
             <FileDown className="mr-2 h-4 w-4" />
             Export
           </Button>
@@ -436,10 +436,10 @@ export default function Transport() {
             Showing {filteredRoutes.length} of {busRoutes.length} routes
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled>
+            <Button variant="blue-outline" size="sm" disabled>
               Previous
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="blue-outline" size="sm">
               Next
             </Button>
           </div>
@@ -577,19 +577,19 @@ export default function Transport() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button className="w-full bg-school-primary hover:bg-school-secondary justify-start">
+              <Button variant="blue" className="w-full justify-start">
                 <Bus className="mr-2 h-4 w-4" />
                 Start Bus Check-in
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="blue-outline" className="w-full justify-start">
                 <UserPlus className="mr-2 h-4 w-4" />
                 Assign New Student
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="blue-outline" className="w-full justify-start">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Bus Stop
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="blue-outline" className="w-full justify-start">
                 <Calendar className="mr-2 h-4 w-4" />
                 Modify Schedule
               </Button>
@@ -694,7 +694,7 @@ export default function Transport() {
             <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAssignStudent}>
+            <Button variant="blue" onClick={handleAssignStudent}>
               Assign Student
             </Button>
           </DialogFooter>
@@ -749,7 +749,7 @@ export default function Transport() {
             <Button variant="outline" onClick={() => setReassignDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleReassignStudent}>
+            <Button variant="blue" onClick={handleReassignStudent}>
               Reassign Student
             </Button>
           </DialogFooter>

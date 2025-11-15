@@ -118,11 +118,11 @@ export default function Notifications() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline">
+          <Button variant="blue-outline">
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
           </Button>
-          <Button className="bg-school-primary hover:bg-school-secondary">
+          <Button variant="blue">
             <Settings className="mr-2 h-4 w-4" />
             Notification Settings
           </Button>
@@ -268,11 +268,11 @@ export default function Notifications() {
           </Tabs>
         </CardContent>
         <CardFooter className="flex justify-between">
-          <Button variant="outline" size="sm">
+          <Button variant="blue-outline" size="sm">
             <FileDown className="mr-2 h-4 w-4" />
             Export Notifications
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="blue-outline" size="sm">
             View All Notifications
           </Button>
         </CardFooter>

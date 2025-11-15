@@ -666,7 +666,7 @@ const Admin = () => {
                     return Object.entries(grouped)
                       .sort(([a], [b]) => a.localeCompare(b))
                       .map(([className, classGroup]) => (
-                        <div key={className} className="border rounded-lg p-4 bg-card">
+                        <div key={className} className="border rounded-lg p-4 bg-card transition-all duration-300 hover:shadow-lg hover:scale-[1.02] hover:border-primary/50 animate-fade-in">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-3">
                               <h3 className="font-semibold text-lg">{className}</h3>
@@ -754,7 +754,7 @@ const Admin = () => {
               <CardContent>
                 <div className="space-y-4">
                   {teachers.map(teacher => (
-                    <div key={teacher.id} className="flex justify-between items-center p-4 border rounded-md">
+                    <div key={teacher.id} className="flex justify-between items-center p-4 border rounded-md transition-all duration-300 hover:shadow-md hover:border-primary/50 hover:bg-accent/5">
                       <div>
                         <h3 className="font-medium">{teacher.name}</h3>
                         <p className="text-sm text-muted-foreground">{teacher.email} | {teacher.subjects.join(", ")}</p>
@@ -823,7 +823,7 @@ const Admin = () => {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {schedules.map((schedule) => (
-                    <div key={schedule.id} className="border rounded-md p-3 hover:shadow-md transition-shadow relative">
+                    <div key={schedule.id} className="border rounded-md p-3 hover:shadow-md transition-all duration-300 relative hover:border-primary/50 hover:bg-accent/5">
                       <div className="absolute top-2 right-2 flex gap-1">
                         <Button 
                           variant="blue-ghost" 

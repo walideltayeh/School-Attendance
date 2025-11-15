@@ -216,15 +216,15 @@ export default function Reports() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline">
+          <Button variant="blue-outline">
             <Calendar className="mr-2 h-4 w-4" />
             Date Range
           </Button>
-          <Button variant="outline">
+          <Button variant="blue-outline">
             <Filter className="mr-2 h-4 w-4" />
             Filter
           </Button>
-          <Button className="bg-school-primary hover:bg-school-secondary">
+          <Button variant="blue">
             <FileDown className="mr-2 h-4 w-4" />
             Export Report
           </Button>
@@ -438,11 +438,11 @@ export default function Reports() {
             </Tabs>
           </CardContent>
           <CardFooter className="flex justify-between">
-            <Button variant="outline" size="sm">
+            <Button variant="blue-outline" size="sm">
               <Filter className="mr-2 h-4 w-4" />
               Filter Results
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="blue-outline" size="sm">
               <Download className="mr-2 h-4 w-4" />
               Download CSV
             </Button>
@@ -577,11 +577,11 @@ export default function Reports() {
           </div>
         </CardContent>
         <CardFooter className="flex justify-between">
-          <Button variant="outline">
+          <Button variant="blue-outline">
             <PieChart className="mr-2 h-4 w-4" />
             Preview Report
           </Button>
-          <Button className="bg-school-primary hover:bg-school-secondary">
+          <Button variant="blue">
             <FileDown className="mr-2 h-4 w-4" />
             Generate Report
           </Button>

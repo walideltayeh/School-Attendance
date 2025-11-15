@@ -415,7 +415,7 @@ export default function StudentRegister() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => navigate("/admin")}>
+          <Button variant="blue-outline" onClick={() => navigate("/admin")}>
             Go to Admin
           </Button>
         </div>
@@ -742,7 +742,7 @@ export default function StudentRegister() {
                 <Link to="/students">
                   <Button variant="outline" type="button">Cancel</Button>
                 </Link>
-                <Button type="submit" className="bg-school-primary hover:bg-school-secondary">
+                <Button type="submit" variant="blue">
                   <Save className="mr-2 h-4 w-4" />
                   Register Student
                 </Button>
