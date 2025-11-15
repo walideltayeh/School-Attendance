@@ -374,6 +374,25 @@ export default function StudentRegister() {
 
           stopId = newStop.id;
         }
+
+        // Create bus assignment
+        const { error: assignmentError } = await supabase
+          .from('bus_assignments')
+          .insert({
+            student_id: newStudent.id,
+            route_id: busRoute,
+            stop_id: stopId,
+            status: 'active'
+          });
+
+        if (assignmentError) {
+          console.error('Error creating bus assignment:', assignmentError);
+          toast({
+            title: "Warning",
+            description: `Student ${editStudent ? 'updated' : 'registered'} but bus assignment failed`,
+            variant: "default"
+          });
+        }
       }
       
       toast({
