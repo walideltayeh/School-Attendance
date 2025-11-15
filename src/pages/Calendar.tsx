@@ -11,6 +11,31 @@ export default function CalendarPage() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [view, setView] = useState<"day" | "week" | "month">("day");
   
+  // Subject color mapping
+  const subjectColors: Record<string, string> = {
+    "Mathematics": "bg-blue-100 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700",
+    "Math": "bg-blue-100 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700",
+    "Science": "bg-green-100 border-green-300 dark:bg-green-900/30 dark:border-green-700",
+    "Biology": "bg-green-100 border-green-300 dark:bg-green-900/30 dark:border-green-700",
+    "PE": "bg-orange-100 border-orange-300 dark:bg-orange-900/30 dark:border-orange-700",
+    "Physical Education": "bg-orange-100 border-orange-300 dark:bg-orange-900/30 dark:border-orange-700",
+    "English": "bg-purple-100 border-purple-300 dark:bg-purple-900/30 dark:border-purple-700",
+    "Arabic": "bg-amber-100 border-amber-300 dark:bg-amber-900/30 dark:border-amber-700",
+    "Islamic Studies": "bg-teal-100 border-teal-300 dark:bg-teal-900/30 dark:border-teal-700",
+    "Art": "bg-pink-100 border-pink-300 dark:bg-pink-900/30 dark:border-pink-700",
+    "Music": "bg-indigo-100 border-indigo-300 dark:bg-indigo-900/30 dark:border-indigo-700",
+    "Computer Science": "bg-cyan-100 border-cyan-300 dark:bg-cyan-900/30 dark:border-cyan-700",
+    "Social Studies": "bg-yellow-100 border-yellow-300 dark:bg-yellow-900/30 dark:border-yellow-700",
+    "All": "bg-slate-100 border-slate-300 dark:bg-slate-900/30 dark:border-slate-700",
+  };
+  
+  const getSubjectColor = (className: string) => {
+    // Extract subject from className format: "KG2 - Section A (Subject)"
+    const match = className.match(/\(([^)]+)\)/);
+    const subject = match ? match[1] : "";
+    return subjectColors[subject] || "bg-gray-100 border-gray-300 dark:bg-gray-900/30 dark:border-gray-700";
+  };
+  
   const schedules = dataService.getClassSchedules();
   
   // Filter schedules for the selected date if in day view
@@ -84,26 +109,27 @@ export default function CalendarPage() {
               <div className="space-y-4">
                 {sortedSchedules.map((schedule, index) => {
                   const periodInfo = periods.find(p => p.periodNumber === schedule.period);
+                  const colorClasses = getSubjectColor(schedule.className);
                   return (
-                    <div key={index} className="flex border rounded-md p-4 hover:bg-muted/50 transition-colors">
-                      <div className="min-w-[80px] text-center border-r pr-3">
-                        <div className="font-medium">Period {schedule.period}</div>
+                    <div key={index} className={`flex border-2 rounded-lg p-4 hover:shadow-md transition-all ${colorClasses}`}>
+                      <div className="min-w-[80px] text-center border-r border-current/20 pr-3">
+                        <div className="font-semibold">Period {schedule.period}</div>
                         {periodInfo && (
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-xs opacity-70">
                             {periodInfo.startTime} - {periodInfo.endTime}
                           </div>
                         )}
                       </div>
                       <div className="ml-4 flex-1">
-                        <div className="font-medium">{schedule.className}</div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="font-semibold text-lg">{schedule.className}</div>
+                        <div className="text-sm opacity-80 mt-1">
                           Teacher: {schedule.teacherName}
                         </div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-sm opacity-80">
                           Room: {schedule.roomName}
                         </div>
                       </div>
-                      <div className="text-xs text-muted-foreground self-end">
+                      <div className="text-xs opacity-70 self-end font-medium">
                         {schedule.day}
                       </div>
                     </div>
