@@ -35,7 +35,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
   const [selectedGrades, setSelectedGrades] = useState<string[]>(initialValues?.grade ? [initialValues.grade] : []);
   const [selectedSections, setSelectedSections] = useState<string[]>(initialValues?.section ? [initialValues.section] : []);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(initialValues?.subjects || []);
-  const [selectedTeacher, setSelectedTeacher] = useState<string>(initialValues?.teacherId || "");
+  const [selectedTeacher, setSelectedTeacher] = useState<string>(initialValues?.teacherId || "none");
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
 
   useEffect(() => {
@@ -126,7 +126,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       grades: selectedGrades,
       sections: selectedSections,
       subjects: selectedSubjects,
-      teacherId: selectedTeacher || undefined,
+      teacherId: selectedTeacher === "none" ? undefined : selectedTeacher,
     });
 
     if (!isEditing) {
@@ -236,7 +236,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
               <SelectValue placeholder="Select a teacher (optional)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">None</SelectItem>
+              <SelectItem value="none">None</SelectItem>
               {teachers.map((teacher) => (
                 <SelectItem key={teacher.id} value={teacher.id}>
                   {teacher.full_name || teacher.name}
