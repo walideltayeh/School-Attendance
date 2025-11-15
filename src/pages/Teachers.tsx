@@ -201,10 +201,10 @@ export default function Teachers() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => navigate("/admin")}>
+          <Button variant="blue-outline" onClick={() => navigate("/admin")}>
             Go to Admin
           </Button>
-          <Button variant="outline" onClick={handleExport}>
+          <Button variant="blue-outline" onClick={handleExport}>
             <FileDown className="mr-2 h-4 w-4" />
             Export
           </Button>
@@ -338,10 +338,10 @@ export default function Teachers() {
             Showing {filteredTeachers.length} of {teachers.length} teachers
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled>
+            <Button variant="blue-outline" size="sm" disabled>
               Previous
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="blue-outline" size="sm">
               Next
             </Button>
           </div>
@@ -446,7 +446,7 @@ export default function Teachers() {
             <Button variant="outline" onClick={() => setIsMessageDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSubmitMessage}>Send</Button>
+            <Button variant="blue" onClick={handleSubmitMessage}>Send</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

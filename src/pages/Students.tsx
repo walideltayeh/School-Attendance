@@ -289,10 +289,10 @@ export default function Students() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => navigate("/admin")}>
+          <Button variant="blue-outline" onClick={() => navigate("/admin")}>
             Go to Admin
           </Button>
-          <Button variant="outline" onClick={handleExport}>
+          <Button variant="blue-outline" onClick={handleExport}>
             <FileDown className="mr-2 h-4 w-4" />
             Export
           </Button>
@@ -404,10 +404,10 @@ export default function Students() {
             Showing {filteredStudents.length} of {students.length} students
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled>
+            <Button variant="blue-outline" size="sm" disabled>
               Previous
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="blue-outline" size="sm">
               Next
             </Button>
           </div>
@@ -518,7 +518,7 @@ export default function Students() {
             <Button variant="outline" onClick={() => setIsMessageDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSubmitMessage}>Send</Button>
+            <Button variant="blue" onClick={handleSubmitMessage}>Send</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -559,7 +559,7 @@ export default function Students() {
             <Button variant="outline" onClick={() => setIsIDCardDialogOpen(false)}>
               Close
             </Button>
-            <Button onClick={() => {
+            <Button variant="blue" onClick={() => {
               toast({
                 title: "ID Card Printed",
                 description: `ID Card for ${selectedStudent?.name} has been sent to the printer`,

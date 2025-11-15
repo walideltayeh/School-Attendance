@@ -189,7 +189,7 @@ export default function Attendance() {
               <Clock className="h-5 w-5 text-school-primary" />
               <span className="font-mono">{formatTime(currentTime)}</span>
             </div>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+            <Button variant="blue-outline" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" /> Logout
             </Button>
           </div>
