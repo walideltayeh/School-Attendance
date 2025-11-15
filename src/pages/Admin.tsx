@@ -332,11 +332,64 @@ const Admin = () => {
       }
     }
     
-    console.log("Inserting classes:", classesToInsert);
+    console.log("Attempting to insert classes:", classesToInsert);
+    
+    // Check for existing classes with the same grade-section-subject combination
+    const { data: existingClasses, error: queryError } = await supabase
+      .from('classes')
+      .select('grade, section, subject');
+    
+    if (queryError) {
+      console.error("Error checking for duplicates:", queryError);
+      toast({
+        title: "Error",
+        description: "Failed to check for duplicate classes",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Filter out duplicates
+    const duplicates: string[] = [];
+    const uniqueClassesToInsert = classesToInsert.filter((classToInsert) => {
+      const isDuplicate = existingClasses?.some(
+        (existing) =>
+          existing.grade === classToInsert.grade &&
+          existing.section === classToInsert.section &&
+          existing.subject === classToInsert.subject
+      );
+      
+      if (isDuplicate) {
+        duplicates.push(`${classToInsert.grade} - Section ${classToInsert.section} (${classToInsert.subject})`);
+      }
+      
+      return !isDuplicate;
+    });
+    
+    // Show warning if duplicates were found
+    if (duplicates.length > 0) {
+      toast({
+        title: "Duplicate Classes Found",
+        description: `Skipped ${duplicates.length} duplicate class${duplicates.length > 1 ? 'es' : ''}: ${duplicates.slice(0, 3).join(', ')}${duplicates.length > 3 ? '...' : ''}`,
+        variant: "destructive",
+      });
+    }
+    
+    // If all classes are duplicates, return early
+    if (uniqueClassesToInsert.length === 0) {
+      toast({
+        title: "No Classes Created",
+        description: "All selected class combinations already exist",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    console.log("Inserting unique classes:", uniqueClassesToInsert);
     
     const { data, error } = await supabase
       .from('classes')
-      .insert(classesToInsert)
+      .insert(uniqueClassesToInsert)
       .select();
     
     if (error) {
@@ -354,9 +407,13 @@ const Admin = () => {
     // Reload classes to update UI
     await loadClasses();
     
+    const successMessage = duplicates.length > 0
+      ? `Created ${uniqueClassesToInsert.length} class${uniqueClassesToInsert.length > 1 ? 'es' : ''}, skipped ${duplicates.length} duplicate${duplicates.length > 1 ? 's' : ''}`
+      : `Created ${uniqueClassesToInsert.length} class${uniqueClassesToInsert.length > 1 ? 'es' : ''} successfully`;
+    
     toast({
       title: "Classes Created",
-      description: `Created ${classesToInsert.length} class${classesToInsert.length > 1 ? 'es' : ''} successfully`,
+      description: successMessage,
     });
   };
 
