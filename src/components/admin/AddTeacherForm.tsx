@@ -350,7 +350,7 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
             Cancel
           </Button>
         )}
-        <Button type="submit" className={isEditing ? "" : "w-full"}>
+        <Button type="submit" variant="blue" className={isEditing ? "" : "w-full"}>
           <Save className="h-4 w-4 mr-2" /> {isEditing ? "Save Changes" : "Add Teacher"}
         </Button>
       </div>

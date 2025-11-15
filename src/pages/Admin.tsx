@@ -588,19 +588,19 @@ const Admin = () => {
       <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
       
       <div className="mb-4 flex flex-wrap gap-2">
-        <Button variant="outline" onClick={() => navigate("/students")}>
+        <Button variant="blue-outline" onClick={() => navigate("/students")}>
           Go to Students
         </Button>
-        <Button variant="outline" onClick={() => navigate("/teachers")}>
+        <Button variant="blue-outline" onClick={() => navigate("/teachers")}>
           Go to Teachers
         </Button>
-        <Button variant="outline" onClick={() => navigate("/students/register")}>
+        <Button variant="blue-outline" onClick={() => navigate("/students/register")}>
           Register Student
         </Button>
-        <Button variant="outline" onClick={() => navigate("/transport")}>
+        <Button variant="blue-outline" onClick={() => navigate("/transport")}>
           Transport
         </Button>
-        <Button variant="outline" onClick={() => navigate("/calendar")}>
+        <Button variant="blue-outline" onClick={() => navigate("/calendar")}>
           Calendar
         </Button>
       </div>
@@ -674,14 +674,14 @@ const Admin = () => {
                             </div>
                             <div className="flex gap-2">
                               <Button 
-                                variant="ghost" 
+                                variant="blue-ghost" 
                                 size="sm" 
                                 onClick={() => handleEditClassGroup(className)}
                               >
                                 <Pencil className="h-4 w-4 mr-1" /> Edit
                               </Button>
                               <Button 
-                                variant="ghost" 
+                                variant="blue-ghost" 
                                 size="sm" 
                                 onClick={() => handleDuplicateClassGroup(className)}
                               >
@@ -690,7 +690,7 @@ const Admin = () => {
                               <Button 
                                 variant="ghost" 
                                 size="sm"
-                                className="text-destructive hover:text-destructive"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                 onClick={() => handleDeleteClassGroup(className)}
                               >
                                 <Trash className="h-4 w-4 mr-1" /> Delete
@@ -762,7 +762,7 @@ const Admin = () => {
                           <p className="text-xs text-muted-foreground">Username: {teacher.username}</p>
                         )}
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => handleEditTeacher(teacher)}>
+                      <Button variant="blue-outline" size="sm" onClick={() => handleEditTeacher(teacher)}>
                         <Edit className="h-4 w-4 mr-2" /> Edit
                       </Button>
                     </div>
@@ -826,7 +826,7 @@ const Admin = () => {
                     <div key={schedule.id} className="border rounded-md p-3 hover:shadow-md transition-shadow relative">
                       <div className="absolute top-2 right-2 flex gap-1">
                         <Button 
-                          variant="ghost" 
+                          variant="blue-ghost" 
                           size="icon" 
                           className="h-6 w-6" 
                           onClick={() => handleEditSchedule(schedule)}
@@ -836,7 +836,7 @@ const Admin = () => {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-6 w-6 text-destructive" 
+                          className="h-6 w-6 text-destructive hover:bg-destructive/10" 
                           onClick={() => handleDeleteSchedule(schedule.id)}
                         >
                           <Trash className="h-3 w-3" />
@@ -891,7 +891,7 @@ const Admin = () => {
           <DialogFooter className="sm:justify-start">
             <Button 
               type="button" 
-              variant="secondary" 
+              variant="outline" 
               onClick={() => setIsEditDialogOpen(false)}
               className="mt-2 sm:mt-0"
             >
@@ -1026,7 +1026,7 @@ const Admin = () => {
             >
               Cancel
             </Button>
-            <Button onClick={confirmDuplicateClassGroup}>
+            <Button variant="blue" onClick={confirmDuplicateClassGroup}>
               <Copy className="h-4 w-4 mr-2" /> Duplicate
             </Button>
           </DialogFooter>

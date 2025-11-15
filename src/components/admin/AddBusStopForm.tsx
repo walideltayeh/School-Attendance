@@ -151,7 +151,7 @@ export function AddBusStopForm({ onSuccess }: AddBusStopFormProps) {
         </div>
       </div>
 
-      <Button type="submit" className="w-full">
+      <Button type="submit" variant="blue" className="w-full">
         <MapPin className="h-4 w-4 mr-2" /> Add Bus Stop
       </Button>
     </form>
