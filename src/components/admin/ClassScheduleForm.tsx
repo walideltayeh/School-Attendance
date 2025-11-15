@@ -29,10 +29,8 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
   
   const rooms = dataService.getRooms();
   
-  // Get classes taught by the selected teacher
-  const teacherClasses = selectedTeacher 
-    ? classes.filter(c => c.teacher_id === selectedTeacher)
-    : [];
+  // Show all classes when creating a schedule - any teacher can teach any class
+  const availableClasses = selectedTeacher ? classes : [];
   
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   const periods = Array.from({ length: 10 }, (_, i) => String(i + 1));
@@ -148,7 +146,7 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
     }
     
     const teacher = teachers.find(t => t.id === selectedTeacher);
-    const selectedClassObj = teacherClasses.find(c => c?.name === selectedClass);
+    const selectedClassObj = availableClasses.find(c => c.id === selectedClass);
     const room = rooms.find(r => r.id === selectedRoom);
     
     if (!teacher || !selectedClassObj || !room) {
@@ -236,13 +234,13 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
           <Select 
             value={selectedClass} 
             onValueChange={setSelectedClass}
-            disabled={!selectedTeacher || teacherClasses.length === 0}
+            disabled={!selectedTeacher || availableClasses.length === 0}
           >
             <SelectTrigger id="class">
               <SelectValue placeholder={!selectedTeacher ? "Select a teacher first" : "Select class"} />
             </SelectTrigger>
             <SelectContent>
-              {teacherClasses.map((classObj) => (
+              {availableClasses.map((classObj) => (
                 <SelectItem key={classObj.id} value={classObj.id}>
                   {classObj.name} ({classObj.subject})
                 </SelectItem>
