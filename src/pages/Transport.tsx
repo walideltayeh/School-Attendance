@@ -600,19 +600,45 @@ export default function Transport() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Button variant="blue" className="w-full justify-start">
+              <Button 
+                variant="blue" 
+                className="w-full justify-start"
+                onClick={() => navigate("/attendance")}
+              >
                 <Bus className="mr-2 h-4 w-4" />
                 Start Bus Check-in
               </Button>
-              <Button variant="blue-outline" className="w-full justify-start">
+              <Button 
+                variant="blue-outline" 
+                className="w-full justify-start"
+                onClick={() => {
+                  if (!selectedRoute) {
+                    toast({
+                      title: "No Route Selected",
+                      description: "Please select a bus route first",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+                  setAssignDialogOpen(true);
+                }}
+              >
                 <UserPlus className="mr-2 h-4 w-4" />
                 Assign New Student
               </Button>
-              <Button variant="blue-outline" className="w-full justify-start">
+              <Button 
+                variant="blue-outline" 
+                className="w-full justify-start"
+                onClick={() => navigate("/admin")}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Add Bus Stop
               </Button>
-              <Button variant="blue-outline" className="w-full justify-start">
+              <Button 
+                variant="blue-outline" 
+                className="w-full justify-start"
+                onClick={() => navigate("/calendar")}
+              >
                 <Calendar className="mr-2 h-4 w-4" />
                 Modify Schedule
               </Button>
