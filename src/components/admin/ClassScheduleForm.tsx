@@ -163,7 +163,7 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
       teacherId: teacher.id,
       teacherName: teacher.name,
       classId: selectedClass,
-      className: selectedClass,
+      className: `${selectedClassObj.name} (${selectedClassObj.subject})`,
       roomId: room.id,
       roomName: room.name,
       day: selectedDay,
