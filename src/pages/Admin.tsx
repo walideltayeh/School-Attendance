@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { dataService, Teacher, BusRoute, ClassSchedule, ClassInfo } from "@/services/dataService";
 import { PlusCircle, Edit, X, Calendar, Pencil, Trash, BookOpen, Copy } from "lucide-react";
@@ -39,6 +40,9 @@ const Admin = () => {
   const [duplicateSourceClass, setDuplicateSourceClass] = useState<string | null>(null);
   const [duplicateTargetGrade, setDuplicateTargetGrade] = useState("");
   const [duplicateTargetSection, setDuplicateTargetSection] = useState("");
+  const [isBulkAssignDialogOpen, setIsBulkAssignDialogOpen] = useState(false);
+  const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
+  const [bulkAssignTeacherId, setBulkAssignTeacherId] = useState<string>("");
   
   useEffect(() => {
     console.log('Admin component mounted, loading data...');
@@ -592,6 +596,71 @@ const Admin = () => {
     }
   };
 
+  const handleBulkTeacherAssignment = async () => {
+    if (selectedClassIds.length === 0) {
+      toast({
+        title: "No Classes Selected",
+        description: "Please select at least one class",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!bulkAssignTeacherId) {
+      toast({
+        title: "No Teacher Selected",
+        description: "Please select a teacher to assign",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('classes')
+        .update({ teacher_id: bulkAssignTeacherId })
+        .in('id', selectedClassIds);
+
+      if (error) throw error;
+
+      toast({
+        title: "Teacher Assigned",
+        description: `Assigned teacher to ${selectedClassIds.length} class${selectedClassIds.length > 1 ? 'es' : ''}`,
+      });
+
+      setIsBulkAssignDialogOpen(false);
+      setSelectedClassIds([]);
+      setBulkAssignTeacherId("");
+      await loadClasses();
+    } catch (error) {
+      console.error("Error assigning teacher:", error);
+      toast({
+        title: "Error",
+        description: "Failed to assign teacher to classes",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleClassSelection = (classId: string) => {
+    setSelectedClassIds(prev =>
+      prev.includes(classId)
+        ? prev.filter(id => id !== classId)
+        : [...prev, classId]
+    );
+  };
+
+  const toggleAllClassesInGroup = (classGroup: typeof classes) => {
+    const groupIds = classGroup.map(c => c.id);
+    const allSelected = groupIds.every(id => selectedClassIds.includes(id));
+    
+    if (allSelected) {
+      setSelectedClassIds(prev => prev.filter(id => !groupIds.includes(id)));
+    } else {
+      setSelectedClassIds(prev => [...new Set([...prev, ...groupIds])]);
+    }
+  };
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
@@ -654,10 +723,21 @@ const Admin = () => {
           {classes.length > 0 && (
             <Card className="mt-6">
               <CardHeader>
-                <CardTitle>Class List</CardTitle>
-                <CardDescription>
-                  Manage existing classes, grades, sections, and subjects
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Class List</CardTitle>
+                    <CardDescription>
+                      Manage existing classes, grades, sections, and subjects
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="blue"
+                    onClick={() => setIsBulkAssignDialogOpen(true)}
+                  >
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    Bulk Assign Teacher
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -678,6 +758,10 @@ const Admin = () => {
                         <div key={className} className="border rounded-lg p-4 bg-card transition-all duration-300 hover:shadow-lg hover:scale-[1.02] hover:border-primary/50 animate-fade-in">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-3">
+                              <Checkbox
+                                checked={classGroup.every(c => selectedClassIds.includes(c.id))}
+                                onCheckedChange={() => toggleAllClassesInGroup(classGroup)}
+                              />
                               <h3 className="font-semibold text-lg">{className}</h3>
                               <Badge variant="outline">{classGroup.length} subject{classGroup.length > 1 ? 's' : ''}</Badge>
                             </div>
@@ -978,6 +1062,76 @@ const Admin = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isBulkAssignDialogOpen} onOpenChange={setIsBulkAssignDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Bulk Assign Teacher</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Selected Classes ({selectedClassIds.length})</Label>
+              <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-1">
+                {selectedClassIds.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No classes selected</p>
+                ) : (
+                  classes
+                    .filter(c => selectedClassIds.includes(c.id))
+                    .map(c => (
+                      <div key={c.id} className="text-sm flex items-center justify-between">
+                        <span>{c.name} - {c.subject}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleClassSelection(c.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="bulk-teacher">Select Teacher</Label>
+              <Select value={bulkAssignTeacherId} onValueChange={setBulkAssignTeacherId}>
+                <SelectTrigger id="bulk-teacher">
+                  <SelectValue placeholder="Select a teacher" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None (Remove teacher)</SelectItem>
+                  {teachers.map((teacher) => (
+                    <SelectItem key={teacher.id} value={teacher.id}>
+                      {teacher.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsBulkAssignDialogOpen(false);
+                setSelectedClassIds([]);
+                setBulkAssignTeacherId("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="blue"
+              onClick={handleBulkTeacherAssignment}
+              disabled={selectedClassIds.length === 0}
+            >
+              Assign Teacher
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isDuplicateDialogOpen} onOpenChange={setIsDuplicateDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
