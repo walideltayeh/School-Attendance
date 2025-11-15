@@ -130,7 +130,7 @@ export function SubjectManagement() {
               placeholder="e.g., Biology, Chemistry"
               onKeyPress={(e) => e.key === 'Enter' && handleAddSubject()}
             />
-            <Button onClick={handleAddSubject}>
+            <Button variant="blue" onClick={handleAddSubject}>
               <Plus className="h-4 w-4 mr-2" />
               Add
             </Button>

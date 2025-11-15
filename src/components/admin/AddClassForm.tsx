@@ -226,7 +226,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: A
       </div>
 
       <div className="flex gap-2 pt-4">
-        <Button type="submit">
+        <Button type="submit" variant="blue">
           {isEditing ? "Save Changes" : "Add Class"}
         </Button>
         {isEditing && onCancel && (

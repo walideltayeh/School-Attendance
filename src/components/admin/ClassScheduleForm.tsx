@@ -342,7 +342,7 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
             Cancel
           </Button>
         )}
-        <Button type="submit" className="w-full">
+        <Button type="submit" variant="blue" className="w-full">
           <Save className="h-4 w-4 mr-2" /> {editingSchedule ? "Update" : "Add"} Schedule
         </Button>
       </div>
