@@ -15,6 +15,7 @@ interface AddClassFormProps {
     grades: string[];
     sections: string[];
     subjects: string[];
+    teacherId?: string;
   }) => void;
   initialValues?: {
     id: string;
@@ -22,16 +23,19 @@ interface AddClassFormProps {
     grade: string;
     section: string;
     subjects: string[];
+    teacherId?: string;
   };
   isEditing?: boolean;
   onCancel?: () => void;
+  teachers?: any[];
 }
 
 
-export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: AddClassFormProps) {
+export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, teachers = [] }: AddClassFormProps) {
   const [selectedGrades, setSelectedGrades] = useState<string[]>(initialValues?.grade ? [initialValues.grade] : []);
   const [selectedSections, setSelectedSections] = useState<string[]>(initialValues?.section ? [initialValues.section] : []);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(initialValues?.subjects || []);
+  const [selectedTeacher, setSelectedTeacher] = useState<string>(initialValues?.teacherId || "");
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
 
   useEffect(() => {
@@ -122,6 +126,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: A
       grades: selectedGrades,
       sections: selectedSections,
       subjects: selectedSubjects,
+      teacherId: selectedTeacher || undefined,
     });
 
     if (!isEditing) {
@@ -222,6 +227,23 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel }: A
               ))}
             </div>
           )}
+        </div>
+
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="teacher">Teacher (Optional)</Label>
+          <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
+            <SelectTrigger id="teacher">
+              <SelectValue placeholder="Select a teacher (optional)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">None</SelectItem>
+              {teachers.map((teacher) => (
+                <SelectItem key={teacher.id} value={teacher.id}>
+                  {teacher.full_name || teacher.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
