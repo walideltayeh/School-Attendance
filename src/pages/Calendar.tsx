@@ -36,6 +36,7 @@ export default function CalendarPage() {
     return subjectColors[subject] || "bg-gray-100 border-gray-300 dark:bg-gray-900/30 dark:border-gray-700";
   };
   
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   const schedules = dataService.getClassSchedules();
   
   // Filter schedules for the selected date if in day view
@@ -105,7 +106,60 @@ export default function CalendarPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {sortedSchedules.length > 0 ? (
+            {view === "week" ? (
+              // Weekly Grid View
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="border p-2 bg-muted font-semibold text-left min-w-[100px]">Period</th>
+                      {days.map(day => (
+                        <th key={day} className="border p-2 bg-muted font-semibold text-center min-w-[150px]">
+                          {day}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {periods.slice(0, 10).map((period) => {
+                      const periodSchedules = schedules.filter(s => s.period === period.periodNumber);
+                      return (
+                        <tr key={period.periodNumber}>
+                          <td className="border p-2 bg-muted/30">
+                            <div className="font-semibold">Period {period.periodNumber}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {period.startTime} - {period.endTime}
+                            </div>
+                          </td>
+                          {days.map(day => {
+                            const daySchedule = periodSchedules.find(s => s.day === day);
+                            const colorClasses = daySchedule ? getSubjectColor(daySchedule.className) : "";
+                            return (
+                              <td key={day} className={`border p-2 ${colorClasses || "bg-background"}`}>
+                                {daySchedule ? (
+                                  <div className="space-y-1">
+                                    <div className="font-medium text-sm">{daySchedule.className}</div>
+                                    <div className="text-xs opacity-80">
+                                      👨‍🏫 {daySchedule.teacherName}
+                                    </div>
+                                    <div className="text-xs opacity-80">
+                                      🚪 {daySchedule.roomName}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="text-center text-muted-foreground text-sm">-</div>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : sortedSchedules.length > 0 ? (
+              // Day/Month View - List Format
               <div className="space-y-4">
                 {sortedSchedules.map((schedule, index) => {
                   const periodInfo = periods.find(p => p.periodNumber === schedule.period);
