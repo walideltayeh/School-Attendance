@@ -125,6 +125,7 @@ const Admin = () => {
       id: cls.id,
       name: `${cls.grade} - Section ${cls.section}`,
       teacher: 'Unassigned',
+      teacher_id: cls.teacher_id,
       room: cls.room_number || 'TBD',
       subject: cls.subject
     }));
@@ -762,7 +763,17 @@ const Admin = () => {
                                 checked={classGroup.every(c => selectedClassIds.includes(c.id))}
                                 onCheckedChange={() => toggleAllClassesInGroup(classGroup)}
                               />
-                              <h3 className="font-semibold text-lg">{className}</h3>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold text-lg">{className}</h3>
+                                {classGroup[0].teacher_id && (() => {
+                                  const teacher = teachers.find(t => t.id === classGroup[0].teacher_id);
+                                  return teacher ? (
+                                    <span className="text-sm text-muted-foreground">
+                                      ({teacher.name})
+                                    </span>
+                                  ) : null;
+                                })()}
+                              </div>
                               <Badge variant="outline">{classGroup.length} subject{classGroup.length > 1 ? 's' : ''}</Badge>
                             </div>
                             <div className="flex gap-2">
