@@ -64,10 +64,10 @@ export default {
 				},
 				// Custom education theme colors
 				school: {
-					primary: '#7E69AB',
-					secondary: '#6E59A5',
-					accent: '#9b87f5',
-					light: '#E5DEFF',
+					primary: '#1a56db',
+					secondary: '#1e429f',
+					accent: '#3b82f6',
+					light: '#dbeafe',
 					dark: '#1A1F2C',
 					success: '#4CAF50',
 					warning: '#FFC107',
