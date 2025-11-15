@@ -14,9 +14,11 @@ interface ClassScheduleFormProps {
   onSubmit: (schedule: any) => void;
   editingSchedule?: ClassSchedule | null;
   onCancelEdit?: () => void;
+  teachers?: any[];
+  classes?: any[];
 }
 
-export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEdit }: ClassScheduleFormProps) {
+export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEdit, teachers = [], classes = [] }: ClassScheduleFormProps) {
   const [selectedTeacher, setSelectedTeacher] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedRoom, setSelectedRoom] = useState("");
@@ -25,14 +27,11 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
   const [weekSchedule, setWeekSchedule] = useState<number[]>([1]);
   const [applyToAllWeeks, setApplyToAllWeeks] = useState(false);
   
-  const teachers = dataService.getTeachers();
   const rooms = dataService.getRooms();
   
+  // Get classes taught by the selected teacher
   const teacherClasses = selectedTeacher 
-    ? teachers.find(t => t.id === selectedTeacher)?.classes.map(c => {
-        const match = c.match(/(.*) \((.*)\)/);
-        return match ? { name: match[1], subject: match[2] } : null;
-      }).filter(Boolean) || []
+    ? classes.filter(c => c.teacher_id === selectedTeacher)
     : [];
   
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -225,7 +224,7 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
             <SelectContent>
               {teachers.map((teacher) => (
                 <SelectItem key={teacher.id} value={teacher.id}>
-                  {teacher.name}
+                  {teacher.full_name || teacher.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -243,9 +242,9 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
               <SelectValue placeholder={!selectedTeacher ? "Select a teacher first" : "Select class"} />
             </SelectTrigger>
             <SelectContent>
-              {teacherClasses.map((classObj, index) => (
-                <SelectItem key={index} value={classObj?.name || ""}>
-                  {classObj?.name} ({classObj?.subject})
+              {teacherClasses.map((classObj) => (
+                <SelectItem key={classObj.id} value={classObj.id}>
+                  {classObj.name} ({classObj.subject})
                 </SelectItem>
               ))}
             </SelectContent>

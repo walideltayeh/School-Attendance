@@ -808,7 +808,11 @@ const Admin = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ClassScheduleForm onSubmit={handleAddSchedule} />
+              <ClassScheduleForm 
+                onSubmit={handleAddSchedule} 
+                teachers={teachers}
+                classes={classes}
+              />
             </CardContent>
           </Card>
           
