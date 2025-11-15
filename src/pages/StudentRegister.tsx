@@ -376,22 +376,32 @@ export default function StudentRegister() {
         }
 
         // Create bus assignment
-        const { error: assignmentError } = await supabase
+        console.log('Creating bus assignment:', {
+          student_id: newStudent.id,
+          route_id: busRoute,
+          stop_id: stopId,
+          status: 'active'
+        });
+
+        const { data: assignmentData, error: assignmentError } = await supabase
           .from('bus_assignments')
           .insert({
             student_id: newStudent.id,
             route_id: busRoute,
             stop_id: stopId,
             status: 'active'
-          });
+          })
+          .select();
 
         if (assignmentError) {
           console.error('Error creating bus assignment:', assignmentError);
           toast({
             title: "Warning",
-            description: `Student ${editStudent ? 'updated' : 'registered'} but bus assignment failed`,
+            description: `Student ${editStudent ? 'updated' : 'registered'} but bus assignment failed: ${assignmentError.message}`,
             variant: "default"
           });
+        } else {
+          console.log('Bus assignment created successfully:', assignmentData);
         }
       }
       

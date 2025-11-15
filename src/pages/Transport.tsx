@@ -61,7 +61,30 @@ export default function Transport() {
   useEffect(() => {
     fetchBusRoutes();
     fetchStudents();
-  }, []);
+
+    // Subscribe to realtime updates for bus assignments
+    const channel = supabase
+      .channel('bus-assignments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bus_assignments'
+        },
+        () => {
+          // Refresh route details if a route is selected
+          if (selectedRoute) {
+            fetchRouteDetails(selectedRoute);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedRoute]);
 
   useEffect(() => {
     if (selectedRoute) {
