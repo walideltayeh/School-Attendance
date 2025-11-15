@@ -306,7 +306,7 @@ const Admin = () => {
     });
   };
 
-  const handleAddClass = async (classData: { grades: string[]; sections: string[]; subjects: string[] }) => {
+  const handleAddClass = async (classData: { grades: string[]; sections: string[]; subjects: string[]; teacherId?: string }) => {
     console.log("handleAddClass called with:", classData);
     
     // Create a class for each combination of grade, section, and subject
@@ -319,7 +319,7 @@ const Admin = () => {
             name: `${grade} - Section ${section}`,
             grade: grade,
             section: section,
-            teacher_id: null,
+            teacher_id: classData.teacherId || null,
             room_number: "TBD",
             subject: subject
           });
@@ -477,7 +477,7 @@ const Admin = () => {
     }
   };
 
-  const handleUpdateClassGroup = async (updatedData: { grades: string[]; sections: string[]; subjects: string[] }) => {
+  const handleUpdateClassGroup = async (updatedData: { grades: string[]; sections: string[]; subjects: string[]; teacherId?: string }) => {
     if (!editingClassName) return;
     
     const newGrade = updatedData.grades[0];
@@ -500,7 +500,8 @@ const Admin = () => {
             .update({ 
               name: newClassName,
               grade: newGrade,
-              section: newSection
+              section: newSection,
+              teacher_id: updatedData.teacherId || null
             })
             .in('id', classesToUpdate.map(c => c.id));
 
@@ -527,7 +528,7 @@ const Admin = () => {
               name: newClassName,
               grade: newGrade,
               section: newSection,
-              teacher_id: null,
+              teacher_id: updatedData.teacherId || null,
               room_number: "TBD",
               subject: subject
             })));
@@ -536,6 +537,14 @@ const Admin = () => {
         }
       } else {
         // Only subjects changed, same grade/section
+        // Update teacher for all existing classes
+        const { error: teacherUpdateError } = await supabase
+          .from('classes')
+          .update({ teacher_id: updatedData.teacherId || null })
+          .in('id', oldClasses.map(c => c.id));
+
+        if (teacherUpdateError) throw teacherUpdateError;
+
         // Delete removed subjects
         const classesToDelete = oldClasses.filter(c => !newSubjects.includes(c.subject));
         if (classesToDelete.length > 0) {
@@ -556,7 +565,7 @@ const Admin = () => {
               name: newClassName,
               grade: newGrade,
               section: newSection,
-              teacher_id: null,
+              teacher_id: updatedData.teacherId || null,
               room_number: "TBD",
               subject: subject
             })));
@@ -638,7 +647,7 @@ const Admin = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <AddClassForm onSubmit={handleAddClass} />
+              <AddClassForm onSubmit={handleAddClass} teachers={teachers} />
             </CardContent>
           </Card>
           
@@ -933,9 +942,11 @@ const Admin = () => {
                 name: selectedClass.name,
                 grade: editingClassName.split(' - ')[0],
                 section: editingClassName.split('Section ')[1],
-                subjects: classes.filter(c => c.name === editingClassName).map(c => c.subject)
+                subjects: classes.filter(c => c.name === editingClassName).map(c => c.subject),
+                teacherId: selectedClass.teacher || undefined
               }}
               isEditing={true}
+              teachers={teachers}
               onCancel={() => {
                 setIsClassEditDialogOpen(false);
                 setEditingClassName(null);
