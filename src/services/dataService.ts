@@ -28,6 +28,7 @@ export interface ClassInfo {
   id: string;
   name: string;
   teacher: string;
+  teacher_id?: string | null;
   room: string;
   subject: string;
 }
