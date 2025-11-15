@@ -35,7 +35,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
             to="/" 
             className={({ isActive }) => 
               cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-primary/85 hover:text-primary-foreground",
                 isActive ? "bg-muted text-foreground" : ""
               )
             }
@@ -48,7 +48,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
             to="/students" 
             className={({ isActive }) => 
               cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-primary/85 hover:text-primary-foreground",
                 isActive ? "bg-muted text-foreground" : ""
               )
             }
@@ -60,7 +60,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
             to="/teachers" 
             className={({ isActive }) => 
               cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-primary/85 hover:text-primary-foreground",
                 isActive ? "bg-muted text-foreground" : ""
               )
             }
@@ -72,7 +72,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
             to="/attendance" 
             className={({ isActive }) => 
               cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-primary/85 hover:text-primary-foreground",
                 isActive ? "bg-muted text-foreground" : ""
               )
             }
@@ -84,7 +84,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
             to="/calendar" 
             className={({ isActive }) => 
               cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-primary/85 hover:text-primary-foreground",
                 isActive ? "bg-muted text-foreground" : ""
               )
             }
@@ -96,7 +96,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
             to="/reports" 
             className={({ isActive }) => 
               cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-primary/85 hover:text-primary-foreground",
                 isActive ? "bg-muted text-foreground" : ""
               )
             }
@@ -108,7 +108,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
             to="/transport" 
             className={({ isActive }) => 
               cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-primary/85 hover:text-primary-foreground",
                 isActive ? "bg-muted text-foreground" : ""
               )
             }
@@ -120,7 +120,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
             to="/notifications" 
             className={({ isActive }) => 
               cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-primary/85 hover:text-primary-foreground",
                 isActive ? "bg-muted text-foreground" : ""
               )
             }
@@ -132,7 +132,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
             to="/admin" 
             className={({ isActive }) => 
               cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-primary/85 hover:text-primary-foreground",
                 isActive ? "bg-muted text-foreground" : ""
               )
             }
@@ -144,7 +144,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
             to="/settings" 
             className={({ isActive }) => 
               cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-foreground",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-primary/85 hover:text-primary-foreground",
                 isActive ? "bg-muted text-foreground" : ""
               )
             }
