@@ -48,6 +48,7 @@ export default function Transport() {
   const [busStops, setBusStops] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [assignedStudents, setAssignedStudents] = useState<any[]>([]);
+  const [allAssignments, setAllAssignments] = useState<any[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState("");
@@ -61,6 +62,7 @@ export default function Transport() {
   useEffect(() => {
     fetchBusRoutes();
     fetchStudents();
+    fetchAllAssignments();
 
     // Subscribe to realtime updates for bus assignments
     const channel = supabase
@@ -73,7 +75,8 @@ export default function Transport() {
           table: 'bus_assignments'
         },
         () => {
-          // Refresh route details if a route is selected
+          // Refresh all assignments and route details
+          fetchAllAssignments();
           if (selectedRoute) {
             fetchRouteDetails(selectedRoute);
           }
@@ -127,6 +130,20 @@ export default function Transport() {
     }
     
     setStudents(data || []);
+  };
+
+  const fetchAllAssignments = async () => {
+    const { data, error } = await supabase
+      .from('bus_assignments')
+      .select('*')
+      .eq('status', 'active');
+    
+    if (error) {
+      console.error("Failed to load bus assignments:", error);
+      return;
+    }
+    
+    setAllAssignments(data || []);
   };
 
   const fetchRouteDetails = async (routeId: string) => {
@@ -403,7 +420,7 @@ export default function Transport() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-1">
                         <User className="h-3 w-3 text-muted-foreground" />
-                        <span>{assignedStudents.filter(a => a.route_id === route.id).length} students</span>
+                        <span>{allAssignments.filter(a => a.route_id === route.id).length} students</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <MapPin className="h-3 w-3 text-muted-foreground" />
