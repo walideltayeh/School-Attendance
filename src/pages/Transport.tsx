@@ -63,6 +63,7 @@ export default function Transport() {
     fetchBusRoutes();
     fetchStudents();
     fetchAllAssignments();
+    fetchAllBusStops();
 
     // Subscribe to realtime updates for bus assignments
     const channel = supabase
@@ -144,6 +145,20 @@ export default function Transport() {
     }
     
     setAllAssignments(data || []);
+  };
+
+  const fetchAllBusStops = async () => {
+    const { data, error } = await supabase
+      .from('bus_stops')
+      .select('*')
+      .order('stop_order');
+    
+    if (error) {
+      console.error("Failed to load bus stops:", error);
+      return;
+    }
+    
+    setBusStops(data || []);
   };
 
   const fetchRouteDetails = async (routeId: string) => {
