@@ -40,6 +40,7 @@ export default function StudentRegister() {
   const [firstName, setFirstName] = useState(editStudent?.full_name?.split(' ')[0] || "");
   const [lastName, setLastName] = useState(editStudent?.full_name?.split(' ').slice(1).join(' ') || "");
   const [dateOfBirth, setDateOfBirth] = useState(editStudent?.date_of_birth || "");
+  const [age, setAge] = useState<number | null>(null);
   const [gender, setGender] = useState(editStudent?.gender || "female");
   const [bloodType, setBloodType] = useState(editStudent?.blood_type || "");
   const [allergyDetails, setAllergyDetails] = useState(editStudent?.allergies_details || "");
@@ -124,6 +125,24 @@ export default function StudentRegister() {
     }
   }, [grade, classes]);
 
+  // Calculate age when date of birth changes
+  useEffect(() => {
+    if (dateOfBirth) {
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+      let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        calculatedAge--;
+      }
+      
+      setAge(calculatedAge);
+    } else {
+      setAge(null);
+    }
+  }, [dateOfBirth]);
+
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -165,6 +184,32 @@ export default function StudentRegister() {
         variant: "destructive"
       });
       return;
+    }
+
+    // Validate date of birth
+    if (dateOfBirth) {
+      const birthDate = new Date(dateOfBirth);
+      const today = new Date();
+      
+      // Check if date is not in the future
+      if (birthDate > today) {
+        toast({
+          title: "Invalid Date of Birth",
+          description: "Date of birth cannot be in the future.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Check if age is within reasonable range (2-20 years for school)
+      if (age !== null && (age < 2 || age > 20)) {
+        toast({
+          title: "Invalid Age",
+          description: "Student age must be between 2 and 20 years old.",
+          variant: "destructive"
+        });
+        return;
+      }
     }
     
     if (hasAllergies && !allergyDetails) {
@@ -543,14 +588,21 @@ export default function StudentRegister() {
                     <Label htmlFor="dob" className="text-right">
                       Date of Birth
                     </Label>
-                    <Input 
-                      id="dob" 
-                      type="date" 
-                      className="col-span-3" 
-                      required 
-                      value={dateOfBirth}
-                      onChange={(e) => setDateOfBirth(e.target.value)}
-                    />
+                    <div className="col-span-3 space-y-2">
+                      <Input 
+                        id="dob" 
+                        type="date" 
+                        required 
+                        value={dateOfBirth}
+                        onChange={(e) => setDateOfBirth(e.target.value)}
+                        max={new Date().toISOString().split('T')[0]}
+                      />
+                      {age !== null && (
+                        <p className="text-sm text-muted-foreground">
+                          Age: {age} years old
+                        </p>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-4 items-center gap-4">
