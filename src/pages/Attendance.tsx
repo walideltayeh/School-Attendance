@@ -10,8 +10,9 @@ import { toast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { dataService, ClassInfo, BusRoute, ScanRecord, Room, Teacher } from "@/services/dataService";
+import { dataService, ScanRecord, Room, Teacher } from "@/services/dataService";
 import { AttendanceScanner } from "@/components/attendance/AttendanceScanner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Attendance() {
   const { roomId, teacherId } = useParams();
@@ -24,12 +25,14 @@ export default function Attendance() {
   const [recentScans, setRecentScans] = useState<ScanRecord[]>([]);
   const [teacher, setTeacher] = useState<Teacher | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
-  
-  const classes = dataService.getClasses();
-  const busRoutes = dataService.getBusRoutes();
+  const [classes, setClasses] = useState<any[]>([]);
+  const [busRoutes, setBusRoutes] = useState<any[]>([]);
 
   // Load teacher and room data if IDs are provided
   useEffect(() => {
+    fetchClasses();
+    fetchBusRoutes();
+    
     if (roomId) {
       const foundRoom = dataService.getRoom(roomId);
       if (foundRoom) {
@@ -52,6 +55,43 @@ export default function Attendance() {
       }
     }
   }, [roomId, teacherId, navigate]);
+
+  const fetchClasses = async () => {
+    const { data, error } = await supabase
+      .from('classes')
+      .select('*')
+      .order('name');
+    
+    if (error) {
+      console.error("Error loading classes:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load classes",
+        variant: "destructive"
+      });
+    } else {
+      setClasses(data || []);
+    }
+  };
+
+  const fetchBusRoutes = async () => {
+    const { data, error } = await supabase
+      .from('bus_routes')
+      .select('*')
+      .eq('status', 'active')
+      .order('name');
+    
+    if (error) {
+      console.error("Error loading bus routes:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load bus routes",
+        variant: "destructive"
+      });
+    } else {
+      setBusRoutes(data || []);
+    }
+  };
 
   // Update the time every second
   useEffect(() => {
@@ -172,8 +212,8 @@ export default function Attendance() {
     // Get today's schedule for this room
     const todaySchedules = dataService.getRoomScheduleForToday(roomId);
     
-    // Get teacher's classes
-    const teacherClasses = classes.filter(c => c.teacher === teacher.name);
+    // Get teacher's classes - now filtering by teacher_id from Supabase
+    const teacherClasses = classes.filter(c => c.teacher_id === teacherId);
     
     return (
       <div className="space-y-6 py-4">
@@ -369,12 +409,20 @@ export default function Attendance() {
                   <h4 className="font-semibold">Class Information</h4>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <p className="text-muted-foreground">Teacher:</p>
-                      <p>{classes.find(c => c.id === selectedClass)?.teacher}</p>
+                      <p className="text-muted-foreground">Subject:</p>
+                      <p>{classes.find(c => c.id === selectedClass)?.subject}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Room Number:</p>
-                      <p>{classes.find(c => c.id === selectedClass)?.room}</p>
+                      <p>{classes.find(c => c.id === selectedClass)?.room_number}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Grade:</p>
+                      <p>{classes.find(c => c.id === selectedClass)?.grade}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Section:</p>
+                      <p>{classes.find(c => c.id === selectedClass)?.section}</p>
                     </div>
                   </div>
                 </div>
@@ -453,7 +501,15 @@ export default function Attendance() {
                   <div className="grid grid-cols-1 gap-2 text-sm">
                     <div>
                       <p className="text-muted-foreground">Driver:</p>
-                      <p>{busRoutes.find(b => b.id === selectedBus)?.driver}</p>
+                      <p>{busRoutes.find(b => b.id === selectedBus)?.driver_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Phone:</p>
+                      <p>{busRoutes.find(b => b.id === selectedBus)?.driver_phone}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Departure:</p>
+                      <p>{busRoutes.find(b => b.id === selectedBus)?.departure_time}</p>
                     </div>
                   </div>
                 </div>
