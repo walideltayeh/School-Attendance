@@ -463,6 +463,7 @@ export type Database = {
           allergies_details: string | null
           blood_type: Database["public"]["Enums"]["blood_type"] | null
           created_at: string
+          date_of_birth: string | null
           full_name: string
           gender: string | null
           grade: string
@@ -480,6 +481,7 @@ export type Database = {
           allergies_details?: string | null
           blood_type?: Database["public"]["Enums"]["blood_type"] | null
           created_at?: string
+          date_of_birth?: string | null
           full_name: string
           gender?: string | null
           grade: string
@@ -497,6 +499,7 @@ export type Database = {
           allergies_details?: string | null
           blood_type?: Database["public"]["Enums"]["blood_type"] | null
           created_at?: string
+          date_of_birth?: string | null
           full_name?: string
           gender?: string | null
           grade?: string

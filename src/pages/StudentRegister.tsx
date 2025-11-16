@@ -39,6 +39,7 @@ export default function StudentRegister() {
   // Student form state
   const [firstName, setFirstName] = useState(editStudent?.full_name?.split(' ')[0] || "");
   const [lastName, setLastName] = useState(editStudent?.full_name?.split(' ').slice(1).join(' ') || "");
+  const [dateOfBirth, setDateOfBirth] = useState(editStudent?.date_of_birth || "");
   const [gender, setGender] = useState(editStudent?.gender || "female");
   const [bloodType, setBloodType] = useState(editStudent?.blood_type || "");
   const [allergyDetails, setAllergyDetails] = useState(editStudent?.allergies_details || "");
@@ -217,6 +218,7 @@ export default function StudentRegister() {
         // Update existing student
         const updateData: any = {
           full_name: `${firstName} ${lastName}`,
+          date_of_birth: dateOfBirth || null,
           gender: gender,
           grade: grade,
           section: section,
@@ -247,6 +249,7 @@ export default function StudentRegister() {
           .insert({
             student_code: barcodeValue,
             full_name: `${firstName} ${lastName}`,
+            date_of_birth: dateOfBirth || null,
             gender: gender,
             grade: grade,
             section: section,
@@ -540,7 +543,14 @@ export default function StudentRegister() {
                     <Label htmlFor="dob" className="text-right">
                       Date of Birth
                     </Label>
-                    <Input id="dob" type="date" className="col-span-3" required />
+                    <Input 
+                      id="dob" 
+                      type="date" 
+                      className="col-span-3" 
+                      required 
+                      value={dateOfBirth}
+                      onChange={(e) => setDateOfBirth(e.target.value)}
+                    />
                   </div>
                   
                   <div className="grid grid-cols-4 items-center gap-4">
