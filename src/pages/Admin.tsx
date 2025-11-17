@@ -311,7 +311,7 @@ const Admin = () => {
     });
   };
 
-  const handleAddClass = async (classData: { grades: string[]; sections: string[]; subjects: string[]; teacherId?: string }) => {
+  const handleAddClass = async (classData: { grades: string[]; sections: string[]; subjects: string[]; roomNumber: string; teacherId?: string }) => {
     console.log("handleAddClass called with:", classData);
     
     // Create a class for each combination of grade, section, and subject
@@ -325,7 +325,7 @@ const Admin = () => {
             grade: grade,
             section: section,
             teacher_id: classData.teacherId || null,
-            room_number: "TBD",
+            room_number: classData.roomNumber,
             subject: subject
           });
         }

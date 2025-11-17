@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { dataService, Teacher } from "@/services/dataService";
 import { toast } from "@/hooks/use-toast";
@@ -12,6 +13,7 @@ interface AddClassFormProps {
     grades: string[];
     sections: string[];
     subjects: string[];
+    roomNumber: string;
     teacherId?: string;
   }) => void;
   initialValues?: {
@@ -33,6 +35,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
   const [selectedSection, setSelectedSection] = useState<string>(initialValues?.section || "");
   const [selectedSubject, setSelectedSubject] = useState<string>(initialValues?.subjects?.[0] || "");
   const [selectedTeacher, setSelectedTeacher] = useState<string>(initialValues?.teacherId || "none");
+  const [roomNumber, setRoomNumber] = useState<string>("");
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
 
   useEffect(() => {
@@ -86,10 +89,10 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       availableSubjects
     });
 
-    if (!selectedGrade || !selectedSection || !selectedSubject) {
+    if (!selectedGrade || !selectedSection || !selectedSubject || !roomNumber) {
       toast({
         title: "Validation Error",
-        description: "Please select a grade, section, and subject",
+        description: "Please select a grade, section, subject, and room number",
         variant: "destructive",
       });
       return;
@@ -100,6 +103,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       grades: [selectedGrade],
       sections: [selectedSection],
       subjects: [selectedSubject],
+      roomNumber: roomNumber,
       teacherId: selectedTeacher === "none" ? undefined : selectedTeacher,
     });
 
@@ -107,6 +111,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       setSelectedGrade("");
       setSelectedSection("");
       setSelectedSubject("");
+      setRoomNumber("");
     }
   };
 
@@ -159,6 +164,18 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div>
+          <Label htmlFor="roomNumber">Room Number *</Label>
+          <Input
+            id="roomNumber"
+            type="text"
+            value={roomNumber}
+            onChange={(e) => setRoomNumber(e.target.value)}
+            placeholder="Enter room number"
+            className="bg-background"
+          />
         </div>
 
         <div className="space-y-2">
