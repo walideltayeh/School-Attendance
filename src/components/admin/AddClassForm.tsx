@@ -119,7 +119,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
             <SelectTrigger id="grade" className="bg-background">
               <SelectValue placeholder="Select a grade" />
             </SelectTrigger>
-            <SelectContent className="bg-background">
+            <SelectContent className="z-50 bg-background border border-border">
               {ALL_GRADES.map((grade) => (
                 <SelectItem key={grade} value={grade}>
                   {grade}
@@ -135,7 +135,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
             <SelectTrigger id="section" className="bg-background">
               <SelectValue placeholder="Select a section" />
             </SelectTrigger>
-            <SelectContent className="bg-background">
+            <SelectContent className="z-50 bg-background border border-border">
               {ALL_SECTIONS.map((section) => (
                 <SelectItem key={section} value={section}>
                   Section {section}
@@ -151,7 +151,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
             <SelectTrigger id="subject" className="bg-background">
               <SelectValue placeholder="Select a subject" />
             </SelectTrigger>
-            <SelectContent className="bg-background">
+            <SelectContent className="z-50 bg-background border border-border">
               {availableSubjects.map((subject) => (
                 <SelectItem key={subject} value={subject}>
                   {subject}
@@ -167,7 +167,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
             <SelectTrigger id="teacher" className="bg-background">
               <SelectValue placeholder="Select a teacher (optional)" />
             </SelectTrigger>
-            <SelectContent className="bg-background">
+            <SelectContent className="z-50 bg-background border border-border">
               <SelectItem value="none">None</SelectItem>
               {teachers.map((teacher) => (
                 <SelectItem key={teacher.id} value={teacher.id}>
