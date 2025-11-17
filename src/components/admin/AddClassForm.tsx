@@ -4,9 +4,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { dataService, Teacher } from "@/services/dataService";
 import { toast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
-import { X, Plus } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ALL_GRADES, ALL_SECTIONS } from "@/utils/classHelpers";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -32,9 +29,9 @@ interface AddClassFormProps {
 
 
 export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, teachers = [] }: AddClassFormProps) {
-  const [selectedGrades, setSelectedGrades] = useState<string[]>(initialValues?.grade ? [initialValues.grade] : []);
-  const [selectedSections, setSelectedSections] = useState<string[]>(initialValues?.section ? [initialValues.section] : []);
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(initialValues?.subjects || []);
+  const [selectedGrade, setSelectedGrade] = useState<string>(initialValues?.grade || "");
+  const [selectedSection, setSelectedSection] = useState<string>(initialValues?.section || "");
+  const [selectedSubject, setSelectedSubject] = useState<string>(initialValues?.subjects?.[0] || "");
   const [selectedTeacher, setSelectedTeacher] = useState<string>(initialValues?.teacherId || "none");
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
 
@@ -78,44 +75,21 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
     setAvailableSubjects(subjects);
   };
 
-  const handleGradeToggle = (grade: string) => {
-    if (selectedGrades.includes(grade)) {
-      setSelectedGrades(selectedGrades.filter(g => g !== grade));
-    } else {
-      setSelectedGrades([...selectedGrades, grade]);
-    }
-  };
-
-  const handleSectionToggle = (section: string) => {
-    if (selectedSections.includes(section)) {
-      setSelectedSections(selectedSections.filter(s => s !== section));
-    } else {
-      setSelectedSections([...selectedSections, section]);
-    }
-  };
-
-  const handleSubjectToggle = (subject: string) => {
-    if (selectedSubjects.includes(subject)) {
-      setSelectedSubjects(selectedSubjects.filter(s => s !== subject));
-    } else {
-      setSelectedSubjects([...selectedSubjects, subject]);
-    }
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     console.log("Form submission attempt:", {
-      grades: selectedGrades,
-      sections: selectedSections,
-      subjects: selectedSubjects,
+      grade: selectedGrade,
+      section: selectedSection,
+      subject: selectedSubject,
       availableSubjects
     });
 
-    if (selectedGrades.length === 0 || selectedSections.length === 0 || selectedSubjects.length === 0) {
+    if (!selectedGrade || !selectedSection || !selectedSubject) {
       toast({
         title: "Validation Error",
-        description: "Please select at least one grade, section, and subject",
+        description: "Please select a grade, section, and subject",
         variant: "destructive",
       });
       return;
@@ -123,119 +97,77 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
 
     console.log("Calling onSubmit with data");
     onSubmit({
-      grades: selectedGrades,
-      sections: selectedSections,
-      subjects: selectedSubjects,
+      grades: [selectedGrade],
+      sections: [selectedSection],
+      subjects: [selectedSubject],
       teacherId: selectedTeacher === "none" ? undefined : selectedTeacher,
     });
 
     if (!isEditing) {
-      setSelectedGrades([]);
-      setSelectedSections([]);
-      setSelectedSubjects([]);
+      setSelectedGrade("");
+      setSelectedSection("");
+      setSelectedSubject("");
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Grades * (Select multiple)</Label>
-          <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
-            {ALL_GRADES.map((grade) => (
-              <div key={grade} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`grade-${grade}`}
-                  checked={selectedGrades.includes(grade)}
-                  onCheckedChange={() => handleGradeToggle(grade)}
-                />
-                <label
-                  htmlFor={`grade-${grade}`}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="grade">Select Class (Grade) *</Label>
+          <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+            <SelectTrigger id="grade" className="bg-background">
+              <SelectValue placeholder="Select a grade" />
+            </SelectTrigger>
+            <SelectContent className="bg-background">
+              {ALL_GRADES.map((grade) => (
+                <SelectItem key={grade} value={grade}>
                   {grade}
-                </label>
-              </div>
-            ))}
-          </div>
-          {selectedGrades.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {selectedGrades.map((grade) => (
-                <Badge key={grade} variant="secondary" className="text-xs">
-                  {grade}
-                </Badge>
+                </SelectItem>
               ))}
-            </div>
-          )}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label htmlFor="section">Select Section *</Label>
+          <Select value={selectedSection} onValueChange={setSelectedSection}>
+            <SelectTrigger id="section" className="bg-background">
+              <SelectValue placeholder="Select a section" />
+            </SelectTrigger>
+            <SelectContent className="bg-background">
+              {ALL_SECTIONS.map((section) => (
+                <SelectItem key={section} value={section}>
+                  Section {section}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label htmlFor="subject">Select Subject *</Label>
+          <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+            <SelectTrigger id="subject" className="bg-background">
+              <SelectValue placeholder="Select a subject" />
+            </SelectTrigger>
+            <SelectContent className="bg-background">
+              {availableSubjects.map((subject) => (
+                <SelectItem key={subject} value={subject}>
+                  {subject}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">
-          <Label>Sections * (Select multiple)</Label>
-          <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
-            {ALL_SECTIONS.map((section) => (
-              <div key={section} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`section-${section}`}
-                  checked={selectedSections.includes(section)}
-                  onCheckedChange={() => handleSectionToggle(section)}
-                />
-                <label
-                  htmlFor={`section-${section}`}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  Section {section}
-                </label>
-              </div>
-            ))}
-          </div>
-          {selectedSections.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {selectedSections.map((section) => (
-                <Badge key={section} variant="secondary" className="text-xs">
-                  Section {section}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-2 md:col-span-2">
-          <Label>Subjects * (Select multiple)</Label>
-          <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
-            {availableSubjects.map((subject) => (
-              <div key={subject} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`subject-${subject}`}
-                  checked={selectedSubjects.includes(subject)}
-                  onCheckedChange={() => handleSubjectToggle(subject)}
-                />
-                <label
-                  htmlFor={`subject-${subject}`}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  {subject}
-                </label>
-              </div>
-            ))}
-          </div>
-          {selectedSubjects.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {selectedSubjects.map((subject) => (
-                <Badge key={subject} variant="secondary" className="text-xs">
-                  {subject}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-2 md:col-span-2">
           <Label htmlFor="teacher">Teacher (Optional)</Label>
           <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
-            <SelectTrigger id="teacher">
+            <SelectTrigger id="teacher" className="bg-background">
               <SelectValue placeholder="Select a teacher (optional)" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-background">
               <SelectItem value="none">None</SelectItem>
               {teachers.map((teacher) => (
                 <SelectItem key={teacher.id} value={teacher.id}>
