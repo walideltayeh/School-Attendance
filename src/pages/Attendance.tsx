@@ -20,6 +20,10 @@ export default function Attendance() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [activeTab, setActiveTab] = useState("classroom");
   const [selectedClass, setSelectedClass] = useState("");
+  const [selectedGrade, setSelectedGrade] = useState("");
+  const [selectedSection, setSelectedSection] = useState("");
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [selectedRoom, setSelectedRoom] = useState("");
   const [selectedBus, setSelectedBus] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [recentScans, setRecentScans] = useState<ScanRecord[]>([]);
@@ -103,11 +107,31 @@ export default function Attendance() {
   }, []);
 
   const handleStartScan = () => {
-    // Validate selection
-    if (activeTab === "classroom" && !selectedClass) {
+    // Determine selected class ID based on grade, section, subject, room
+    const matchingClass = classes.find(c => 
+      c.grade === selectedGrade && 
+      c.section === selectedSection && 
+      c.subject === selectedSubject && 
+      c.room_number === selectedRoom
+    );
+
+    if (!matchingClass) {
       toast({
-        title: "Please select a class",
-        description: "You must select a class before starting the scan.",
+        title: "Error",
+        description: "Could not find a matching class. Please verify your selections.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Set the selectedClass to the matching class ID
+    setSelectedClass(matchingClass.id);
+
+    // Validate selection
+    if (activeTab === "classroom" && !matchingClass.id) {
+      toast({
+        title: "Please complete all selections",
+        description: "You must select grade, section, subject, and room before starting the scan.",
         variant: "destructive",
       });
       return;
@@ -199,8 +223,10 @@ export default function Attendance() {
   // Get the selected item name for display
   const getSelectedItemName = () => {
     if (activeTab === "classroom") {
-      const classItem = classes.find(c => c.id === selectedClass);
-      return classItem ? classItem.name : "";
+      if (selectedGrade && selectedSection && selectedSubject) {
+        return `${selectedGrade} - Section ${selectedSection} - ${selectedSubject}`;
+      }
+      return "";
     } else {
       const busRoute = busRoutes.find(b => b.id === selectedBus);
       return busRoute ? busRoute.name : "";
@@ -290,34 +316,103 @@ export default function Attendance() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="class-select">Select Your Class</Label>
-                  <Select value={selectedClass} onValueChange={setSelectedClass}>
-                    <SelectTrigger id="class-select">
-                      <SelectValue placeholder="Select a class" />
+                  <Label htmlFor="teacher-grade-select">Select Class (Grade)</Label>
+                  <Select value={selectedGrade} onValueChange={(value) => {
+                    setSelectedGrade(value);
+                    setSelectedSection("");
+                    setSelectedSubject("");
+                    setSelectedRoom("");
+                    setSelectedClass("");
+                  }}>
+                    <SelectTrigger id="teacher-grade-select" className="bg-background">
+                      <SelectValue placeholder="Select a grade" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {teacherClasses.map((classItem) => (
-                        <SelectItem key={classItem.id} value={classItem.id}>
-                          {classItem.name} - {classItem.subject}
+                    <SelectContent className="z-50 bg-background border border-border">
+                      {[...new Set(teacherClasses.map(c => c.grade))].sort().map((grade) => (
+                        <SelectItem key={grade} value={grade}>
+                          {grade}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                
-                {selectedClass && (
-                  <div className="rounded-lg border p-4 space-y-2">
-                    <h4 className="font-semibold">Class Information</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Subject:</p>
-                        <p>{classes.find(c => c.id === selectedClass)?.subject}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Room Number:</p>
-                        <p>{classes.find(c => c.id === selectedClass)?.room}</p>
-                      </div>
-                    </div>
+
+                {selectedGrade && (
+                  <div className="space-y-2">
+                    <Label htmlFor="teacher-section-select">Select Section</Label>
+                    <Select value={selectedSection} onValueChange={(value) => {
+                      setSelectedSection(value);
+                      setSelectedSubject("");
+                      setSelectedRoom("");
+                      setSelectedClass("");
+                    }}>
+                      <SelectTrigger id="teacher-section-select" className="bg-background">
+                        <SelectValue placeholder="Select a section" />
+                      </SelectTrigger>
+                      <SelectContent className="z-50 bg-background border border-border">
+                        {[...new Set(teacherClasses.filter(c => c.grade === selectedGrade).map(c => c.section))].sort().map((section) => (
+                          <SelectItem key={section} value={section}>
+                            Section {section}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {selectedSection && (
+                  <div className="space-y-2">
+                    <Label htmlFor="teacher-subject-select">Select Subject</Label>
+                    <Select value={selectedSubject} onValueChange={(value) => {
+                      setSelectedSubject(value);
+                      setSelectedRoom("");
+                      setSelectedClass("");
+                    }}>
+                      <SelectTrigger id="teacher-subject-select" className="bg-background">
+                        <SelectValue placeholder="Select a subject" />
+                      </SelectTrigger>
+                      <SelectContent className="z-50 bg-background border border-border">
+                        {[...new Set(teacherClasses.filter(c => c.grade === selectedGrade && c.section === selectedSection).map(c => c.subject))].map((subject) => (
+                          <SelectItem key={subject} value={subject}>
+                            {subject}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {selectedSubject && (
+                  <div className="space-y-2">
+                    <Label htmlFor="teacher-room-select">Select Room</Label>
+                    <Select value={selectedRoom} onValueChange={(value) => {
+                      setSelectedRoom(value);
+                      // Find and set the matching class
+                      const matchingClass = teacherClasses.find(c => 
+                        c.grade === selectedGrade && 
+                        c.section === selectedSection && 
+                        c.subject === selectedSubject && 
+                        c.room_number === value
+                      );
+                      if (matchingClass) {
+                        setSelectedClass(matchingClass.id);
+                      }
+                    }}>
+                      <SelectTrigger id="teacher-room-select" className="bg-background">
+                        <SelectValue placeholder="Select a room" />
+                      </SelectTrigger>
+                      <SelectContent className="z-50 bg-background border border-border">
+                        {[...new Set(teacherClasses.filter(c => 
+                          c.grade === selectedGrade && 
+                          c.section === selectedSection && 
+                          c.subject === selectedSubject
+                        ).map(c => c.room_number))].map((room) => (
+                          <SelectItem key={room} value={room}>
+                            Room {room}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
                 
@@ -325,7 +420,7 @@ export default function Attendance() {
                   <Button 
                     className="w-full bg-school-primary hover:bg-school-secondary" 
                     onClick={handleStartScan}
-                    disabled={!selectedClass}
+                    disabled={!selectedGrade || !selectedSection || !selectedSubject || !selectedRoom}
                   >
                     <QrCode className="mr-2 h-4 w-4" />
                     Start Scanning
@@ -345,7 +440,7 @@ export default function Attendance() {
             
             <AttendanceScanner
               type="classroom"
-              selectedItemName={classes.find(c => c.id === selectedClass)?.name || ""}
+              selectedItemName={getSelectedItemName()}
               isScanning={isScanning}
               onStartScan={handleStartScan}
               onStopScan={handleStopScan}
@@ -389,42 +484,88 @@ export default function Attendance() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="class-select">Select Class</Label>
-                <Select value={selectedClass} onValueChange={setSelectedClass}>
-                  <SelectTrigger id="class-select">
-                    <SelectValue placeholder="Select a class" />
+                <Label htmlFor="grade-select">Select Class (Grade)</Label>
+                <Select value={selectedGrade} onValueChange={(value) => {
+                  setSelectedGrade(value);
+                  setSelectedSection("");
+                  setSelectedSubject("");
+                  setSelectedRoom("");
+                }}>
+                  <SelectTrigger id="grade-select" className="bg-background">
+                    <SelectValue placeholder="Select a grade" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {classes.map((classItem) => (
-                      <SelectItem key={classItem.id} value={classItem.id}>
-                        {classItem.name}
+                  <SelectContent className="z-50 bg-background border border-border">
+                    {[...new Set(classes.map(c => c.grade))].sort().map((grade) => (
+                      <SelectItem key={grade} value={grade}>
+                        {grade}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              
-              {selectedClass && (
-                <div className="rounded-lg border p-4 space-y-2">
-                  <h4 className="font-semibold">Class Information</h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Subject:</p>
-                      <p>{classes.find(c => c.id === selectedClass)?.subject}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Room Number:</p>
-                      <p>{classes.find(c => c.id === selectedClass)?.room_number}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Grade:</p>
-                      <p>{classes.find(c => c.id === selectedClass)?.grade}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Section:</p>
-                      <p>{classes.find(c => c.id === selectedClass)?.section}</p>
-                    </div>
-                  </div>
+
+              {selectedGrade && (
+                <div className="space-y-2">
+                  <Label htmlFor="section-select">Select Section</Label>
+                  <Select value={selectedSection} onValueChange={(value) => {
+                    setSelectedSection(value);
+                    setSelectedSubject("");
+                    setSelectedRoom("");
+                  }}>
+                    <SelectTrigger id="section-select" className="bg-background">
+                      <SelectValue placeholder="Select a section" />
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-background border border-border">
+                      {[...new Set(classes.filter(c => c.grade === selectedGrade).map(c => c.section))].sort().map((section) => (
+                        <SelectItem key={section} value={section}>
+                          Section {section}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {selectedSection && (
+                <div className="space-y-2">
+                  <Label htmlFor="subject-select">Select Subject</Label>
+                  <Select value={selectedSubject} onValueChange={(value) => {
+                    setSelectedSubject(value);
+                    setSelectedRoom("");
+                  }}>
+                    <SelectTrigger id="subject-select" className="bg-background">
+                      <SelectValue placeholder="Select a subject" />
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-background border border-border">
+                      {[...new Set(classes.filter(c => c.grade === selectedGrade && c.section === selectedSection).map(c => c.subject))].map((subject) => (
+                        <SelectItem key={subject} value={subject}>
+                          {subject}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {selectedSubject && (
+                <div className="space-y-2">
+                  <Label htmlFor="room-select">Select Room</Label>
+                  <Select value={selectedRoom} onValueChange={setSelectedRoom}>
+                    <SelectTrigger id="room-select" className="bg-background">
+                      <SelectValue placeholder="Select a room" />
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-background border border-border">
+                      {[...new Set(classes.filter(c => 
+                        c.grade === selectedGrade && 
+                        c.section === selectedSection && 
+                        c.subject === selectedSubject
+                      ).map(c => c.room_number))].map((room) => (
+                        <SelectItem key={room} value={room}>
+                          Room {room}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
               
@@ -451,7 +592,7 @@ export default function Attendance() {
                 <Button 
                   className="bg-school-primary hover:bg-school-secondary mr-2" 
                   onClick={handleStartScan}
-                  disabled={!selectedClass}
+                  disabled={!selectedGrade || !selectedSection || !selectedSubject || !selectedRoom}
                 >
                   <QrCode className="mr-2 h-4 w-4" />
                   Start Scanning
