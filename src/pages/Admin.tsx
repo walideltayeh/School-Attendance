@@ -20,6 +20,7 @@ import { AddBusRouteForm } from "@/components/admin/AddBusRouteForm";
 import { AddBusStopForm } from "@/components/admin/AddBusStopForm";
 import { AddClassForm } from "@/components/admin/AddClassForm";
 import { SubjectManagement } from "@/components/admin/SubjectManagement";
+import { BulkClassImport } from "@/components/admin/BulkClassImport";
 import { supabase } from "@/integrations/supabase/client";
 
 const Admin = () => {
@@ -773,8 +774,12 @@ const Admin = () => {
                 Create classes by selecting grade, section, and subjects
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <AddClassForm onSubmit={handleAddClass} teachers={teachers} />
+            <CardContent className="space-y-6">
+              <BulkClassImport onImportComplete={loadClasses} />
+              <div className="border-t pt-6">
+                <h3 className="text-sm font-medium mb-4">Or Add Single Class</h3>
+                <AddClassForm onSubmit={handleAddClass} teachers={teachers} />
+              </div>
             </CardContent>
           </Card>
           
