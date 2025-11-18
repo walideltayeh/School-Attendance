@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { dataService, ScanRecord, Room, Teacher } from "@/services/dataService";
 import { AttendanceScanner } from "@/components/attendance/AttendanceScanner";
+import { BulkClassroomSetup } from "@/components/attendance/BulkClassroomSetup";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Attendance() {
@@ -483,6 +484,24 @@ export default function Attendance() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <BulkClassroomSetup onSetupComplete={() => {
+                toast({
+                  title: "Bulk Setup Complete",
+                  description: "Classrooms verified successfully",
+                });
+              }} />
+              
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Or setup single classroom
+                  </span>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="grade-select">Select Class (Grade)</Label>
                 <Select value={selectedGrade} onValueChange={(value) => {
