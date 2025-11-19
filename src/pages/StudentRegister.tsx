@@ -289,6 +289,7 @@ export default function StudentRegister() {
         studentError = result.error;
       } else {
         // Insert new student
+        console.log('Attempting to insert new student...');
         const result = await supabase
           .from('students')
           .insert({
@@ -308,6 +309,7 @@ export default function StudentRegister() {
           .select()
           .single();
         
+        console.log('Insert result:', { data: result.data, error: result.error });
         newStudent = result.data;
         studentError = result.error;
       }
@@ -316,11 +318,13 @@ export default function StudentRegister() {
         console.error('Error saving student:', studentError);
         toast({
           title: "Error",
-          description: `Failed to ${editStudent ? 'update' : 'register'} student`,
+          description: `Failed to ${editStudent ? 'update' : 'register'} student: ${studentError.message}`,
           variant: "destructive"
         });
         return;
       }
+
+      console.log('Student saved successfully:', newStudent);
 
       // Handle bus assignments
       if (editStudent) {
@@ -453,17 +457,27 @@ export default function StudentRegister() {
         }
       }
       
+      console.log('Student registration completed successfully!', {
+        studentId: newStudent.id,
+        fullName: newStudent.full_name
+      });
+      
       toast({
         title: editStudent ? "Student Updated Successfully" : "Student Registered Successfully",
         description: "The student information has been saved to the system.",
       });
       
       navigate("/students");
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error registering student:', error);
+      console.error('Error details:', {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details
+      });
       toast({
         title: "Error",
-        description: "Failed to register student",
+        description: `Failed to register student: ${error?.message || 'Unknown error'}`,
         variant: "destructive"
       });
     }
