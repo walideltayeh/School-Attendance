@@ -93,6 +93,7 @@ export default function StudentRegister() {
           stops: 0,
           status: route.status
         })) || [];
+        console.log('Loaded bus routes:', mappedRoutes);
         setBusRoutes(mappedRoutes);
       }
       
@@ -761,12 +762,18 @@ export default function StudentRegister() {
                       </Label>
                       <Select onValueChange={setBusRoute} value={busRoute}>
                         <SelectTrigger id="busRoute" className="col-span-3">
-                          <SelectValue placeholder="Select bus route" />
+                          <SelectValue placeholder={busRoutes.length === 0 ? "No bus routes available" : "Select bus route"} />
                         </SelectTrigger>
-                        <SelectContent>
-                          {busRoutes.map(route => (
-                            <SelectItem key={route.id} value={route.id}>{route.name}</SelectItem>
-                          ))}
+                        <SelectContent className="bg-background z-50">
+                          {busRoutes.length === 0 ? (
+                            <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                              No bus routes available. Please create one in Admin panel.
+                            </div>
+                          ) : (
+                            busRoutes.map(route => (
+                              <SelectItem key={route.id} value={route.id}>{route.name}</SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>

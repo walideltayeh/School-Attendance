@@ -249,7 +249,7 @@ const Admin = () => {
         departure_time: route.departureTime,
         return_time: route.returnTime,
         route_code: `RT-${Date.now()}`,
-        status: route.status
+        status: route.status || 'active'
       }])
       .select();
     
@@ -267,7 +267,7 @@ const Admin = () => {
     
     toast({
       title: "Bus Route Added",
-      description: `${route.name} has been added with ${route.driver} as the driver`,
+      description: `${route.name} has been added with ${route.driver} as the driver. Go to Student Registration to use it.`,
     });
   };
 
