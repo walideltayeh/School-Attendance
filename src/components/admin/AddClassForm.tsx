@@ -35,7 +35,6 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
   const [selectedSection, setSelectedSection] = useState<string>(initialValues?.section || "");
   const [selectedSubject, setSelectedSubject] = useState<string>(initialValues?.subjects?.[0] || "");
   const [selectedTeacher, setSelectedTeacher] = useState<string>(initialValues?.teacherId || "none");
-  const [roomNumber, setRoomNumber] = useState<string>("");
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
 
   useEffect(() => {
@@ -89,10 +88,10 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       availableSubjects
     });
 
-    if (!selectedGrade || !selectedSection || !selectedSubject || !roomNumber) {
+    if (!selectedGrade || !selectedSection || !selectedSubject) {
       toast({
         title: "Validation Error",
-        description: "Please select a grade, section, subject, and room number",
+        description: "Please select a grade, section, and subject",
         variant: "destructive",
       });
       return;
@@ -103,7 +102,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       grades: [selectedGrade],
       sections: [selectedSection],
       subjects: [selectedSubject],
-      roomNumber: roomNumber,
+      roomNumber: "",
       teacherId: selectedTeacher === "none" ? undefined : selectedTeacher,
     });
 
@@ -111,7 +110,6 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       setSelectedGrade("");
       setSelectedSection("");
       setSelectedSubject("");
-      setRoomNumber("");
     }
   };
 
@@ -164,18 +162,6 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
               ))}
             </SelectContent>
           </Select>
-        </div>
-
-        <div>
-          <Label htmlFor="roomNumber">Room Number *</Label>
-          <Input
-            id="roomNumber"
-            type="text"
-            value={roomNumber}
-            onChange={(e) => setRoomNumber(e.target.value)}
-            placeholder="Enter room number"
-            className="bg-background"
-          />
         </div>
 
         <div className="space-y-2">
