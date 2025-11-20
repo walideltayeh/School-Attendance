@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { dataService, Teacher } from "@/services/dataService";
 import { toast } from "@/hooks/use-toast";
 import { ALL_GRADES, ALL_SECTIONS } from "@/utils/classHelpers";
@@ -33,7 +34,7 @@ interface AddClassFormProps {
 export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, teachers = [] }: AddClassFormProps) {
   const [selectedGrade, setSelectedGrade] = useState<string>(initialValues?.grade || "");
   const [selectedSection, setSelectedSection] = useState<string>(initialValues?.section || "");
-  const [selectedSubject, setSelectedSubject] = useState<string>(initialValues?.subjects?.[0] || "");
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(initialValues?.subjects || []);
   const [selectedTeacher, setSelectedTeacher] = useState<string>(initialValues?.teacherId || "none");
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
 
@@ -84,14 +85,14 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
     console.log("Form submission attempt:", {
       grade: selectedGrade,
       section: selectedSection,
-      subject: selectedSubject,
+      subjects: selectedSubjects,
       availableSubjects
     });
 
-    if (!selectedGrade || !selectedSection || !selectedSubject) {
+    if (!selectedGrade || !selectedSection || selectedSubjects.length === 0) {
       toast({
         title: "Validation Error",
-        description: "Please select a grade, section, and subject",
+        description: "Please select a grade, section, and at least one subject",
         variant: "destructive",
       });
       return;
@@ -101,7 +102,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
     onSubmit({
       grades: [selectedGrade],
       sections: [selectedSection],
-      subjects: [selectedSubject],
+      subjects: selectedSubjects,
       roomNumber: "",
       teacherId: selectedTeacher === "none" ? undefined : selectedTeacher,
     });
@@ -109,7 +110,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
     if (!isEditing) {
       setSelectedGrade("");
       setSelectedSection("");
-      setSelectedSubject("");
+      setSelectedSubjects([]);
     }
   };
 
@@ -149,19 +150,14 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
         </div>
 
         <div>
-          <Label htmlFor="subject">Select Subject *</Label>
-          <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-            <SelectTrigger id="subject" className="bg-background">
-              <SelectValue placeholder="Select a subject" />
-            </SelectTrigger>
-            <SelectContent className="z-50 bg-background border border-border">
-              {availableSubjects.map((subject) => (
-                <SelectItem key={subject} value={subject}>
-                  {subject}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="subject">Select Subjects *</Label>
+          <MultiSelect
+            options={availableSubjects.map(subject => ({ value: subject, label: subject }))}
+            selected={selectedSubjects}
+            onChange={setSelectedSubjects}
+            placeholder="Select subjects"
+            className="bg-background"
+          />
         </div>
 
         <div className="space-y-2">
