@@ -22,6 +22,7 @@ import { AddClassForm } from "@/components/admin/AddClassForm";
 import { SubjectManagement } from "@/components/admin/SubjectManagement";
 import { BulkClassImport } from "@/components/admin/BulkClassImport";
 import { supabase } from "@/integrations/supabase/client";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -44,10 +45,12 @@ const Admin = () => {
   const [isBulkAssignDialogOpen, setIsBulkAssignDialogOpen] = useState(false);
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
   const [bulkAssignTeacherId, setBulkAssignTeacherId] = useState<string>("");
+  const [busRoutes, setBusRoutes] = useState<any[]>([]);
   
   useEffect(() => {
     console.log('Admin component mounted, loading data...');
     loadTeachers();
+    loadBusRoutes();
     setSchedules(dataService.getClassSchedules());
     loadClasses();
 
@@ -237,6 +240,20 @@ const Admin = () => {
     }
   };
 
+  const loadBusRoutes = async () => {
+    const { data, error } = await supabase
+      .from('bus_routes')
+      .select('*')
+      .order('name', { ascending: true });
+    
+    if (error) {
+      console.error("Error loading bus routes:", error);
+      return;
+    }
+    
+    setBusRoutes(data || []);
+  };
+
   const handleAddBusRoute = async (route: Omit<BusRoute, "id">) => {
     console.log("Adding bus route:", route);
     
@@ -264,6 +281,9 @@ const Admin = () => {
     }
     
     console.log("Bus route created successfully:", data);
+    
+    // Reload bus routes to update the summary
+    await loadBusRoutes();
     
     toast({
       title: "Bus Route Added",
@@ -963,6 +983,49 @@ const Admin = () => {
               <AddBusStopForm />
             </CardContent>
           </Card>
+
+          {busRoutes.length > 0 && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Bus Routes Summary</CardTitle>
+                <CardDescription>
+                  View all created bus routes and their details
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Route Name</TableHead>
+                      <TableHead>Route Code</TableHead>
+                      <TableHead>Driver</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Departure Time</TableHead>
+                      <TableHead>Return Time</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {busRoutes.map((route) => (
+                      <TableRow key={route.id}>
+                        <TableCell className="font-medium">{route.name}</TableCell>
+                        <TableCell>{route.route_code}</TableCell>
+                        <TableCell>{route.driver_name}</TableCell>
+                        <TableCell>{route.driver_phone}</TableCell>
+                        <TableCell>{route.departure_time}</TableCell>
+                        <TableCell>{route.return_time}</TableCell>
+                        <TableCell>
+                          <Badge variant={route.status === 'active' ? 'default' : 'secondary'}>
+                            {route.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
         
         <TabsContent value="calendar">
