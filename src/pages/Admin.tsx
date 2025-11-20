@@ -788,8 +788,8 @@ const Admin = () => {
           <SubjectManagement />
           
           <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Add New Class</CardTitle>
+            <CardHeader className="border-b bg-muted/50">
+              <CardTitle className="text-2xl font-bold text-primary">Add New Class</CardTitle>
               <CardDescription>
                 Create classes by selecting grade, section, and subjects
               </CardDescription>
@@ -805,10 +805,10 @@ const Admin = () => {
           
           {classes.length > 0 && (
             <Card className="mt-6">
-              <CardHeader>
+              <CardHeader className="border-b bg-muted/50">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Class List</CardTitle>
+                    <CardTitle className="text-2xl font-bold text-primary">Class List</CardTitle>
                     <CardDescription>
                       Manage existing classes, grades, sections, and subjects
                     </CardDescription>
@@ -918,8 +918,8 @@ const Admin = () => {
         
         <TabsContent value="teachers">
           <Card>
-            <CardHeader>
-              <CardTitle>Add New Teacher</CardTitle>
+            <CardHeader className="border-b bg-muted/50">
+              <CardTitle className="text-2xl font-bold text-primary">Add New Teacher</CardTitle>
               <CardDescription>
                 Enter teacher details to add them to the system.
               </CardDescription>
@@ -931,8 +931,8 @@ const Admin = () => {
           
           {teachers.length > 0 && (
             <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Teacher List</CardTitle>
+              <CardHeader className="border-b bg-muted/50">
+                <CardTitle className="text-2xl font-bold text-primary">Teacher List</CardTitle>
                 <CardDescription>
                   Edit or manage existing teachers
                 </CardDescription>
@@ -961,8 +961,8 @@ const Admin = () => {
         
         <TabsContent value="buses">
           <Card>
-            <CardHeader>
-              <CardTitle>Add New Bus Route</CardTitle>
+            <CardHeader className="border-b bg-muted/50">
+              <CardTitle className="text-2xl font-bold text-primary">Add New Bus Route</CardTitle>
               <CardDescription>
                 Configure a new bus route for student transportation.
               </CardDescription>
@@ -973,8 +973,8 @@ const Admin = () => {
           </Card>
 
           <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Add Bus Stop</CardTitle>
+            <CardHeader className="border-b bg-muted/50">
+              <CardTitle className="text-2xl font-bold text-primary">Add Bus Stop</CardTitle>
               <CardDescription>
                 Add stops to existing bus routes with pickup/dropoff locations and times.
               </CardDescription>
@@ -986,8 +986,8 @@ const Admin = () => {
 
           {busRoutes.length > 0 && (
             <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Bus Routes Summary</CardTitle>
+              <CardHeader className="border-b bg-muted/50">
+                <CardTitle className="text-2xl font-bold text-primary">Bus Routes Summary</CardTitle>
                 <CardDescription>
                   View all created bus routes and their details
                 </CardDescription>
@@ -1030,8 +1030,8 @@ const Admin = () => {
         
         <TabsContent value="calendar">
           <Card>
-            <CardHeader>
-              <CardTitle>Class Scheduling</CardTitle>
+            <CardHeader className="border-b bg-muted/50">
+              <CardTitle className="text-2xl font-bold text-primary">Class Scheduling</CardTitle>
               <CardDescription>
                 Create and manage the school timetable
               </CardDescription>
@@ -1047,8 +1047,8 @@ const Admin = () => {
           
           {schedules.length > 0 && (
             <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Current Schedules</CardTitle>
+              <CardHeader className="border-b bg-muted/50">
+                <CardTitle className="text-2xl font-bold text-primary">Current Schedules</CardTitle>
                 <CardDescription>
                   View and manage classroom assignments
                 </CardDescription>
@@ -1095,8 +1095,8 @@ const Admin = () => {
         
         <TabsContent value="periods">
           <Card>
-            <CardHeader>
-              <CardTitle>Class Period Times</CardTitle>
+            <CardHeader className="border-b bg-muted/50">
+              <CardTitle className="text-2xl font-bold text-primary">Class Period Times</CardTitle>
               <CardDescription>
                 Configure the start and end times for each class period
               </CardDescription>
