@@ -21,6 +21,7 @@ import { AddBusStopForm } from "@/components/admin/AddBusStopForm";
 import { AddClassForm } from "@/components/admin/AddClassForm";
 import { SubjectManagement } from "@/components/admin/SubjectManagement";
 import { BulkClassImport } from "@/components/admin/BulkClassImport";
+import { ScheduleQRCode } from "@/components/admin/ScheduleQRCode";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -51,7 +52,7 @@ const Admin = () => {
     console.log('Admin component mounted, loading data...');
     loadTeachers();
     loadBusRoutes();
-    setSchedules(dataService.getClassSchedules());
+    loadSchedules();
     loadClasses();
 
     // Subscribe to real-time updates for classes
@@ -88,12 +89,30 @@ const Admin = () => {
       )
       .subscribe();
 
+    // Subscribe to real-time updates for schedules
+    const schedulesChannel = supabase
+      .channel('schedules-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'class_schedules'
+        },
+        () => {
+          console.log('Schedules changed, reloading...');
+          loadSchedules();
+        }
+      )
+      .subscribe();
+
     // Also reload when component becomes visible again
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         console.log('Page became visible, reloading data...');
         loadClasses();
         loadTeachers();
+        loadSchedules();
       }
     };
     
@@ -103,6 +122,7 @@ const Admin = () => {
       console.log('Admin component unmounting...');
       supabase.removeChannel(classesChannel);
       supabase.removeChannel(teachersChannel);
+      supabase.removeChannel(schedulesChannel);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
@@ -291,10 +311,95 @@ const Admin = () => {
     });
   };
 
-  const handleAddSchedule = (schedule: Omit<ClassSchedule, "id">) => {
-    const addedSchedule = dataService.addClassSchedule(schedule);
-    console.log("Added schedule:", addedSchedule);
-    setSchedules(dataService.getClassSchedules());
+  const loadSchedules = async () => {
+    const { data, error } = await supabase
+      .from('class_schedules')
+      .select(`
+        *,
+        classes(id, name, grade, section, subject, room_number, teacher_id),
+        periods(id, period_number, start_time, end_time)
+      `)
+      .order('day', { ascending: true })
+      .order('week_number', { ascending: true });
+
+    if (error) {
+      console.error('Error loading schedules:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load schedules",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Transform to match ClassSchedule interface
+    const transformedSchedules = (data || []).map((sched: any) => {
+      const classData = sched.classes;
+      const periodData = sched.periods;
+      const teacher = teachers.find(t => t.id === classData?.teacher_id);
+      
+      return {
+        id: sched.id,
+        teacherId: classData?.teacher_id || '',
+        teacherName: teacher?.name || 'Unassigned',
+        classId: sched.class_id,
+        className: `${classData?.grade} - Section ${classData?.section} (${classData?.subject})`,
+        roomId: classData?.room_number || '',
+        roomName: classData?.room_number || 'TBD',
+        day: sched.day,
+        period: periodData?.period_number || 0,
+        week: sched.week_number,
+        qrCode: sched.qr_code
+      };
+    });
+
+    console.log('Loaded schedules:', transformedSchedules);
+    setSchedules(transformedSchedules);
+  };
+
+  const handleAddSchedule = async (schedule: Omit<ClassSchedule, "id">) => {
+    // Get period from Supabase
+    const { data: periodData, error: periodError } = await supabase
+      .from('periods')
+      .select('id')
+      .eq('period_number', schedule.period)
+      .single();
+
+    if (periodError || !periodData) {
+      toast({
+        title: "Error",
+        description: "Please configure class periods first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('class_schedules')
+      .insert({
+        class_id: schedule.classId,
+        period_id: periodData.id,
+        day: schedule.day,
+        week_number: schedule.week
+      })
+      .select();
+
+    if (error) {
+      console.error('Error adding schedule:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add schedule",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Success",
+      description: "Schedule added successfully with QR code generated",
+    });
+
+    loadSchedules();
   };
 
   const handleEditSchedule = (schedule: ClassSchedule) => {
@@ -773,7 +878,7 @@ const Admin = () => {
           }
         }}
       >
-        <TabsList className="grid w-full grid-cols-5 mb-6">
+        <TabsList className="grid w-full grid-cols-6 mb-6">
           <TabsTrigger value="classes">
             <BookOpen className="h-4 w-4 mr-2" />
             Manage Classes
@@ -782,6 +887,7 @@ const Admin = () => {
           <TabsTrigger value="buses">Bus Routes</TabsTrigger>
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="periods">Periods</TabsTrigger>
+          <TabsTrigger value="qrcodes">QR Codes</TabsTrigger>
         </TabsList>
         
         <TabsContent value="classes">
@@ -1103,6 +1209,41 @@ const Admin = () => {
             </CardHeader>
             <CardContent>
               <ClassPeriodsForm />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="qrcodes">
+          <Card>
+            <CardHeader className="border-b bg-muted/50">
+              <CardTitle className="text-2xl font-bold text-primary">Class QR Codes</CardTitle>
+              <CardDescription>
+                Print or download QR codes for attendance scanning
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {schedules.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No schedules created yet. Create schedules in the Calendar tab to generate QR codes.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {schedules
+                    .filter(schedule => schedule.qrCode)
+                    .map((schedule) => (
+                      <ScheduleQRCode
+                        key={schedule.id}
+                        qrCode={schedule.qrCode!}
+                        className={schedule.className}
+                        period={`Period ${schedule.period}`}
+                        day={schedule.day}
+                        room={schedule.roomName}
+                        teacher={schedule.teacherName}
+                        weekNumber={schedule.week}
+                      />
+                    ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
