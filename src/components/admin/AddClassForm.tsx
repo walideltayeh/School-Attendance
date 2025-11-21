@@ -36,6 +36,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
   const [selectedSection, setSelectedSection] = useState<string>(initialValues?.section || "");
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(initialValues?.subjects || []);
   const [selectedTeacher, setSelectedTeacher] = useState<string>(initialValues?.teacherId || "none");
+  const [roomNumber, setRoomNumber] = useState<string>("");
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
 
   useEffect(() => {
@@ -86,13 +87,34 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       grade: selectedGrade,
       section: selectedSection,
       subjects: selectedSubjects,
+      roomNumber,
       availableSubjects
     });
 
+    // Validation
     if (!selectedGrade || !selectedSection || selectedSubjects.length === 0) {
       toast({
         title: "Validation Error",
         description: "Please select a grade, section, and at least one subject",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!roomNumber || roomNumber.trim() === "") {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a room number",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate that subjects are not empty strings
+    if (selectedSubjects.some(subject => !subject || subject.trim() === "")) {
+      toast({
+        title: "Validation Error",
+        description: "Subject cannot be empty",
         variant: "destructive",
       });
       return;
@@ -103,7 +125,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       grades: [selectedGrade],
       sections: [selectedSection],
       subjects: selectedSubjects,
-      roomNumber: "",
+      roomNumber: roomNumber.trim(),
       teacherId: selectedTeacher === "none" ? undefined : selectedTeacher,
     });
 
@@ -111,6 +133,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       setSelectedGrade("");
       setSelectedSection("");
       setSelectedSubjects([]);
+      setRoomNumber("");
     }
   };
 
@@ -156,6 +179,18 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
             selected={selectedSubjects}
             onChange={setSelectedSubjects}
             placeholder="Select subjects"
+            className="bg-background"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="roomNumber">Room Number *</Label>
+          <Input
+            id="roomNumber"
+            type="text"
+            value={roomNumber}
+            onChange={(e) => setRoomNumber(e.target.value)}
+            placeholder="Enter room number"
             className="bg-background"
           />
         </div>
