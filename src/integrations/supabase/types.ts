@@ -241,6 +241,7 @@ export type Database = {
           day: Database["public"]["Enums"]["day_of_week"]
           id: string
           period_id: string
+          qr_code: string | null
           week_number: number
         }
         Insert: {
@@ -249,6 +250,7 @@ export type Database = {
           day: Database["public"]["Enums"]["day_of_week"]
           id?: string
           period_id: string
+          qr_code?: string | null
           week_number?: number
         }
         Update: {
@@ -257,6 +259,7 @@ export type Database = {
           day?: Database["public"]["Enums"]["day_of_week"]
           id?: string
           period_id?: string
+          qr_code?: string | null
           week_number?: number
         }
         Relationships: [
