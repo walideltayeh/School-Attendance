@@ -372,13 +372,13 @@ export default function Attendance() {
                       <SelectTrigger id="teacher-subject-select" className="bg-background">
                         <SelectValue placeholder="Select a subject" />
                       </SelectTrigger>
-                      <SelectContent className="z-50 bg-background border border-border">
-                        {[...new Set(teacherClasses.filter(c => c.grade === selectedGrade && c.section === selectedSection).map(c => c.subject))].map((subject) => (
-                          <SelectItem key={subject} value={subject}>
-                            {subject}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                    <SelectContent className="z-50 bg-background border border-border">
+                      {[...new Set(teacherClasses.filter(c => c.grade === selectedGrade && c.section === selectedSection).map(c => c.subject))].filter(subject => subject && subject.trim() !== '').map((subject) => (
+                        <SelectItem key={subject} value={subject}>
+                          {subject}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                     </Select>
                   </div>
                 )}
@@ -407,7 +407,7 @@ export default function Attendance() {
                           c.grade === selectedGrade && 
                           c.section === selectedSection && 
                           c.subject === selectedSubject
-                        ).map(c => c.room_number))].map((room) => (
+                        ).map(c => c.room_number))].filter(room => room && room.trim() !== '').map((room) => (
                           <SelectItem key={room} value={room}>
                             Room {room}
                           </SelectItem>
@@ -556,7 +556,7 @@ export default function Attendance() {
                       <SelectValue placeholder="Select a subject" />
                     </SelectTrigger>
                     <SelectContent className="z-50 bg-background border border-border">
-                      {[...new Set(classes.filter(c => c.grade === selectedGrade && c.section === selectedSection).map(c => c.subject))].map((subject) => (
+                      {[...new Set(classes.filter(c => c.grade === selectedGrade && c.section === selectedSection).map(c => c.subject))].filter(subject => subject && subject.trim() !== '').map((subject) => (
                         <SelectItem key={subject} value={subject}>
                           {subject}
                         </SelectItem>
@@ -578,7 +578,7 @@ export default function Attendance() {
                         c.grade === selectedGrade && 
                         c.section === selectedSection && 
                         c.subject === selectedSubject
-                      ).map(c => c.room_number))].map((room) => (
+                      ).map(c => c.room_number))].filter(room => room && room.trim() !== '').map((room) => (
                         <SelectItem key={room} value={room}>
                           Room {room}
                         </SelectItem>
