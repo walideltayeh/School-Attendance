@@ -22,6 +22,7 @@ import { AddClassForm } from "@/components/admin/AddClassForm";
 import { SubjectManagement } from "@/components/admin/SubjectManagement";
 import { BulkClassImport } from "@/components/admin/BulkClassImport";
 import { ScheduleQRCode } from "@/components/admin/ScheduleQRCode";
+import { DataCleanup } from "@/components/admin/DataCleanup";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -892,6 +893,10 @@ const Admin = () => {
         
         <TabsContent value="classes">
           <SubjectManagement />
+          
+          <div className="mt-6">
+            <DataCleanup />
+          </div>
           
           <Card className="mt-6">
             <CardHeader className="border-b bg-muted/50">
