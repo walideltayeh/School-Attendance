@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { dataService } from "@/services/dataService";
 import { Save, Calendar } from "lucide-react";
 import { ClassSchedule } from "@/services/dataService";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ClassScheduleFormProps {
   onSubmit: (schedule: any) => void;
@@ -26,6 +27,7 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
   const [selectedPeriod, setSelectedPeriod] = useState<string>("1");
   const [weekSchedule, setWeekSchedule] = useState<number[]>([1]);
   const [applyToAllWeeks, setApplyToAllWeeks] = useState(false);
+  const [availablePeriods, setAvailablePeriods] = useState<any[]>([]);
   
   const rooms = dataService.getRooms();
   
@@ -33,8 +35,47 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
   const availableClasses = selectedTeacher ? classes : [];
   
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-  const periods = Array.from({ length: 10 }, (_, i) => String(i + 1));
   const weeks = [1, 2, 3, 4];
+
+  // Load periods from database
+  useEffect(() => {
+    loadPeriods();
+
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('periods-changes-schedule')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'periods'
+        },
+        () => {
+          console.log('Periods changed, reloading in schedule form...');
+          loadPeriods();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const loadPeriods = async () => {
+    const { data, error } = await supabase
+      .from('periods')
+      .select('*')
+      .order('period_number', { ascending: true });
+
+    if (error) {
+      console.error('Error loading periods:', error);
+      return;
+    }
+
+    setAvailablePeriods(data || []);
+  };
 
   // Initialize form with editing values if provided
   useEffect(() => {
@@ -283,14 +324,14 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
         
         <div className="space-y-2">
           <Label htmlFor="period">Period</Label>
-          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+          <Select value={selectedPeriod} onValueChange={setSelectedPeriod} disabled={availablePeriods.length === 0}>
             <SelectTrigger id="period">
-              <SelectValue placeholder="Select period" />
+              <SelectValue placeholder={availablePeriods.length === 0 ? "No periods configured" : "Select period"} />
             </SelectTrigger>
             <SelectContent>
-              {periods.map((period) => (
-                <SelectItem key={period} value={period}>
-                  Period {period}
+              {availablePeriods.map((period) => (
+                <SelectItem key={period.period_number} value={String(period.period_number)}>
+                  Period {period.period_number} ({period.start_time} - {period.end_time})
                 </SelectItem>
               ))}
             </SelectContent>

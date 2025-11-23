@@ -1,19 +1,64 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { dataService } from "@/services/dataService";
 import { PlusCircle, Save, Trash, Clock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card } from "@/components/ui/card";
 
 export function ClassPeriodsForm() {
-  const [periods, setPeriods] = useState(() => {
-    const existingPeriods = dataService.getPeriods();
-    return existingPeriods.length > 0 
-      ? existingPeriods 
-      : [{ periodNumber: 1, startTime: "", endTime: "" }];
-  });
+  const [periods, setPeriods] = useState<Array<{ periodNumber: number; startTime: string; endTime: string }>>([
+    { periodNumber: 1, startTime: "", endTime: "" }
+  ]);
+  const [savedPeriods, setSavedPeriods] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadPeriods();
+
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('periods-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'periods'
+        },
+        () => {
+          console.log('Periods changed, reloading...');
+          loadPeriods();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const loadPeriods = async () => {
+    const { data, error } = await supabase
+      .from('periods')
+      .select('*')
+      .order('period_number', { ascending: true });
+
+    if (error) {
+      console.error('Error loading periods:', error);
+      return;
+    }
+
+    if (data && data.length > 0) {
+      setSavedPeriods(data);
+      setPeriods(data.map(p => ({
+        periodNumber: p.period_number,
+        startTime: p.start_time,
+        endTime: p.end_time
+      })));
+    }
+  };
 
   const handleAddPeriod = () => {
     const nextPeriodNumber = periods.length > 0 
@@ -41,7 +86,7 @@ export function ClassPeriodsForm() {
     setPeriods(newPeriods);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate all periods have start and end times
@@ -56,30 +101,73 @@ export function ClassPeriodsForm() {
       return;
     }
     
-    // Save periods
-    periods.forEach(period => {
-      dataService.addOrUpdatePeriod(period);
-    });
-    
-    toast({
-      title: "Success",
-      description: `${periods.length} class periods have been saved`,
-    });
+    try {
+      // Delete existing periods
+      const { error: deleteError } = await supabase
+        .from('periods')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (deleteError) throw deleteError;
+
+      // Insert new periods
+      const periodsToInsert = periods.map(period => ({
+        period_number: period.periodNumber,
+        start_time: period.startTime,
+        end_time: period.endTime
+      }));
+
+      const { error: insertError } = await supabase
+        .from('periods')
+        .insert(periodsToInsert);
+
+      if (insertError) throw insertError;
+
+      await loadPeriods();
+      
+      toast({
+        title: "Success",
+        description: `${periods.length} class periods have been saved`,
+      });
+    } catch (error: any) {
+      console.error('Error saving periods:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save periods: " + error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Label className="text-lg font-medium">Class Periods</Label>
-        <Button 
-          type="button" 
-          variant="outline" 
-          size="sm" 
-          onClick={handleAddPeriod}
-        >
-          <PlusCircle className="h-4 w-4 mr-1" /> Add Period
-        </Button>
-      </div>
+    <div className="space-y-6">
+      {savedPeriods.length > 0 && (
+        <Card className="p-4">
+          <h3 className="text-sm font-semibold mb-3">Current Periods Summary</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {savedPeriods.map((period) => (
+              <div key={period.id} className="flex items-center gap-2 text-sm bg-muted p-2 rounded">
+                <Clock className="h-3 w-3 text-primary" />
+                <span className="font-medium">Period {period.period_number}:</span>
+                <span className="text-muted-foreground">{period.start_time} - {period.end_time}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Label className="text-lg font-medium">Configure Class Periods</Label>
+          <Button 
+            type="button" 
+            variant="outline" 
+            size="sm" 
+            onClick={handleAddPeriod}
+          >
+            <PlusCircle className="h-4 w-4 mr-1" /> Add Period
+          </Button>
+        </div>
       
       {periods.map((period, index) => (
         <div key={index} className="border p-3 rounded-md space-y-3">
@@ -127,9 +215,10 @@ export function ClassPeriodsForm() {
         </div>
       ))}
       
-      <Button type="submit" variant="blue" className="w-full">
-        <Save className="h-4 w-4 mr-2" /> Save Periods
-      </Button>
-    </form>
+        <Button type="submit" variant="blue" className="w-full">
+          <Save className="h-4 w-4 mr-2" /> Save Periods
+        </Button>
+      </form>
+    </div>
   );
 }
