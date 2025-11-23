@@ -29,7 +29,8 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
   const [applyToAllWeeks, setApplyToAllWeeks] = useState(false);
   const [availablePeriods, setAvailablePeriods] = useState<any[]>([]);
   
-  const rooms = dataService.getRooms();
+  // Get unique room numbers from classes
+  const availableRooms = [...new Set(classes.map(c => c.room_number).filter(r => r && r.trim() !== ''))];
   
   // Show all classes when creating a schedule - any teacher can teach any class
   const availableClasses = selectedTeacher ? classes : [];
@@ -188,9 +189,8 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
     
     const teacher = teachers.find(t => t.id === selectedTeacher);
     const selectedClassObj = availableClasses.find(c => c.id === selectedClass);
-    const room = rooms.find(r => r.id === selectedRoom);
     
-    if (!teacher || !selectedClassObj || !room) {
+    if (!teacher || !selectedClassObj || !selectedRoom) {
       toast({
         title: "Error",
         description: "Invalid selection - please try again",
@@ -202,11 +202,11 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
     let hasConflict = false;
     const schedules = weekSchedule.map(week => ({
       teacherId: teacher.id,
-      teacherName: teacher.name,
+      teacherName: teacher.full_name || teacher.name,
       classId: selectedClass,
       className: `${selectedClassObj.name} (${selectedClassObj.subject})`,
-      roomId: room.id,
-      roomName: room.name,
+      roomId: selectedRoom,
+      roomName: selectedRoom,
       day: selectedDay,
       period: parseInt(selectedPeriod),
       week: week
@@ -297,9 +297,9 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
               <SelectValue placeholder="Select room" />
             </SelectTrigger>
             <SelectContent>
-              {rooms.map((room) => (
-                <SelectItem key={room.id} value={room.id}>
-                  {room.name}
+              {availableRooms.map((room) => (
+                <SelectItem key={room} value={room}>
+                  Room {room}
                 </SelectItem>
               ))}
             </SelectContent>

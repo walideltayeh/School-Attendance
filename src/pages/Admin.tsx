@@ -364,7 +364,7 @@ const Admin = () => {
       .from('periods')
       .select('id')
       .eq('period_number', schedule.period)
-      .single();
+      .maybeSingle();
 
     if (periodError || !periodData) {
       toast({
@@ -375,6 +375,26 @@ const Admin = () => {
       return;
     }
 
+    // Update the class with selected teacher and room
+    const { error: classUpdateError } = await supabase
+      .from('classes')
+      .update({
+        teacher_id: schedule.teacherId || null,
+        room_number: schedule.roomName || 'TBD'
+      })
+      .eq('id', schedule.classId);
+
+    if (classUpdateError) {
+      console.error('Error updating class:', classUpdateError);
+      toast({
+        title: "Error",
+        description: "Failed to update class information",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create the schedule
     const { data, error } = await supabase
       .from('class_schedules')
       .insert({
@@ -401,6 +421,7 @@ const Admin = () => {
     });
 
     loadSchedules();
+    loadClasses();
   };
 
   const handleEditSchedule = (schedule: ClassSchedule) => {
