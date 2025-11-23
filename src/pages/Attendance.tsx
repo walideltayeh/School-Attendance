@@ -38,6 +38,23 @@ export default function Attendance() {
     fetchClasses();
     fetchBusRoutes();
     
+    // Subscribe to real-time updates for classes
+    const classesChannel = supabase
+      .channel('classes-changes-attendance')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'classes'
+        },
+        () => {
+          console.log('Classes changed, reloading in Attendance...');
+          fetchClasses();
+        }
+      )
+      .subscribe();
+    
     if (roomId) {
       const foundRoom = dataService.getRoom(roomId);
       if (foundRoom) {
@@ -59,6 +76,10 @@ export default function Attendance() {
         navigate("/");
       }
     }
+
+    return () => {
+      supabase.removeChannel(classesChannel);
+    };
   }, [roomId, teacherId, navigate]);
 
   const fetchClasses = async () => {
