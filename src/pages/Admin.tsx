@@ -891,7 +891,7 @@ const Admin = () => {
       </div>
       
       <Tabs 
-        defaultValue="classes" 
+        defaultValue="rooms" 
         className="w-full"
         onValueChange={(value) => {
           console.log('Tab changed to:', value);
@@ -902,17 +902,21 @@ const Admin = () => {
         }}
       >
         <TabsList className="grid w-full grid-cols-7 mb-6">
+          <TabsTrigger value="rooms">Rooms</TabsTrigger>
           <TabsTrigger value="classes">
             <BookOpen className="h-4 w-4 mr-2" />
             Manage Classes
           </TabsTrigger>
           <TabsTrigger value="teachers">Manage Teachers</TabsTrigger>
-          <TabsTrigger value="rooms">Rooms</TabsTrigger>
           <TabsTrigger value="buses">Bus Routes</TabsTrigger>
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="periods">Periods</TabsTrigger>
           <TabsTrigger value="qrcodes">QR Codes</TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="rooms">
+          <RoomManagement />
+        </TabsContent>
         
         <TabsContent value="classes">
           <SubjectManagement />
