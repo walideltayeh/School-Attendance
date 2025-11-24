@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { dataService, Teacher } from "@/services/dataService";
@@ -36,14 +35,16 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
   const [selectedSection, setSelectedSection] = useState<string>(initialValues?.section || "");
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(initialValues?.subjects || []);
   const [selectedTeacher, setSelectedTeacher] = useState<string>(initialValues?.teacherId || "none");
-  const [roomNumber, setRoomNumber] = useState<string>("");
+  const [selectedRoom, setSelectedRoom] = useState<string>("");
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
+  const [availableRooms, setAvailableRooms] = useState<any[]>([]);
 
   useEffect(() => {
     loadSubjects();
+    loadRooms();
 
-    // Subscribe to real-time updates
-    const channel = supabase
+    // Subscribe to real-time updates for subjects
+    const subjectsChannel = supabase
       .channel('subjects-changes-form')
       .on(
         'postgres_changes',
@@ -58,8 +59,25 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       )
       .subscribe();
 
+    // Subscribe to real-time updates for rooms
+    const roomsChannel = supabase
+      .channel('rooms-changes-form')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'rooms'
+        },
+        () => {
+          loadRooms();
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(subjectsChannel);
+      supabase.removeChannel(roomsChannel);
     };
   }, []);
 
@@ -79,6 +97,20 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
     setAvailableSubjects(subjects);
   };
 
+  const loadRooms = async () => {
+    const { data, error } = await supabase
+      .from('rooms')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('Error loading rooms:', error);
+      return;
+    }
+
+    setAvailableRooms(data || []);
+  };
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,8 +119,9 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       grade: selectedGrade,
       section: selectedSection,
       subjects: selectedSubjects,
-      roomNumber,
-      availableSubjects
+      room: selectedRoom,
+      availableSubjects,
+      availableRooms
     });
 
     // Validation
@@ -101,10 +134,10 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       return;
     }
 
-    if (!roomNumber || roomNumber.trim() === "") {
+    if (!selectedRoom || selectedRoom.trim() === "") {
       toast({
         title: "Validation Error",
-        description: "Please enter a room number",
+        description: "Please select a room",
         variant: "destructive",
       });
       return;
@@ -125,7 +158,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       grades: [selectedGrade],
       sections: [selectedSection],
       subjects: selectedSubjects,
-      roomNumber: roomNumber.trim(),
+      roomNumber: selectedRoom,
       teacherId: selectedTeacher === "none" ? undefined : selectedTeacher,
     });
 
@@ -133,7 +166,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       setSelectedGrade("");
       setSelectedSection("");
       setSelectedSubjects([]);
-      setRoomNumber("");
+      setSelectedRoom("");
     }
   };
 
@@ -184,15 +217,27 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
         </div>
 
         <div>
-          <Label htmlFor="roomNumber">Room Number *</Label>
-          <Input
-            id="roomNumber"
-            type="text"
-            value={roomNumber}
-            onChange={(e) => setRoomNumber(e.target.value)}
-            placeholder="Enter room number"
-            className="bg-background"
-          />
+          <Label htmlFor="room">Select Room *</Label>
+          <Select value={selectedRoom} onValueChange={setSelectedRoom}>
+            <SelectTrigger id="room" className="bg-background">
+              <SelectValue placeholder={availableRooms.length === 0 ? "No rooms available - create rooms first" : "Select a room"} />
+            </SelectTrigger>
+            <SelectContent className="z-50 bg-background border border-border">
+              {availableRooms.length === 0 ? (
+                <div className="p-2 text-sm text-muted-foreground text-center">
+                  No rooms available. Please create rooms in the Rooms tab first.
+                </div>
+              ) : (
+                availableRooms.map((room) => (
+                  <SelectItem key={room.id} value={room.name}>
+                    {room.name}
+                    {room.building && ` - ${room.building}`}
+                    {room.capacity && ` (Capacity: ${room.capacity})`}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">
