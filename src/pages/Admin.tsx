@@ -23,6 +23,7 @@ import { SubjectManagement } from "@/components/admin/SubjectManagement";
 import { BulkClassImport } from "@/components/admin/BulkClassImport";
 import { ScheduleQRCode } from "@/components/admin/ScheduleQRCode";
 import { DataCleanup } from "@/components/admin/DataCleanup";
+import { RoomManagement } from "@/components/admin/RoomManagement";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -900,12 +901,13 @@ const Admin = () => {
           }
         }}
       >
-        <TabsList className="grid w-full grid-cols-6 mb-6">
+        <TabsList className="grid w-full grid-cols-7 mb-6">
           <TabsTrigger value="classes">
             <BookOpen className="h-4 w-4 mr-2" />
             Manage Classes
           </TabsTrigger>
           <TabsTrigger value="teachers">Manage Teachers</TabsTrigger>
+          <TabsTrigger value="rooms">Rooms</TabsTrigger>
           <TabsTrigger value="buses">Bus Routes</TabsTrigger>
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="periods">Periods</TabsTrigger>
@@ -1272,6 +1274,10 @@ const Admin = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="rooms">
+          <RoomManagement />
         </TabsContent>
       </Tabs>
       

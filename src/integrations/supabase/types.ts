@@ -459,6 +459,36 @@ export type Database = {
         }
         Relationships: []
       }
+      rooms: {
+        Row: {
+          building: string | null
+          capacity: number | null
+          created_at: string | null
+          floor: number | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          building?: string | null
+          capacity?: number | null
+          created_at?: string | null
+          floor?: number | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          building?: string | null
+          capacity?: number | null
+          created_at?: string | null
+          floor?: number | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       students: {
         Row: {
           address: string | null

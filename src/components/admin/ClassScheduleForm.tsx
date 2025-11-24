@@ -28,9 +28,7 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
   const [weekSchedule, setWeekSchedule] = useState<number[]>([1]);
   const [applyToAllWeeks, setApplyToAllWeeks] = useState(false);
   const [availablePeriods, setAvailablePeriods] = useState<any[]>([]);
-  
-  // Get unique room numbers from classes
-  const availableRooms = [...new Set(classes.map(c => c.room_number).filter(r => r && r.trim() !== ''))];
+  const [availableRooms, setAvailableRooms] = useState<any[]>([]);
   
   // Show all classes when creating a schedule - any teacher can teach any class
   const availableClasses = selectedTeacher ? classes : [];
@@ -38,12 +36,13 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   const weeks = [1, 2, 3, 4];
 
-  // Load periods from database
+  // Load periods and rooms from database
   useEffect(() => {
     loadPeriods();
+    loadRooms();
 
     // Subscribe to real-time updates
-    const channel = supabase
+    const periodsChannel = supabase
       .channel('periods-changes-schedule')
       .on(
         'postgres_changes',
@@ -59,8 +58,25 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
       )
       .subscribe();
 
+    const roomsChannel = supabase
+      .channel('rooms-changes-schedule')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'rooms'
+        },
+        () => {
+          console.log('Rooms changed, reloading in schedule form...');
+          loadRooms();
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(periodsChannel);
+      supabase.removeChannel(roomsChannel);
     };
   }, []);
 
@@ -76,6 +92,20 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
     }
 
     setAvailablePeriods(data || []);
+  };
+
+  const loadRooms = async () => {
+    const { data, error } = await supabase
+      .from('rooms')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('Error loading rooms:', error);
+      return;
+    }
+
+    setAvailableRooms(data || []);
   };
 
   // Initialize form with editing values if provided
@@ -292,14 +322,14 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
         
         <div className="space-y-2">
           <Label htmlFor="room">Room</Label>
-          <Select value={selectedRoom} onValueChange={setSelectedRoom}>
+          <Select value={selectedRoom} onValueChange={setSelectedRoom} disabled={availableRooms.length === 0}>
             <SelectTrigger id="room">
-              <SelectValue placeholder="Select room" />
+              <SelectValue placeholder={availableRooms.length === 0 ? "No rooms configured" : "Select room"} />
             </SelectTrigger>
             <SelectContent>
               {availableRooms.map((room) => (
-                <SelectItem key={room} value={room}>
-                  Room {room}
+                <SelectItem key={room.id} value={room.name}>
+                  {room.name}
                 </SelectItem>
               ))}
             </SelectContent>
