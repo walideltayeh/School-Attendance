@@ -38,10 +38,12 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
   const [selectedRoom, setSelectedRoom] = useState<string>("");
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
   const [availableRooms, setAvailableRooms] = useState<any[]>([]);
+  const [roomUsage, setRoomUsage] = useState<Record<string, number>>({});
 
   useEffect(() => {
     loadSubjects();
     loadRooms();
+    loadRoomUsage();
 
     // Subscribe to real-time updates for subjects
     const subjectsChannel = supabase
@@ -75,9 +77,26 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       )
       .subscribe();
 
+    // Subscribe to real-time updates for classes (to track room usage)
+    const classesChannel = supabase
+      .channel('classes-changes-form')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'classes'
+        },
+        () => {
+          loadRoomUsage();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(subjectsChannel);
       supabase.removeChannel(roomsChannel);
+      supabase.removeChannel(classesChannel);
     };
   }, []);
 
@@ -109,6 +128,28 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
     }
 
     setAvailableRooms(data || []);
+  };
+
+  const loadRoomUsage = async () => {
+    const { data, error } = await supabase
+      .from('classes')
+      .select('room_number');
+
+    if (error) {
+      console.error('Error loading room usage:', error);
+      return;
+    }
+
+    // Count how many times each room is used
+    const usage: Record<string, number> = {};
+    data?.forEach((classData) => {
+      const room = classData.room_number;
+      if (room) {
+        usage[room] = (usage[room] || 0) + 1;
+      }
+    });
+
+    setRoomUsage(usage);
   };
 
 
@@ -228,13 +269,29 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
                   No rooms available. Please create rooms in the Rooms tab first.
                 </div>
               ) : (
-                availableRooms.map((room) => (
-                  <SelectItem key={room.id} value={room.name}>
-                    {room.name}
-                    {room.building && ` - ${room.building}`}
-                    {room.capacity && ` (Capacity: ${room.capacity})`}
-                  </SelectItem>
-                ))
+                availableRooms.map((room) => {
+                  const usageCount = roomUsage[room.name] || 0;
+                  const isAvailable = usageCount === 0;
+                  
+                  return (
+                    <SelectItem key={room.id} value={room.name}>
+                      <div className="flex items-center justify-between w-full gap-4">
+                        <span>
+                          {room.name}
+                          {room.building && ` - ${room.building}`}
+                          {room.capacity && ` (Capacity: ${room.capacity})`}
+                        </span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          isAvailable 
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
+                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
+                        }`}>
+                          {isAvailable ? 'Available' : `${usageCount} class${usageCount > 1 ? 'es' : ''}`}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  );
+                })
               )}
             </SelectContent>
           </Select>
