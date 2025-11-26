@@ -42,14 +42,21 @@ export function BulkRoomImport() {
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log('No file selected');
+      return;
+    }
 
+    console.log('File selected:', file.name, 'Size:', file.size, 'Type:', file.type);
     setIsImporting(true);
 
     Papa.parse<RoomCSVRow>(file, {
       header: true,
       skipEmptyLines: true,
       complete: async (results) => {
+        console.log('CSV parsed successfully. Rows:', results.data.length);
+        console.log('Sample data:', results.data.slice(0, 2));
+        
         try {
           const rooms = results.data
             .filter((row) => row.name && row.name.trim() !== "")
@@ -60,10 +67,14 @@ export function BulkRoomImport() {
               capacity: row.capacity ? parseInt(row.capacity) : null,
             }));
 
+          console.log('Filtered rooms:', rooms.length);
+          console.log('Rooms to insert:', rooms);
+
           if (rooms.length === 0) {
+            console.error('No valid rooms found in CSV');
             toast({
               title: "Error",
-              description: "No valid rooms found in CSV file",
+              description: "No valid rooms found in CSV file. Make sure the 'name' column has values.",
               variant: "destructive",
             });
             setIsImporting(false);
@@ -79,15 +90,16 @@ export function BulkRoomImport() {
             if (room.building && room.building.length > 50) {
               errors.push(`Row ${index + 2}: Building name too long (max 50 characters)`);
             }
-            if (room.floor !== null && (room.floor < -10 || room.floor > 100)) {
-              errors.push(`Row ${index + 2}: Floor must be between -10 and 100`);
+            if (room.floor !== null && (isNaN(room.floor) || room.floor < -10 || room.floor > 100)) {
+              errors.push(`Row ${index + 2}: Floor must be a number between -10 and 100`);
             }
-            if (room.capacity !== null && (room.capacity < 1 || room.capacity > 1000)) {
-              errors.push(`Row ${index + 2}: Capacity must be between 1 and 1000`);
+            if (room.capacity !== null && (isNaN(room.capacity) || room.capacity < 1 || room.capacity > 1000)) {
+              errors.push(`Row ${index + 2}: Capacity must be a number between 1 and 1000`);
             }
           });
 
           if (errors.length > 0) {
+            console.error('Validation errors:', errors);
             toast({
               title: "Validation Errors",
               description: errors.slice(0, 3).join("; ") + (errors.length > 3 ? "..." : ""),
@@ -97,18 +109,20 @@ export function BulkRoomImport() {
             return;
           }
 
+          console.log('Inserting rooms into database...');
           const { data, error } = await supabase.from("rooms").insert(rooms).select();
 
           if (error) {
-            console.error("Error importing rooms:", error);
+            console.error("Database error importing rooms:", error);
             toast({
               title: "Import Failed",
               description: error.message.includes("duplicate")
                 ? "Some rooms already exist with the same name"
-                : "Failed to import rooms. Please check your permissions.",
+                : `Database error: ${error.message}`,
               variant: "destructive",
             });
           } else {
+            console.log('Successfully imported rooms:', data);
             toast({
               title: "Success",
               description: `Successfully imported ${data.length} room(s)`,
@@ -118,7 +132,7 @@ export function BulkRoomImport() {
           console.error("Error processing CSV:", error);
           toast({
             title: "Error",
-            description: "Failed to process CSV file",
+            description: `Failed to process CSV file: ${error instanceof Error ? error.message : 'Unknown error'}`,
             variant: "destructive",
           });
         } finally {
@@ -132,7 +146,7 @@ export function BulkRoomImport() {
         console.error("CSV parsing error:", error);
         toast({
           title: "Error",
-          description: "Failed to parse CSV file",
+          description: `Failed to parse CSV file: ${error.message}`,
           variant: "destructive",
         });
         setIsImporting(false);
