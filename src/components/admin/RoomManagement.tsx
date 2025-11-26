@@ -181,20 +181,22 @@ export function RoomManagement() {
       capacity: formData.capacity ? Number(formData.capacity) : null
     };
 
-    const { error } = await supabase
+    console.log('Attempting to add room:', roomData);
+
+    const { data, error } = await supabase
       .from('rooms')
-      .insert([roomData]);
+      .insert([roomData])
+      .select();
 
     if (error) {
       console.error('Error adding room:', error);
+      console.error('Error details:', { code: error.code, message: error.message, details: error.details });
       
       let errorMessage = "Failed to add room";
       if (error.message.includes('duplicate')) {
         errorMessage = "A room with this name already exists";
-      } else if (error.message.includes('row-level security')) {
-        errorMessage = "Permission denied. Please log in as an admin to manage rooms.";
-      } else if (error.code === '42501') {
-        errorMessage = "You don't have permission to add rooms. Please ensure you're logged in as an admin.";
+      } else if (error.message.includes('row-level security') || error.code === '42501') {
+        errorMessage = "Permission denied. Please ensure you're logged in with admin privileges.";
       }
       
       toast({
@@ -205,6 +207,7 @@ export function RoomManagement() {
       return;
     }
 
+    console.log('Room added successfully:', data);
     toast({
       title: "Success",
       description: "Room added successfully",
