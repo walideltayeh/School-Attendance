@@ -1,5 +1,5 @@
-
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 import Dashboard from "@/pages/Dashboard";
 import Students from "@/pages/Students";
@@ -15,30 +15,34 @@ import Attendance from "@/pages/Attendance";
 import NotFound from "@/pages/NotFound";
 import ClassroomLogin from "@/pages/ClassroomLogin";
 import Calendar from "@/pages/Calendar";
+import Auth from "@/pages/Auth";
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/students" element={<Students />} />
-          <Route path="/students/register" element={<StudentRegister />} />
-          <Route path="/teachers" element={<Teachers />} />
-          <Route path="/teachers/:teacherId" element={<TeacherProfile />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/transport" element={<Transport />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/attendance" element={<Attendance />} />
-          <Route path="/attendance/scan/:roomId/:teacherId" element={<Attendance />} />
-          <Route path="/classroom-login/:roomId" element={<ClassroomLogin />} />
-          <Route path="/calendar" element={<Calendar />} />
-          <Route path="*" element={<NotFound />} />
-        </Route>
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/" element={<MainLayout />}>
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/students" element={<Students />} />
+            <Route path="/students/register" element={<StudentRegister />} />
+            <Route path="/teachers" element={<Teachers />} />
+            <Route path="/teachers/:teacherId" element={<TeacherProfile />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/transport" element={<Transport />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/attendance" element={<Attendance />} />
+            <Route path="/attendance/scan/:roomId/:teacherId" element={<Attendance />} />
+            <Route path="/classroom-login/:roomId" element={<ClassroomLogin />} />
+            <Route path="/calendar" element={<Calendar />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }
