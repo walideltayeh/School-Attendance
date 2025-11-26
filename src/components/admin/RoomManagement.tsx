@@ -11,7 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface Room {
   id: string;
@@ -31,6 +33,8 @@ interface ClassInfo {
 }
 
 export function RoomManagement() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -39,7 +43,6 @@ export function RoomManagement() {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   const [hasAdminRole, setHasAdminRole] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -49,7 +52,7 @@ export function RoomManagement() {
   });
 
   useEffect(() => {
-    checkAuth();
+    checkAdminRole();
     loadRooms();
     loadClasses();
 
@@ -90,25 +93,21 @@ export function RoomManagement() {
       supabase.removeChannel(roomsChannel);
       supabase.removeChannel(classesChannel);
     };
-  }, []);
+  }, [user]);
 
-  const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    setCurrentUser(user);
-    
-    if (user) {
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
-      
-      const isAdmin = roles?.some(r => r.role === 'admin') || false;
-      setHasAdminRole(isAdmin);
-      
-      if (!isAdmin) {
-        console.warn('User does not have admin role');
-      }
+  const checkAdminRole = async () => {
+    if (!user) {
+      setHasAdminRole(false);
+      return;
     }
+    
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id);
+    
+    const isAdmin = roles?.some(r => r.role === 'admin') || false;
+    setHasAdminRole(isAdmin);
   };
 
   const loadRooms = async () => {
@@ -392,20 +391,30 @@ export function RoomManagement() {
 
   return (
     <div className="space-y-6">
-      {currentUser && !hasAdminRole && (
+      {!user && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            You don't have admin permissions. Please contact an administrator to manage rooms.
+          <AlertTitle>Authentication Required</AlertTitle>
+          <AlertDescription className="mt-2 space-y-2">
+            <p>You must be logged in as an admin to manage rooms.</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate('/auth')}
+              className="mt-2"
+            >
+              Go to Login
+            </Button>
           </AlertDescription>
         </Alert>
       )}
       
-      {!currentUser && (
+      {user && !hasAdminRole && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Admin Access Required</AlertTitle>
           <AlertDescription>
-            You must be logged in as an admin to manage rooms.
+            You don't have admin permissions. Please contact an administrator to manage rooms.
           </AlertDescription>
         </Alert>
       )}
