@@ -15,6 +15,7 @@ interface RoomCSVRow {
 
 export function BulkRoomImport() {
   const [isImporting, setIsImporting] = useState(false);
+  const [updateExisting, setUpdateExisting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const downloadTemplate = () => {
@@ -111,32 +112,67 @@ export function BulkRoomImport() {
 
           console.log('Inserting rooms into database...');
           
-          // Try to insert each room individually to handle duplicates gracefully
           let successCount = 0;
           let duplicateCount = 0;
+          let updatedCount = 0;
           let errorCount = 0;
           
           for (const room of rooms) {
-            const { error } = await supabase.from("rooms").insert([room]);
-            
-            if (error) {
-              if (error.message.includes("duplicate") || error.code === "23505") {
-                duplicateCount++;
-                console.log(`Skipped duplicate room: ${room.name}`);
+            if (updateExisting) {
+              // Try to update first, then insert if doesn't exist
+              const { data: existing } = await supabase
+                .from("rooms")
+                .select("id")
+                .eq("name", room.name)
+                .maybeSingle();
+              
+              if (existing) {
+                const { error } = await supabase
+                  .from("rooms")
+                  .update(room)
+                  .eq("id", existing.id);
+                
+                if (error) {
+                  errorCount++;
+                  console.error(`Error updating room ${room.name}:`, error);
+                } else {
+                  updatedCount++;
+                  console.log(`Updated room: ${room.name}`);
+                }
               } else {
-                errorCount++;
-                console.error(`Error inserting room ${room.name}:`, error);
+                const { error } = await supabase.from("rooms").insert([room]);
+                if (error) {
+                  errorCount++;
+                  console.error(`Error inserting room ${room.name}:`, error);
+                } else {
+                  successCount++;
+                  console.log(`Added new room: ${room.name}`);
+                }
               }
             } else {
-              successCount++;
+              // Just try to insert
+              const { error } = await supabase.from("rooms").insert([room]);
+              
+              if (error) {
+                if (error.message.includes("duplicate") || error.code === "23505") {
+                  duplicateCount++;
+                  console.log(`Skipped duplicate room: ${room.name}`);
+                } else {
+                  errorCount++;
+                  console.error(`Error inserting room ${room.name}:`, error);
+                }
+              } else {
+                successCount++;
+              }
             }
           }
 
-          console.log(`Import complete: ${successCount} added, ${duplicateCount} duplicates skipped, ${errorCount} errors`);
+          console.log(`Import complete: ${successCount} added, ${updatedCount} updated, ${duplicateCount} duplicates skipped, ${errorCount} errors`);
           
-          if (successCount > 0 || duplicateCount > 0) {
+          if (successCount > 0 || updatedCount > 0 || duplicateCount > 0) {
             const messages = [];
             if (successCount > 0) messages.push(`${successCount} room(s) added`);
+            if (updatedCount > 0) messages.push(`${updatedCount} room(s) updated`);
             if (duplicateCount > 0) messages.push(`${duplicateCount} duplicate(s) skipped`);
             
             toast({
@@ -189,6 +225,19 @@ export function BulkRoomImport() {
       </CardHeader>
       <CardContent className="pt-6">
         <div className="space-y-4">
+          <div className="flex items-center space-x-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <input
+              type="checkbox"
+              id="updateExisting"
+              checked={updateExisting}
+              onChange={(e) => setUpdateExisting(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <label htmlFor="updateExisting" className="text-sm font-medium cursor-pointer">
+              Update existing rooms (if room name matches)
+            </label>
+          </div>
+          
           <div className="flex flex-col sm:flex-row gap-4">
             <Button variant="outline" onClick={downloadTemplate} className="flex-1">
               <Download className="h-4 w-4 mr-2" />
