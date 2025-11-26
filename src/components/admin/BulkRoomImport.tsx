@@ -110,22 +110,46 @@ export function BulkRoomImport() {
           }
 
           console.log('Inserting rooms into database...');
-          const { data, error } = await supabase.from("rooms").insert(rooms).select();
+          
+          // Try to insert each room individually to handle duplicates gracefully
+          let successCount = 0;
+          let duplicateCount = 0;
+          let errorCount = 0;
+          
+          for (const room of rooms) {
+            const { error } = await supabase.from("rooms").insert([room]);
+            
+            if (error) {
+              if (error.message.includes("duplicate") || error.code === "23505") {
+                duplicateCount++;
+                console.log(`Skipped duplicate room: ${room.name}`);
+              } else {
+                errorCount++;
+                console.error(`Error inserting room ${room.name}:`, error);
+              }
+            } else {
+              successCount++;
+            }
+          }
 
-          if (error) {
-            console.error("Database error importing rooms:", error);
+          console.log(`Import complete: ${successCount} added, ${duplicateCount} duplicates skipped, ${errorCount} errors`);
+          
+          if (successCount > 0 || duplicateCount > 0) {
+            const messages = [];
+            if (successCount > 0) messages.push(`${successCount} room(s) added`);
+            if (duplicateCount > 0) messages.push(`${duplicateCount} duplicate(s) skipped`);
+            
             toast({
-              title: "Import Failed",
-              description: error.message.includes("duplicate")
-                ? "Some rooms already exist with the same name"
-                : `Database error: ${error.message}`,
-              variant: "destructive",
+              title: "Import Complete",
+              description: messages.join(", "),
             });
-          } else {
-            console.log('Successfully imported rooms:', data);
+          }
+          
+          if (errorCount > 0) {
             toast({
-              title: "Success",
-              description: `Successfully imported ${data.length} room(s)`,
+              title: "Import Warning",
+              description: `${errorCount} room(s) failed to import. Check console for details.`,
+              variant: "destructive",
             });
           }
         } catch (error) {
