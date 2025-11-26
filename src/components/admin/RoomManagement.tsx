@@ -93,18 +93,30 @@ export function RoomManagement() {
   const checkAuth = async () => {
     setCheckingAuth(true);
     
-    const { data: { user } } = await supabase.auth.getUser();
+    console.log('RoomManagement: Checking authentication...');
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    console.log('RoomManagement: User from auth:', user);
+    console.log('RoomManagement: User error:', userError);
+    
     setCurrentUser(user);
     
     if (user) {
-      const { data: roles } = await supabase
+      console.log('RoomManagement: User found, checking roles for user ID:', user.id);
+      
+      const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id);
       
+      console.log('RoomManagement: Roles data:', roles);
+      console.log('RoomManagement: Roles error:', rolesError);
+      
       const isAdmin = roles?.some(r => r.role === 'admin') || false;
+      console.log('RoomManagement: Is admin?', isAdmin);
       setHasAdminRole(isAdmin);
     } else {
+      console.log('RoomManagement: No user found');
       setHasAdminRole(false);
     }
     
@@ -404,8 +416,24 @@ export function RoomManagement() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Authentication Required</AlertTitle>
-          <AlertDescription>
-            You must be logged in as an admin to manage rooms. Please go to the Auth page to log in.
+          <AlertDescription className="space-y-2">
+            <p>You must be logged in as an admin to manage rooms.</p>
+            <div className="flex gap-2 mt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => window.location.href = '/auth'}
+              >
+                Go to Login Page
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={checkAuth}
+              >
+                Refresh Auth Status
+              </Button>
+            </div>
           </AlertDescription>
         </Alert>
       )}
@@ -414,8 +442,16 @@ export function RoomManagement() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Admin Access Required</AlertTitle>
-          <AlertDescription>
-            Your account ({currentUser.email}) doesn't have admin permissions. Please contact an administrator.
+          <AlertDescription className="space-y-2">
+            <p>Your account ({currentUser.email}) doesn't have admin permissions.</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={checkAuth}
+              className="mt-2"
+            >
+              Refresh Auth Status
+            </Button>
           </AlertDescription>
         </Alert>
       )}
