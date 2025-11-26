@@ -24,6 +24,8 @@ import { BulkClassImport } from "@/components/admin/BulkClassImport";
 import { ScheduleQRCode } from "@/components/admin/ScheduleQRCode";
 import { DataCleanup } from "@/components/admin/DataCleanup";
 import { RoomManagement } from "@/components/admin/RoomManagement";
+import { RoomScheduleView } from "@/components/admin/RoomScheduleView";
+import { BulkRoomImport } from "@/components/admin/BulkRoomImport";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -915,7 +917,11 @@ const Admin = () => {
         </TabsList>
         
         <TabsContent value="rooms">
-          <RoomManagement />
+          <div className="space-y-6">
+            <RoomManagement />
+            <BulkRoomImport />
+            <RoomScheduleView />
+          </div>
         </TabsContent>
         
         <TabsContent value="classes">
