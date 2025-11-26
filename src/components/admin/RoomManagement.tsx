@@ -6,11 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { PlusCircle, Edit, Trash2, Building2, Link, AlertCircle } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Building2, Link } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface Room {
   id: string;
@@ -38,9 +37,6 @@ export function RoomManagement() {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [hasAdminRole, setHasAdminRole] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
   const [formData, setFormData] = useState({
     name: "",
     building: "",
@@ -49,7 +45,6 @@ export function RoomManagement() {
   });
 
   useEffect(() => {
-    checkAuth();
     loadRooms();
     loadClasses();
 
@@ -89,39 +84,6 @@ export function RoomManagement() {
       supabase.removeChannel(classesChannel);
     };
   }, []);
-
-  const checkAuth = async () => {
-    setCheckingAuth(true);
-    
-    console.log('RoomManagement: Checking authentication...');
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    console.log('RoomManagement: User from auth:', user);
-    console.log('RoomManagement: User error:', userError);
-    
-    setCurrentUser(user);
-    
-    if (user) {
-      console.log('RoomManagement: User found, checking roles for user ID:', user.id);
-      
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
-      
-      console.log('RoomManagement: Roles data:', roles);
-      console.log('RoomManagement: Roles error:', rolesError);
-      
-      const isAdmin = roles?.some(r => r.role === 'admin') || false;
-      console.log('RoomManagement: Is admin?', isAdmin);
-      setHasAdminRole(isAdmin);
-    } else {
-      console.log('RoomManagement: No user found');
-      setHasAdminRole(false);
-    }
-    
-    setCheckingAuth(false);
-  };
 
   const loadRooms = async () => {
     const { data, error } = await supabase
@@ -402,60 +364,8 @@ export function RoomManagement() {
     return classes.filter(c => c.room_number === roomName);
   };
 
-  if (checkingAuth) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <p className="text-muted-foreground">Checking permissions...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {!currentUser && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Authentication Required</AlertTitle>
-          <AlertDescription className="space-y-2">
-            <p>You must be logged in as an admin to manage rooms.</p>
-            <div className="flex gap-2 mt-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => window.location.href = '/auth'}
-              >
-                Go to Login Page
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={checkAuth}
-              >
-                Refresh Auth Status
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {currentUser && !hasAdminRole && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Admin Access Required</AlertTitle>
-          <AlertDescription className="space-y-2">
-            <p>Your account ({currentUser.email}) doesn't have admin permissions.</p>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={checkAuth}
-              className="mt-2"
-            >
-              Refresh Auth Status
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-      
       <Card>
         <CardHeader className="border-b bg-muted/50">
           <div className="flex items-center justify-between">
@@ -466,7 +376,7 @@ export function RoomManagement() {
               </CardTitle>
               <CardDescription>Add and manage school rooms</CardDescription>
             </div>
-            <Button onClick={openAddDialog} variant="blue" disabled={!currentUser || !hasAdminRole}>
+            <Button onClick={openAddDialog} variant="blue">
               <PlusCircle className="h-4 w-4 mr-2" />
               Add Room
             </Button>
