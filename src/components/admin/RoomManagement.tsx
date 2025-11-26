@@ -6,11 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { PlusCircle, Edit, Trash2, Building2, Link } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Building2, Link, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Room {
   id: string;
@@ -38,6 +39,8 @@ export function RoomManagement() {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [hasAdminRole, setHasAdminRole] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     building: "",
@@ -46,6 +49,7 @@ export function RoomManagement() {
   });
 
   useEffect(() => {
+    checkAuth();
     loadRooms();
     loadClasses();
 
@@ -87,6 +91,25 @@ export function RoomManagement() {
       supabase.removeChannel(classesChannel);
     };
   }, []);
+
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setCurrentUser(user);
+    
+    if (user) {
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+      
+      const isAdmin = roles?.some(r => r.role === 'admin') || false;
+      setHasAdminRole(isAdmin);
+      
+      if (!isAdmin) {
+        console.warn('User does not have admin role');
+      }
+    }
+  };
 
   const loadRooms = async () => {
     const { data, error } = await supabase
@@ -369,6 +392,24 @@ export function RoomManagement() {
 
   return (
     <div className="space-y-6">
+      {currentUser && !hasAdminRole && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            You don't have admin permissions. Please contact an administrator to manage rooms.
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {!currentUser && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            You must be logged in as an admin to manage rooms.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <Card>
         <CardHeader className="border-b bg-muted/50">
           <div className="flex items-center justify-between">
@@ -379,7 +420,7 @@ export function RoomManagement() {
               </CardTitle>
               <CardDescription>Add and manage school rooms</CardDescription>
             </div>
-            <Button onClick={openAddDialog} variant="blue">
+            <Button onClick={openAddDialog} variant="blue" disabled={!hasAdminRole}>
               <PlusCircle className="h-4 w-4 mr-2" />
               Add Room
             </Button>
