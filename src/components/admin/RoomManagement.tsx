@@ -86,6 +86,7 @@ export function RoomManagement() {
   }, []);
 
   const loadRooms = async () => {
+    console.log('Loading rooms from database...');
     const { data, error } = await supabase
       .from('rooms')
       .select('*')
@@ -95,13 +96,21 @@ export function RoomManagement() {
       console.error('Error loading rooms:', error);
       toast({
         title: "Error",
-        description: "Failed to load rooms",
+        description: `Failed to load rooms: ${error.message}`,
         variant: "destructive",
       });
       return;
     }
 
+    console.log('Loaded rooms:', data);
     setRooms(data || []);
+    
+    if (data && data.length > 0) {
+      toast({
+        title: "Rooms Loaded",
+        description: `Found ${data.length} room(s)`,
+      });
+    }
   };
 
   const loadClasses = async () => {
@@ -376,10 +385,15 @@ export function RoomManagement() {
               </CardTitle>
               <CardDescription>Add and manage school rooms</CardDescription>
             </div>
-            <Button onClick={openAddDialog} variant="blue">
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Add Room
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={loadRooms} variant="outline" size="sm">
+                Refresh
+              </Button>
+              <Button onClick={openAddDialog} variant="blue">
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Add Room
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
