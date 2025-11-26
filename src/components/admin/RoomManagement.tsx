@@ -9,11 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { PlusCircle, Edit, Trash2, Building2, Link, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
 
 interface Room {
   id: string;
@@ -33,8 +30,6 @@ interface ClassInfo {
 }
 
 export function RoomManagement() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -43,7 +38,9 @@ export function RoomManagement() {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [hasAdminRole, setHasAdminRole] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [formData, setFormData] = useState({
     name: "",
     building: "",
@@ -52,7 +49,7 @@ export function RoomManagement() {
   });
 
   useEffect(() => {
-    checkAdminRole();
+    checkAuth();
     loadRooms();
     loadClasses();
 
@@ -67,7 +64,6 @@ export function RoomManagement() {
           table: 'rooms'
         },
         () => {
-          console.log('Rooms changed, reloading...');
           loadRooms();
         }
       )
@@ -83,7 +79,6 @@ export function RoomManagement() {
           table: 'classes'
         },
         () => {
-          console.log('Classes changed, reloading...');
           loadClasses();
         }
       )
@@ -93,21 +88,27 @@ export function RoomManagement() {
       supabase.removeChannel(roomsChannel);
       supabase.removeChannel(classesChannel);
     };
-  }, [user]);
+  }, []);
 
-  const checkAdminRole = async () => {
-    if (!user) {
+  const checkAuth = async () => {
+    setCheckingAuth(true);
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    setCurrentUser(user);
+    
+    if (user) {
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+      
+      const isAdmin = roles?.some(r => r.role === 'admin') || false;
+      setHasAdminRole(isAdmin);
+    } else {
       setHasAdminRole(false);
-      return;
     }
     
-    const { data: roles } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id);
-    
-    const isAdmin = roles?.some(r => r.role === 'admin') || false;
-    setHasAdminRole(isAdmin);
+    setCheckingAuth(false);
   };
 
   const loadRooms = async () => {
@@ -389,32 +390,32 @@ export function RoomManagement() {
     return classes.filter(c => c.room_number === roomName);
   };
 
+  if (checkingAuth) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <p className="text-muted-foreground">Checking permissions...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {!user && (
+      {!currentUser && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Authentication Required</AlertTitle>
-          <AlertDescription className="mt-2 space-y-2">
-            <p>You must be logged in as an admin to manage rooms.</p>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/auth')}
-              className="mt-2"
-            >
-              Go to Login
-            </Button>
+          <AlertDescription>
+            You must be logged in as an admin to manage rooms. Please go to the Auth page to log in.
           </AlertDescription>
         </Alert>
       )}
       
-      {user && !hasAdminRole && (
+      {currentUser && !hasAdminRole && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Admin Access Required</AlertTitle>
           <AlertDescription>
-            You don't have admin permissions. Please contact an administrator to manage rooms.
+            Your account ({currentUser.email}) doesn't have admin permissions. Please contact an administrator.
           </AlertDescription>
         </Alert>
       )}
@@ -429,7 +430,7 @@ export function RoomManagement() {
               </CardTitle>
               <CardDescription>Add and manage school rooms</CardDescription>
             </div>
-            <Button onClick={openAddDialog} variant="blue" disabled={!hasAdminRole}>
+            <Button onClick={openAddDialog} variant="blue" disabled={!currentUser || !hasAdminRole}>
               <PlusCircle className="h-4 w-4 mr-2" />
               Add Room
             </Button>
