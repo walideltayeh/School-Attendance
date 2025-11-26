@@ -1279,10 +1279,6 @@ const Admin = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        
-        <TabsContent value="rooms">
-          <RoomManagement />
-        </TabsContent>
       </Tabs>
       
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

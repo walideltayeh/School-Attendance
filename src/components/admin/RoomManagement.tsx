@@ -157,6 +157,7 @@ export function RoomManagement() {
 
     setIsAddDialogOpen(false);
     resetForm();
+    await loadRooms(); // Explicitly reload to ensure UI updates
   };
 
   const handleEdit = async () => {
@@ -194,6 +195,7 @@ export function RoomManagement() {
     setIsEditDialogOpen(false);
     setSelectedRoom(null);
     resetForm();
+    await loadRooms(); // Explicitly reload to ensure UI updates
   };
 
   const handleDelete = async () => {
@@ -221,6 +223,7 @@ export function RoomManagement() {
 
     setIsDeleteDialogOpen(false);
     setSelectedRoom(null);
+    await loadRooms(); // Explicitly reload to ensure UI updates
   };
 
   const resetForm = () => {
@@ -256,10 +259,10 @@ export function RoomManagement() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
+        <CardHeader className="border-b bg-muted/50">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="text-2xl font-bold text-primary flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
                 Room Management
               </CardTitle>
@@ -321,6 +324,35 @@ export function RoomManagement() {
           </Table>
         </CardContent>
       </Card>
+
+      {rooms.length > 0 && (
+        <Card>
+          <CardHeader className="border-b bg-muted/50">
+            <CardTitle className="text-2xl font-bold text-primary">Rooms Summary</CardTitle>
+            <CardDescription>Overview of all created rooms</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                <p className="text-sm text-muted-foreground">Total Rooms</p>
+                <p className="text-3xl font-bold text-primary">{rooms.length}</p>
+              </div>
+              <div className="p-4 rounded-lg bg-secondary/50 border border-secondary">
+                <p className="text-sm text-muted-foreground">Total Capacity</p>
+                <p className="text-3xl font-bold">
+                  {rooms.reduce((sum, room) => sum + (room.capacity || 0), 0)}
+                </p>
+              </div>
+              <div className="p-4 rounded-lg bg-accent/50 border border-accent">
+                <p className="text-sm text-muted-foreground">Buildings</p>
+                <p className="text-3xl font-bold">
+                  {new Set(rooms.map(r => r.building).filter(Boolean)).size || 'N/A'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Add Room Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
