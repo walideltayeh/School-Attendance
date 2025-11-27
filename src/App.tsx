@@ -16,6 +16,8 @@ import NotFound from "@/pages/NotFound";
 import ClassroomLogin from "@/pages/ClassroomLogin";
 import Calendar from "@/pages/Calendar";
 import Auth from "@/pages/Auth";
+import StudentPortal from "@/pages/StudentPortal";
+import BusAttendance from "@/pages/BusAttendance";
 
 function App() {
   return (
@@ -37,7 +39,9 @@ function App() {
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/attendance/scan/:roomId/:teacherId" element={<Attendance />} />
-            <Route path="/classroom-login/:roomId" element={<ClassroomLogin />} />
+            <Route path="/classroom-login" element={<ClassroomLogin />} />
+            <Route path="/student-portal" element={<StudentPortal />} />
+            <Route path="/bus-attendance" element={<BusAttendance />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="*" element={<NotFound />} />
           </Route>

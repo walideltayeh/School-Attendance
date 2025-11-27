@@ -27,6 +27,7 @@ import { RoomManagement } from "@/components/admin/RoomManagement";
 import { RoomScheduleView } from "@/components/admin/RoomScheduleView";
 import { RoomOccupancyCalendar } from "@/components/admin/RoomOccupancyCalendar";
 import { BulkRoomImport } from "@/components/admin/BulkRoomImport";
+import { BulkQRGenerator } from "@/components/admin/BulkQRGenerator";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -1254,38 +1255,42 @@ const Admin = () => {
         </TabsContent>
         
         <TabsContent value="qrcodes">
-          <Card>
-            <CardHeader className="border-b bg-muted/50">
-              <CardTitle className="text-2xl font-bold text-primary">Class QR Codes</CardTitle>
-              <CardDescription>
-                Print or download QR codes for attendance scanning
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              {schedules.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No schedules created yet. Create schedules in the Calendar tab to generate QR codes.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {schedules
-                    .filter(schedule => schedule.qrCode)
-                    .map((schedule) => (
-                      <ScheduleQRCode
-                        key={schedule.id}
-                        qrCode={schedule.qrCode!}
-                        className={schedule.className}
-                        period={`Period ${schedule.period}`}
-                        day={schedule.day}
-                        room={schedule.roomName}
-                        teacher={schedule.teacherName}
-                        weekNumber={schedule.week}
-                      />
-                    ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <BulkQRGenerator />
+            
+            <Card>
+              <CardHeader className="border-b bg-muted/50">
+                <CardTitle className="text-2xl font-bold text-primary">Class Schedule QR Codes</CardTitle>
+                <CardDescription>
+                  Print or download QR codes for class schedule scanning
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {schedules.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No schedules created yet. Create schedules in the Calendar tab to generate QR codes.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {schedules
+                      .filter(schedule => schedule.qrCode)
+                      .map((schedule) => (
+                        <ScheduleQRCode
+                          key={schedule.id}
+                          qrCode={schedule.qrCode!}
+                          className={schedule.className}
+                          period={`Period ${schedule.period}`}
+                          day={schedule.day}
+                          room={schedule.roomName}
+                          teacher={schedule.teacherName}
+                          weekNumber={schedule.week}
+                        />
+                      ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
       
