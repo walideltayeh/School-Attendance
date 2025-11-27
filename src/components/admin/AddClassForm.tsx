@@ -13,7 +13,6 @@ interface AddClassFormProps {
     grades: string[];
     sections: string[];
     subjects: string[];
-    roomNumber: string;
     teacherId?: string;
   }) => void;
   initialValues?: {
@@ -35,15 +34,10 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
   const [selectedSection, setSelectedSection] = useState<string>(initialValues?.section || "");
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(initialValues?.subjects || []);
   const [selectedTeacher, setSelectedTeacher] = useState<string>(initialValues?.teacherId || "none");
-  const [selectedRoom, setSelectedRoom] = useState<string>("");
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
-  const [availableRooms, setAvailableRooms] = useState<any[]>([]);
-  const [roomUsage, setRoomUsage] = useState<Record<string, number>>({});
 
   useEffect(() => {
     loadSubjects();
-    loadRooms();
-    loadRoomUsage();
 
     // Subscribe to real-time updates for subjects
     const subjectsChannel = supabase
@@ -61,42 +55,8 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       )
       .subscribe();
 
-    // Subscribe to real-time updates for rooms
-    const roomsChannel = supabase
-      .channel('rooms-changes-form')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'rooms'
-        },
-        () => {
-          loadRooms();
-        }
-      )
-      .subscribe();
-
-    // Subscribe to real-time updates for classes (to track room usage)
-    const classesChannel = supabase
-      .channel('classes-changes-form')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'classes'
-        },
-        () => {
-          loadRoomUsage();
-        }
-      )
-      .subscribe();
-
     return () => {
       supabase.removeChannel(subjectsChannel);
-      supabase.removeChannel(roomsChannel);
-      supabase.removeChannel(classesChannel);
     };
   }, []);
 
@@ -116,42 +76,6 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
     setAvailableSubjects(subjects);
   };
 
-  const loadRooms = async () => {
-    const { data, error } = await supabase
-      .from('rooms')
-      .select('*')
-      .order('name', { ascending: true });
-
-    if (error) {
-      console.error('Error loading rooms:', error);
-      return;
-    }
-
-    setAvailableRooms(data || []);
-  };
-
-  const loadRoomUsage = async () => {
-    const { data, error } = await supabase
-      .from('classes')
-      .select('room_number');
-
-    if (error) {
-      console.error('Error loading room usage:', error);
-      return;
-    }
-
-    // Count how many times each room is used
-    const usage: Record<string, number> = {};
-    data?.forEach((classData) => {
-      const room = classData.room_number;
-      if (room) {
-        usage[room] = (usage[room] || 0) + 1;
-      }
-    });
-
-    setRoomUsage(usage);
-  };
-
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,9 +84,7 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       grade: selectedGrade,
       section: selectedSection,
       subjects: selectedSubjects,
-      room: selectedRoom,
-      availableSubjects,
-      availableRooms
+      availableSubjects
     });
 
     // Validation
@@ -170,15 +92,6 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       toast({
         title: "Validation Error",
         description: "Please select a grade, section, and at least one subject",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!selectedRoom || selectedRoom.trim() === "") {
-      toast({
-        title: "Validation Error",
-        description: "Please select a room",
         variant: "destructive",
       });
       return;
@@ -199,7 +112,6 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       grades: [selectedGrade],
       sections: [selectedSection],
       subjects: selectedSubjects,
-      roomNumber: selectedRoom,
       teacherId: selectedTeacher === "none" ? undefined : selectedTeacher,
     });
 
@@ -207,7 +119,6 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
       setSelectedGrade("");
       setSelectedSection("");
       setSelectedSubjects([]);
-      setSelectedRoom("");
     }
   };
 
@@ -255,46 +166,9 @@ export function AddClassForm({ onSubmit, initialValues, isEditing, onCancel, tea
             placeholder="Select subjects"
             className="bg-background"
           />
-        </div>
-
-        <div>
-          <Label htmlFor="room">Select Room *</Label>
-          <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-            <SelectTrigger id="room" className="bg-background">
-              <SelectValue placeholder={availableRooms.length === 0 ? "No rooms available - create rooms first" : "Select a room"} />
-            </SelectTrigger>
-            <SelectContent className="z-50 bg-background border border-border">
-              {availableRooms.length === 0 ? (
-                <div className="p-2 text-sm text-muted-foreground text-center">
-                  No rooms available. Please create rooms in the Rooms tab first.
-                </div>
-              ) : (
-                availableRooms.map((room) => {
-                  const usageCount = roomUsage[room.name] || 0;
-                  const isAvailable = usageCount === 0;
-                  
-                  return (
-                    <SelectItem key={room.id} value={room.name}>
-                      <div className="flex items-center justify-between w-full gap-4">
-                        <span>
-                          {room.name}
-                          {room.building && ` - ${room.building}`}
-                          {room.capacity && ` (Capacity: ${room.capacity})`}
-                        </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          isAvailable 
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
-                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
-                        }`}>
-                          {isAvailable ? 'Available' : `${usageCount} class${usageCount > 1 ? 'es' : ''}`}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  );
-                })
-              )}
-            </SelectContent>
-          </Select>
+          <p className="text-sm text-muted-foreground mt-1">
+            Rooms will be assigned when creating the class schedule
+          </p>
         </div>
 
         <div className="space-y-2">

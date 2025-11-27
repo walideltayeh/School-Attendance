@@ -29,7 +29,6 @@ interface ClassInfo {
   grade: string;
   section: string;
   subject: string;
-  room_number: string;
   student_count?: number;
 }
 
@@ -47,7 +46,6 @@ interface Schedule {
     grade: string;
     section: string;
     subject: string;
-    room_number: string;
   };
 }
 
@@ -137,8 +135,7 @@ export default function TeacherProfile() {
             name,
             grade,
             section,
-            subject,
-            room_number
+            subject
           )
         `)
         .in('class_id', classesWithCounts.map(c => c.id))
@@ -350,9 +347,6 @@ export default function TeacherProfile() {
                               <p className="font-medium">
                                 {schedule.classes.subject} - Grade {schedule.classes.grade} Section {schedule.classes.section}
                               </p>
-                              <p className="text-sm text-muted-foreground">
-                                Room: {schedule.classes.room_number}
-                              </p>
                             </div>
                             <div className="text-right">
                               <Badge variant="outline">
@@ -393,14 +387,13 @@ export default function TeacherProfile() {
                     <TableHead>Grade</TableHead>
                     <TableHead>Section</TableHead>
                     <TableHead>Subject</TableHead>
-                    <TableHead>Room</TableHead>
                     <TableHead className="text-right">Students</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {classes.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center text-muted-foreground">
                         No classes assigned yet
                       </TableCell>
                     </TableRow>
@@ -411,7 +404,6 @@ export default function TeacherProfile() {
                         <TableCell>Grade {cls.grade}</TableCell>
                         <TableCell>Section {cls.section}</TableCell>
                         <TableCell>{cls.subject}</TableCell>
-                        <TableCell>{cls.room_number}</TableCell>
                         <TableCell className="text-right">{cls.student_count || 0}</TableCell>
                       </TableRow>
                     ))

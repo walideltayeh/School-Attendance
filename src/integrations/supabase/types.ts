@@ -242,6 +242,7 @@ export type Database = {
           id: string
           period_id: string
           qr_code: string | null
+          room_id: string | null
           week_number: number
         }
         Insert: {
@@ -251,6 +252,7 @@ export type Database = {
           id?: string
           period_id: string
           qr_code?: string | null
+          room_id?: string | null
           week_number?: number
         }
         Update: {
@@ -260,6 +262,7 @@ export type Database = {
           id?: string
           period_id?: string
           qr_code?: string | null
+          room_id?: string | null
           week_number?: number
         }
         Relationships: [
@@ -277,6 +280,13 @@ export type Database = {
             referencedRelation: "periods"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "class_schedules_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
         ]
       }
       classes: {
@@ -285,7 +295,6 @@ export type Database = {
           grade: string
           id: string
           name: string
-          room_number: string
           section: string
           subject: string
           teacher_id: string | null
@@ -296,7 +305,6 @@ export type Database = {
           grade: string
           id?: string
           name: string
-          room_number: string
           section: string
           subject: string
           teacher_id?: string | null
@@ -307,7 +315,6 @@ export type Database = {
           grade?: string
           id?: string
           name?: string
-          room_number?: string
           section?: string
           subject?: string
           teacher_id?: string | null

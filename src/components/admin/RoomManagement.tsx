@@ -320,59 +320,6 @@ export function RoomManagement() {
     setIsDeleteDialogOpen(true);
   };
 
-  const openAssignDialog = (room: Room) => {
-    setSelectedRoom(room);
-    // Find classes currently assigned to this room
-    const assignedClasses = classes.filter(c => c.room_number === room.name);
-    setSelectedClassIds(assignedClasses.map(c => c.id));
-    setIsAssignDialogOpen(true);
-  };
-
-  const handleAssignClasses = async () => {
-    if (!selectedRoom) return;
-
-    try {
-      // First, unassign this room from all classes
-      const { error: unassignError } = await supabase
-        .from('classes')
-        .update({ room_number: 'TBD' })
-        .eq('room_number', selectedRoom.name);
-
-      if (unassignError) throw unassignError;
-
-      // Then assign selected classes to this room
-      if (selectedClassIds.length > 0) {
-        const { error: assignError } = await supabase
-          .from('classes')
-          .update({ room_number: selectedRoom.name })
-          .in('id', selectedClassIds);
-
-        if (assignError) throw assignError;
-      }
-
-      toast({
-        title: "Success",
-        description: `Assigned ${selectedClassIds.length} class(es) to ${selectedRoom.name}`,
-      });
-
-      setIsAssignDialogOpen(false);
-      setSelectedRoom(null);
-      setSelectedClassIds([]);
-      await loadClasses();
-    } catch (error) {
-      console.error('Error assigning classes:', error);
-      toast({
-        title: "Error",
-        description: "Failed to assign classes to room",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getAssignedClasses = (roomName: string) => {
-    return classes.filter(c => c.room_number === roomName);
-  };
-
   return (
     <div className="space-y-6">
       <Card>
@@ -417,27 +364,12 @@ export function RoomManagement() {
               ) : (
                 rooms.map((room) => (
                   <TableRow key={room.id}>
-                    <TableCell className="font-medium">
-                      {room.name}
-                      {getAssignedClasses(room.name).length > 0 && (
-                        <Badge variant="secondary" className="ml-2">
-                          {getAssignedClasses(room.name).length} class{getAssignedClasses(room.name).length > 1 ? 'es' : ''}
-                        </Badge>
-                      )}
-                    </TableCell>
+                    <TableCell className="font-medium">{room.name}</TableCell>
                     <TableCell>{room.building || "-"}</TableCell>
                     <TableCell>{room.floor !== null && room.floor !== undefined ? room.floor : "-"}</TableCell>
                     <TableCell>{room.capacity || "-"}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openAssignDialog(room)}
-                          title="Assign classes to this room"
-                        >
-                          <Link className="h-4 w-4" />
-                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -638,69 +570,6 @@ export function RoomManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Assign Classes Dialog */}
-      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Assign Classes to {selectedRoom?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Select which classes should use this room. Multiple classes can share the same room.
-            </p>
-            <div className="space-y-2">
-              <Label>Available Classes</Label>
-              <div className="border rounded-md p-3 max-h-96 overflow-y-auto space-y-2">
-                {classes.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No classes available</p>
-                ) : (
-                  classes.map((classInfo) => (
-                    <div key={classInfo.id} className="flex items-center gap-2 p-2 hover:bg-accent rounded">
-                      <input
-                        type="checkbox"
-                        id={`class-${classInfo.id}`}
-                        checked={selectedClassIds.includes(classInfo.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedClassIds([...selectedClassIds, classInfo.id]);
-                          } else {
-                            setSelectedClassIds(selectedClassIds.filter(id => id !== classInfo.id));
-                          }
-                        }}
-                        className="rounded border-gray-300"
-                      />
-                      <label htmlFor={`class-${classInfo.id}`} className="text-sm flex-1 cursor-pointer">
-                        {classInfo.grade} - Section {classInfo.section} ({classInfo.subject})
-                        {classInfo.room_number && classInfo.room_number !== 'TBD' && (
-                          <span className="text-muted-foreground ml-2">
-                            (Currently: {classInfo.room_number})
-                          </span>
-                        )}
-                      </label>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsAssignDialogOpen(false);
-                setSelectedRoom(null);
-                setSelectedClassIds([]);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button variant="blue" onClick={handleAssignClasses}>
-              Assign {selectedClassIds.length} Class{selectedClassIds.length !== 1 ? 'es' : ''}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

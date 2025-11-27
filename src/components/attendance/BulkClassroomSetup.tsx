@@ -72,7 +72,6 @@ export function BulkClassroomSetup({ onSetupComplete }: { onSetupComplete: () =>
                 .eq("grade", classroom.grade)
                 .eq("section", classroom.section)
                 .eq("subject", classroom.subject)
-                .eq("room_number", classroom.room_number)
                 .single();
 
               if (error || !data) {
