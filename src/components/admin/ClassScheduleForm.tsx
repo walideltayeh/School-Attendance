@@ -143,23 +143,36 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
     }
   }, [applyToAllWeeks, editingSchedule]);
 
-  const checkForConflicts = (schedule: any): boolean => {
-    const existingSchedules = dataService.getClassSchedules();
+  const checkForConflicts = async (schedule: any): Promise<boolean> => {
+    // Check against database schedules for conflicts
+    const { data: existingSchedules, error } = await supabase
+      .from('class_schedules')
+      .select('*, classes(name, grade, section, subject), teachers:class_id(teachers(full_name)), rooms:room_id(name)')
+      .eq('day', schedule.day)
+      .eq('period_id', selectedPeriod)
+      .eq('week_number', schedule.week);
     
-    // Don't check against the schedule we're currently editing
+    if (error) {
+      console.error('Error checking conflicts:', error);
+      return false;
+    }
+
+    // Filter out the schedule we're currently editing
     const filteredSchedules = editingSchedule 
-      ? existingSchedules.filter(s => s.id !== editingSchedule.id) 
+      ? existingSchedules?.filter(s => s.id !== editingSchedule.id) 
       : existingSchedules;
     
+    if (!filteredSchedules || filteredSchedules.length === 0) {
+      return false;
+    }
+    
     // Check for teacher conflicts (same teacher, same day, period, week)
-    const teacherConflict = filteredSchedules.some(s => 
-      s.teacherId === schedule.teacherId && 
-      s.day === schedule.day && 
-      s.period === schedule.period && 
-      s.week === schedule.week
+    const teacherConflict = filteredSchedules.some((s: any) => 
+      s.class_id === schedule.classId
     );
     
     if (teacherConflict) {
+      const conflictingClass = filteredSchedules.find((s: any) => s.class_id === schedule.classId);
       toast({
         title: "Schedule Conflict",
         description: `Teacher ${schedule.teacherName} is already scheduled at this time`,
@@ -169,34 +182,17 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
     }
     
     // Check for room conflicts (same room, same day, period, week)
-    const roomConflict = filteredSchedules.some(s => 
-      s.roomId === schedule.roomId && 
-      s.day === schedule.day && 
-      s.period === schedule.period && 
-      s.week === schedule.week
+    const roomConflict = filteredSchedules.some((s: any) => 
+      s.room_id === schedule.roomId
     );
     
     if (roomConflict) {
+      const conflictingSchedule = filteredSchedules.find((s: any) => s.room_id === schedule.roomId);
+      const roomName = conflictingSchedule?.rooms?.name || schedule.roomName;
+      const conflictingClassName = conflictingSchedule?.classes?.name || 'another class';
       toast({
-        title: "Schedule Conflict",
-        description: `Room ${schedule.roomName} is already scheduled at this time`,
-        variant: "destructive",
-      });
-      return true;
-    }
-    
-    // Check for class conflicts (class already scheduled at this time)
-    const classConflict = filteredSchedules.some(s => 
-      s.className === schedule.className && 
-      s.day === schedule.day && 
-      s.period === schedule.period && 
-      s.week === schedule.week
-    );
-    
-    if (classConflict) {
-      toast({
-        title: "Schedule Conflict",
-        description: `Class ${schedule.className} is already scheduled at this time`,
+        title: "Room Double-Booking Detected",
+        description: `Room ${roomName} is already booked for ${conflictingClassName} at this time`,
         variant: "destructive",
       });
       return true;
@@ -205,7 +201,7 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
     return false;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedTeacher || !selectedClass || !selectedRoom || !selectedDay || !selectedPeriod || weekSchedule.length === 0) {
@@ -230,7 +226,6 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
       return;
     }
     
-    let hasConflict = false;
     const schedules = weekSchedule.map(week => ({
       teacherId: teacher.id,
       teacherName: teacher.full_name || teacher.name,
@@ -245,14 +240,10 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
     
     // Check each schedule for conflicts
     for (const schedule of schedules) {
-      if (checkForConflicts(schedule)) {
-        hasConflict = true;
-        break;
+      const hasConflict = await checkForConflicts(schedule);
+      if (hasConflict) {
+        return;
       }
-    }
-    
-    if (hasConflict) {
-      return;
     }
     
     // If we have an editing schedule, clear form after submitting

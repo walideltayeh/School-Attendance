@@ -71,6 +71,7 @@ export default function Settings() {
       await supabase.from('bus_routes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       await supabase.from('periods').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       await supabase.from('classes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('rooms').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       // Skip deleting subjects - keep predefined subjects
       await supabase.from('teachers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       await supabase.from('students').delete().neq('id', '00000000-0000-0000-0000-000000000000');

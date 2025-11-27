@@ -25,6 +25,7 @@ import { ScheduleQRCode } from "@/components/admin/ScheduleQRCode";
 import { DataCleanup } from "@/components/admin/DataCleanup";
 import { RoomManagement } from "@/components/admin/RoomManagement";
 import { RoomScheduleView } from "@/components/admin/RoomScheduleView";
+import { RoomOccupancyCalendar } from "@/components/admin/RoomOccupancyCalendar";
 import { BulkRoomImport } from "@/components/admin/BulkRoomImport";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -920,6 +921,7 @@ const Admin = () => {
           <div className="space-y-6">
             <RoomManagement />
             <BulkRoomImport />
+            <RoomOccupancyCalendar />
             <RoomScheduleView />
           </div>
         </TabsContent>
