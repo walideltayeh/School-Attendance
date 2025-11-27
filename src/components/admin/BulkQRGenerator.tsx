@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { Download, Printer, Users } from "lucide-react";
 import QRCode from "react-qr-code";
+import { getAvailableGrades, getAvailableSections } from "@/utils/classHelpers";
 
 interface Student {
   id: string;
@@ -23,17 +24,36 @@ export function BulkQRGenerator() {
   const [selectedGrade, setSelectedGrade] = useState<string>("all");
   const [selectedSection, setSelectedSection] = useState<string>("all");
   const [loading, setLoading] = useState(false);
-
-  const grades = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
-  const sections = ["A", "B", "C", "D", "E", "F"];
+  const [availableGrades, setAvailableGrades] = useState<string[]>([]);
+  const [availableSections, setAvailableSections] = useState<string[]>([]);
 
   useEffect(() => {
     loadStudents();
+    loadAvailableGrades();
   }, []);
+
+  useEffect(() => {
+    if (selectedGrade !== "all") {
+      loadAvailableSections(selectedGrade);
+    } else {
+      setAvailableSections([]);
+      setSelectedSection("all");
+    }
+  }, [selectedGrade]);
 
   useEffect(() => {
     filterStudents();
   }, [selectedGrade, selectedSection, students]);
+
+  const loadAvailableGrades = async () => {
+    const grades = await getAvailableGrades();
+    setAvailableGrades(grades);
+  };
+
+  const loadAvailableSections = async (grade: string) => {
+    const sections = await getAvailableSections(grade);
+    setAvailableSections(sections);
+  };
 
   const loadStudents = async () => {
     try {
@@ -195,9 +215,9 @@ export function BulkQRGenerator() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Grades</SelectItem>
-                {grades.map((grade) => (
+                {availableGrades.map((grade) => (
                   <SelectItem key={grade} value={grade}>
-                    Grade {grade}
+                    {grade}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -206,15 +226,19 @@ export function BulkQRGenerator() {
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Filter by Section</label>
-            <Select value={selectedSection} onValueChange={setSelectedSection}>
+            <Select 
+              value={selectedSection} 
+              onValueChange={setSelectedSection}
+              disabled={selectedGrade === "all"}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="All Sections" />
+                <SelectValue placeholder={selectedGrade === "all" ? "Select a grade first" : "All Sections"} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Sections</SelectItem>
-                {sections.map((section) => (
+                {availableSections.map((section) => (
                   <SelectItem key={section} value={section}>
-                    Section {section}
+                    {section}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -229,9 +253,9 @@ export function BulkQRGenerator() {
             <p className="text-2xl font-bold">{filteredStudents.length}</p>
           </div>
           <Badge variant="outline">
-            {selectedGrade !== "all" && `Grade ${selectedGrade}`}
+            {selectedGrade !== "all" && selectedGrade}
             {selectedGrade !== "all" && selectedSection !== "all" && " - "}
-            {selectedSection !== "all" && `Section ${selectedSection}`}
+            {selectedSection !== "all" && selectedSection}
             {selectedGrade === "all" && selectedSection === "all" && "All Students"}
           </Badge>
         </div>
