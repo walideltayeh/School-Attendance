@@ -21,7 +21,7 @@ export function DataCleanup() {
       const { data: classes, error } = await supabase
         .from('classes')
         .select('*')
-        .or('subject.eq.,room_number.eq.');
+        .eq('subject', '');
 
       if (error) throw error;
 
@@ -29,9 +29,7 @@ export function DataCleanup() {
         id: cls.id,
         name: `${cls.grade} - Section ${cls.section}`,
         subject: cls.subject,
-        room_number: cls.room_number,
-        hasEmptySubject: !cls.subject || cls.subject.trim() === '',
-        hasEmptyRoom: !cls.room_number || cls.room_number.trim() === ''
+        hasEmptySubject: !cls.subject || cls.subject.trim() === ''
       })) || [];
 
       setIssues(foundIssues);
@@ -40,12 +38,12 @@ export function DataCleanup() {
       if (foundIssues.length === 0) {
         toast({
           title: "No Issues Found",
-          description: "All classes have valid subject and room number values",
+          description: "All classes have valid subject values",
         });
       } else {
         toast({
           title: "Issues Found",
-          description: `Found ${foundIssues.length} class${foundIssues.length > 1 ? 'es' : ''} with empty fields`,
+          description: `Found ${foundIssues.length} class${foundIssues.length > 1 ? 'es' : ''} with empty subject`,
           variant: "destructive",
         });
       }
@@ -70,20 +68,10 @@ export function DataCleanup() {
       let fixedCount = 0;
 
       for (const issue of issues) {
-        const updates: any = {};
-        
         if (issue.hasEmptySubject) {
-          updates.subject = 'General';
-        }
-        
-        if (issue.hasEmptyRoom) {
-          updates.room_number = 'TBD';
-        }
-
-        if (Object.keys(updates).length > 0) {
           const { error } = await supabase
             .from('classes')
-            .update(updates)
+            .update({ subject: 'General' })
             .eq('id', issue.id);
 
           if (error) {
@@ -96,7 +84,7 @@ export function DataCleanup() {
 
       toast({
         title: "Data Cleaned",
-        description: `Fixed ${fixedCount} class${fixedCount > 1 ? 'es' : ''}. Empty subjects set to 'General', empty rooms set to 'TBD'.`,
+        description: `Fixed ${fixedCount} class${fixedCount > 1 ? 'es' : ''}. Empty subjects set to 'General'.`,
       });
 
       // Rescan to show updated results
@@ -118,7 +106,7 @@ export function DataCleanup() {
       <CardHeader>
         <CardTitle>Data Cleanup Tool</CardTitle>
         <CardDescription>
-          Scan for and fix classes with empty subject or room number values
+          Scan for and fix classes with empty subject values
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -161,7 +149,7 @@ export function DataCleanup() {
             <CheckCircle className="h-4 w-4" />
             <AlertTitle>All Clear!</AlertTitle>
             <AlertDescription>
-              No data issues found. All classes have valid subject and room number values.
+              No data issues found. All classes have valid subject values.
             </AlertDescription>
           </Alert>
         )}
@@ -176,7 +164,6 @@ export function DataCleanup() {
                   <div key={issue.id} className="text-sm">
                     <strong>{issue.name}</strong>
                     {issue.hasEmptySubject && <span className="ml-2">• Empty subject</span>}
-                    {issue.hasEmptyRoom && <span className="ml-2">• Empty room number</span>}
                   </div>
                 ))}
               </div>

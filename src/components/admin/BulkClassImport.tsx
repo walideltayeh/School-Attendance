@@ -11,14 +11,13 @@ interface ClassRow {
   grade: string;
   section: string;
   subject: string;
-  room_number: string;
 }
 
 export function BulkClassImport({ onImportComplete }: { onImportComplete: () => void }) {
   const [isImporting, setIsImporting] = useState(false);
 
   const handleDownloadTemplate = () => {
-    const csv = "grade,section,subject,room_number\nKG1,A,Mathematics,101\nKG1,B,English,102";
+    const csv = "grade,section,subject\nKG1,A,Mathematics\nKG1,B,English";
     const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -45,7 +44,7 @@ export function BulkClassImport({ onImportComplete }: { onImportComplete: () => 
         const validClasses: ClassRow[] = [];
 
         data.forEach((row, index) => {
-          if (!row.grade || !row.section || !row.subject || !row.room_number) {
+          if (!row.grade || !row.section || !row.subject) {
             errors.push(`Row ${index + 2}: Missing required fields`);
           } else {
             validClasses.push(row);
@@ -69,7 +68,6 @@ export function BulkClassImport({ onImportComplete }: { onImportComplete: () => 
             grade: row.grade,
             section: row.section,
             subject: row.subject,
-            room_number: row.room_number,
             teacher_id: null,
           }));
 
@@ -114,7 +112,7 @@ export function BulkClassImport({ onImportComplete }: { onImportComplete: () => 
       <div className="flex flex-col gap-2">
         <Label>Bulk Import Classes from CSV</Label>
         <p className="text-sm text-muted-foreground">
-          Upload a CSV file with columns: grade, section, subject, room_number
+          Upload a CSV file with columns: grade, section, subject (rooms assigned in schedules)
         </p>
       </div>
 

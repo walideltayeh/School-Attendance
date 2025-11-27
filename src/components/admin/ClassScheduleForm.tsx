@@ -219,8 +219,9 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
     
     const teacher = teachers.find(t => t.id === selectedTeacher);
     const selectedClassObj = availableClasses.find(c => c.id === selectedClass);
+    const selectedRoomObj = availableRooms.find(r => r.id === selectedRoom);
     
-    if (!teacher || !selectedClassObj || !selectedRoom) {
+    if (!teacher || !selectedClassObj || !selectedRoomObj) {
       toast({
         title: "Error",
         description: "Invalid selection - please try again",
@@ -236,7 +237,7 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
       classId: selectedClass,
       className: `${selectedClassObj.name} (${selectedClassObj.subject})`,
       roomId: selectedRoom,
-      roomName: selectedRoom,
+      roomName: selectedRoomObj.name,
       day: selectedDay,
       period: parseInt(selectedPeriod),
       week: week
@@ -328,8 +329,10 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
             </SelectTrigger>
             <SelectContent>
               {availableRooms.map((room) => (
-                <SelectItem key={room.id} value={room.name}>
+                <SelectItem key={room.id} value={room.id}>
                   {room.name}
+                  {room.building && ` - ${room.building}`}
+                  {room.capacity && ` (Cap: ${room.capacity})`}
                 </SelectItem>
               ))}
             </SelectContent>

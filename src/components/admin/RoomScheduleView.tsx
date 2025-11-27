@@ -22,12 +22,17 @@ interface ClassSchedule {
     grade: string;
     section: string;
     subject: string;
-    room_number: string;
     teacher_id: string | null;
     teachers: {
       full_name: string;
     } | null;
   };
+  rooms: {
+    id: string;
+    name: string;
+    building: string | null;
+    floor: number | null;
+  } | null;
 }
 
 interface RoomScheduleEntry {
@@ -66,7 +71,7 @@ export function RoomScheduleView() {
 
       if (periodsError) throw periodsError;
 
-      // Load class schedules with class details
+      // Load class schedules with class details and room information
       const { data: schedulesData, error: schedulesError } = await supabase
         .from('class_schedules')
         .select(`
@@ -76,11 +81,16 @@ export function RoomScheduleView() {
             grade,
             section,
             subject,
-            room_number,
             teacher_id,
             teachers (
               full_name
             )
+          ),
+          rooms:room_id (
+            id,
+            name,
+            building,
+            floor
           )
         `);
 
@@ -89,11 +99,11 @@ export function RoomScheduleView() {
       setPeriods(periodsData || []);
       setSchedules(schedulesData || []);
 
-      // Extract unique rooms
+      // Extract unique rooms from the rooms relation
       const uniqueRooms = new Set<string>();
       schedulesData?.forEach((schedule: any) => {
-        if (schedule.classes?.room_number) {
-          uniqueRooms.add(schedule.classes.room_number);
+        if (schedule.rooms?.name) {
+          uniqueRooms.add(schedule.rooms.name);
         }
       });
       setRooms(Array.from(uniqueRooms).sort());
@@ -113,8 +123,8 @@ export function RoomScheduleView() {
     // Get all unique rooms from schedules
     const roomsSet = new Set<string>();
     schedules.forEach((schedule) => {
-      if (schedule.classes?.room_number) {
-        roomsSet.add(schedule.classes.room_number);
+      if (schedule.rooms?.name) {
+        roomsSet.add(schedule.rooms.name);
       }
     });
 
@@ -125,7 +135,7 @@ export function RoomScheduleView() {
 
       // Fill in the schedule for each day
       schedules.forEach((schedule) => {
-        if (schedule.classes?.room_number === room) {
+        if (schedule.rooms?.name === room) {
           const periodIndex = periods.findIndex((p) => p.id === schedule.period_id);
           if (periodIndex !== -1) {
             const day = schedule.day.toLowerCase() as keyof Omit<RoomScheduleEntry, 'period'>;
