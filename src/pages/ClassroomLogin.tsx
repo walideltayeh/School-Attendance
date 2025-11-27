@@ -1,187 +1,380 @@
-
-import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "@/components/ui/use-toast";
-import { dataService, ClassSchedule } from "@/services/dataService";
-import { LogIn, Calendar, Clock, Users, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "@/hooks/use-toast";
+import { LogOut, Clock, BookOpen, MapPin } from "lucide-react";
+import { QRScanner } from "@/components/attendance/QRScanner";
+import { AttendanceScanner } from "@/components/attendance/AttendanceScanner";
+
+interface ScheduleEntry {
+  id: string;
+  period_number: number;
+  start_time: string;
+  end_time: string;
+  day: string;
+  class_name: string;
+  grade: string;
+  section: string;
+  subject: string;
+  room_name: string;
+  week_number: number;
+}
+
+interface ScanRecord {
+  id: string;
+  name: string;
+  success: boolean;
+  time: Date;
+  message: string;
+}
+
+interface ValidationResult {
+  valid: boolean;
+  error?: string;
+  student_id?: string;
+  class_id?: string;
+  schedule_id?: string;
+  student_name?: string;
+  class_name?: string;
+  grade?: string;
+  section?: string;
+}
 
 export default function ClassroomLogin() {
-  const { roomId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [teacherInfo, setTeacherInfo] = useState<any>(null);
+  const [roomInfo, setRoomInfo] = useState<any>(null);
+  const [todaySchedule, setTodaySchedule] = useState<ScheduleEntry[]>([]);
+  const [selectedSchedule, setSelectedSchedule] = useState<ScheduleEntry | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [recentScans, setRecentScans] = useState<ScanRecord[]>([]);
   
-  // Get the room from the roomId parameter
-  const room = roomId ? dataService.getRoom(roomId) : null;
-  
-  // Get today's schedule for this room
-  const todaySchedules = roomId ? dataService.getRoomScheduleForToday(roomId) : [];
-  
-  // Format the current time to display
-  const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const currentDate = new Date().toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  
-  // Sort schedules by period
-  const sortedSchedules = [...todaySchedules].sort((a, b) => a.period - b.period);
-  
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!username || !password) {
+  const roomId = searchParams.get("roomId");
+  const teacherId = searchParams.get("teacherId");
+
+  useEffect(() => {
+    if (roomId && teacherId) {
+      loadRoomAndTeacherInfo();
+      loadTodaySchedule();
+    }
+  }, [roomId, teacherId]);
+
+  const loadRoomAndTeacherInfo = async () => {
+    try {
+      // Load room info
+      const { data: room } = await supabase
+        .from("rooms")
+        .select("*")
+        .eq("id", roomId)
+        .maybeSingle();
+      
+      setRoomInfo(room);
+
+      // Load teacher info
+      const { data: teacher } = await supabase
+        .from("teachers")
+        .select("*")
+        .eq("id", teacherId)
+        .maybeSingle();
+      
+      setTeacherInfo(teacher);
+    } catch (error) {
+      console.error("Error loading info:", error);
+    }
+  };
+
+  const loadTodaySchedule = async () => {
+    try {
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
+      const todayIndex = new Date().getDay();
+      const today = dayNames[todayIndex];
+
+      // Skip if weekend
+      if (today === 'Sunday' || today === 'Saturday') {
+        setTodaySchedule([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("class_schedules")
+        .select(`
+          id,
+          day,
+          week_number,
+          class_id,
+          period_id,
+          room_id,
+          classes!inner(name, grade, section, subject, teacher_id),
+          periods!inner(period_number, start_time, end_time),
+          rooms!inner(name)
+        `)
+        .eq("classes.teacher_id", teacherId)
+        .eq("day", today);
+
+      if (error) throw error;
+
+      const scheduleEntries: ScheduleEntry[] = (data || []).map((entry: any) => ({
+        id: entry.id,
+        period_number: entry.periods.period_number,
+        start_time: entry.periods.start_time,
+        end_time: entry.periods.end_time,
+        day: entry.day,
+        class_name: entry.classes.name,
+        grade: entry.classes.grade,
+        section: entry.classes.section,
+        subject: entry.classes.subject,
+        room_name: entry.rooms.name,
+        week_number: entry.week_number,
+      }));
+
+      scheduleEntries.sort((a, b) => a.period_number - b.period_number);
+      setTodaySchedule(scheduleEntries);
+    } catch (error) {
+      console.error("Error loading schedule:", error);
       toast({
         title: "Error",
-        description: "Please enter both username and password",
+        description: "Failed to load today's schedule",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleScan = async (qrCode: string) => {
+    if (!selectedSchedule) {
+      toast({
+        title: "No Period Selected",
+        description: "Please select a period first",
         variant: "destructive",
       });
       return;
     }
-    
-    setLoading(true);
-    
+
     try {
-      // Simulate an API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Verify the teacher's credentials
-      const teacher = dataService.verifyTeacherLogin(username, password);
-      
-      if (teacher) {
-        toast({
-          title: "Login successful",
-          description: `Welcome, ${teacher.name}!`,
+      setLoading(true);
+
+      // Call the validation function
+      const { data: validationData, error: validationError } = await supabase
+        .rpc("validate_student_attendance", {
+          _student_qr: qrCode,
+          _schedule_id: selectedSchedule.id,
+          _recorded_by: teacherId,
         });
-        
-        // Navigate to the attendance scanning page with teacher and room context
-        navigate(`/attendance/scan/${roomId}/${teacher.id}`);
-      } else {
+
+      if (validationError) throw validationError;
+
+      const validationResult = (validationData as unknown) as ValidationResult;
+
+      if (!validationResult.valid) {
         toast({
-          title: "Login failed",
-          description: "Invalid username or password",
+          title: "Validation Failed",
+          description: validationResult.error || "Unknown error",
           variant: "destructive",
         });
+        
+        setRecentScans(prev => [{
+          id: qrCode,
+          name: "Unknown Student",
+          success: false,
+          time: new Date(),
+          message: validationResult.error || "Invalid QR code",
+        }, ...prev.slice(0, 9)]);
+        return;
       }
+
+      // Record attendance
+      const { error: insertError } = await supabase
+        .from("attendance_records")
+        .insert({
+          student_id: validationResult.student_id!,
+          class_id: validationResult.class_id!,
+          schedule_id: validationResult.schedule_id!,
+          recorded_by: teacherId!,
+          status: "present",
+          type: "classroom",
+          date: new Date().toISOString().split('T')[0],
+          scanned_at: new Date().toISOString(),
+        });
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: "Attendance Recorded",
+        description: `${validationResult.student_name} marked present`,
+      });
+
+      setRecentScans(prev => [{
+        id: validationResult.student_id!,
+        name: validationResult.student_name!,
+        success: true,
+        time: new Date(),
+        message: "Checked In",
+      }, ...prev.slice(0, 9)]);
+
     } catch (error) {
+      console.error("Error recording attendance:", error);
       toast({
         title: "Error",
-        description: "An error occurred during login",
+        description: "Failed to record attendance",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
-  
+
+  const handleLogout = () => {
+    navigate("/attendance");
+  };
+
+  if (!roomId || !teacherId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10 p-4">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Invalid Access</CardTitle>
+            <CardDescription>
+              This page requires valid room and teacher parameters
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => navigate("/attendance")} className="w-full">
+              Go to Attendance
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl">
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        <div className="md:col-span-3">
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
-                Today's Schedule
-              </CardTitle>
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-accent/10 p-4">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Classroom Device</CardTitle>
               <CardDescription>
-                {currentDate}
+                {roomInfo?.name && teacherInfo?.full_name && (
+                  <>Room: {roomInfo.name} | Teacher: {teacherInfo.full_name}</>
+                )}
               </CardDescription>
-            </CardHeader>
-            <CardContent className="overflow-auto" style={{ maxHeight: "400px" }}>
-              {sortedSchedules.length > 0 ? (
-                <div className="space-y-4">
-                  {sortedSchedules.map((schedule, index) => (
-                    <div key={index} className="border rounded-md p-4 hover:bg-muted/50 transition-colors">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                            {schedule.period}
-                          </div>
-                          <div>
-                            <h3 className="font-medium text-base">{schedule.className}</h3>
-                            <p className="text-sm text-muted-foreground">Period {schedule.period}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-xs bg-secondary px-2 py-0.5 rounded-full">
-                            Week {schedule.week}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-x-6 text-sm mt-2">
-                        <div className="flex items-center gap-1">
-                          <User className="h-4 w-4 text-primary/70" />
-                          <span>{schedule.teacherName}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-48 text-center">
-                  <Calendar className="h-10 w-10 text-muted-foreground mb-2" />
-                  <p className="text-muted-foreground">No classes scheduled for today in this room</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-        
-        <div className="md:col-span-2">
+            </div>
+            <Button variant="outline" onClick={handleLogout} size="sm">
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
+          </CardHeader>
+        </Card>
+
+        {/* Today's Schedule */}
+        {todaySchedule.length > 0 ? (
           <Card>
             <CardHeader>
-              <div className="flex flex-col items-center text-center">
-                <div className="flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
-                  <User className="h-8 w-8 text-primary" />
-                </div>
-                <CardTitle>Teacher Login</CardTitle>
-                <CardDescription className="mt-2">
-                  {room ? `${room.name} - ${currentTime}` : "Classroom Login"}
-                </CardDescription>
-              </div>
+              <CardTitle>Today's Schedule</CardTitle>
+              <CardDescription>Select a period to start attendance</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    placeholder="Enter your username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <>Loading...</>
-                  ) : (
-                    <>
-                      <LogIn className="h-4 w-4 mr-2" /> Login
-                    </>
-                  )}
-                </Button>
-              </form>
+              <div className="grid gap-3">
+                {todaySchedule.map((schedule) => (
+                  <Card
+                    key={schedule.id}
+                    className={`cursor-pointer transition-colors ${
+                      selectedSchedule?.id === schedule.id
+                        ? "border-primary bg-primary/5"
+                        : "hover:border-primary/50"
+                    }`}
+                    onClick={() => {
+                      setSelectedSchedule(schedule);
+                      setIsScanning(false);
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">Period {schedule.period_number}</Badge>
+                            <span className="font-semibold">
+                              {schedule.class_name} - {schedule.subject}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {schedule.start_time} - {schedule.end_time}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {schedule.room_name}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <BookOpen className="h-3 w-3" />
+                              Grade {schedule.grade} - {schedule.section}
+                            </span>
+                          </div>
+                        </div>
+                        {selectedSchedule?.id === schedule.id && (
+                          <Badge>Selected</Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </CardContent>
-            <CardFooter className="flex justify-center border-t pt-4">
-              <p className="text-sm text-muted-foreground">
-                This device is for teacher use only
-              </p>
-            </CardFooter>
           </Card>
-        </div>
+        ) : (
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-center text-muted-foreground">
+                No classes scheduled for today
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* QR Scanner */}
+        {selectedSchedule && (
+          <div className="space-y-4">
+            {!isScanning ? (
+              <Button
+                onClick={() => setIsScanning(true)}
+                size="lg"
+                className="w-full"
+              >
+                Start Attendance for Period {selectedSchedule.period_number}
+              </Button>
+            ) : (
+              <>
+                <QRScanner onScan={handleScan} isActive={isScanning} />
+                <Button
+                  onClick={() => setIsScanning(false)}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Stop Scanning
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Recent Scans */}
+        {recentScans.length > 0 && (
+          <AttendanceScanner
+            type="classroom"
+            selectedItemName={selectedSchedule?.class_name || ""}
+            isScanning={isScanning}
+            onStartScan={() => setIsScanning(true)}
+            onStopScan={() => setIsScanning(false)}
+            recentScans={recentScans}
+          />
+        )}
       </div>
     </div>
   );
