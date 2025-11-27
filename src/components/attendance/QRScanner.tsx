@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Camera, Scan } from "lucide-react";
+import { Camera, Scan, Keyboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CameraQRScanner } from "./CameraQRScanner";
 
 interface QRScannerProps {
   onScan: (qrCode: string) => void;
@@ -13,6 +14,7 @@ interface QRScannerProps {
 export function QRScanner({ onScan, isActive }: QRScannerProps) {
   const [manualInput, setManualInput] = useState("");
   const [scanMode, setScanMode] = useState<"camera" | "manual">("manual");
+  const [showCamera, setShowCamera] = useState(false);
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,6 +26,16 @@ export function QRScanner({ onScan, isActive }: QRScannerProps) {
 
   if (!isActive) {
     return null;
+  }
+
+  if (showCamera) {
+    return (
+      <CameraQRScanner
+        onScan={onScan}
+        isActive={showCamera}
+        onClose={() => setShowCamera(false)}
+      />
+    );
   }
 
   return (
@@ -41,23 +53,29 @@ export function QRScanner({ onScan, isActive }: QRScannerProps) {
         <div className="flex gap-2">
           <Button
             variant={scanMode === "manual" ? "default" : "outline"}
-            onClick={() => setScanMode("manual")}
+            onClick={() => {
+              setScanMode("manual");
+              setShowCamera(false);
+            }}
             className="flex-1"
           >
+            <Keyboard className="mr-2 h-4 w-4" />
             Manual Entry
           </Button>
           <Button
             variant={scanMode === "camera" ? "default" : "outline"}
-            onClick={() => setScanMode("camera")}
+            onClick={() => {
+              setScanMode("camera");
+              setShowCamera(true);
+            }}
             className="flex-1"
-            disabled
           >
             <Camera className="mr-2 h-4 w-4" />
-            Camera (Coming Soon)
+            Camera Scanner
           </Button>
         </div>
 
-        {scanMode === "manual" && (
+        {scanMode === "manual" && !showCamera && (
           <form onSubmit={handleManualSubmit} className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor="qr-input">Student QR Code</Label>
@@ -80,11 +98,6 @@ export function QRScanner({ onScan, isActive }: QRScannerProps) {
           </form>
         )}
 
-        {scanMode === "camera" && (
-          <div className="flex items-center justify-center h-64 bg-muted rounded-lg">
-            <p className="text-muted-foreground">Camera scanning coming soon</p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
