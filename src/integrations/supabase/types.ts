@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       attendance_records: {
         Row: {
+          bus_route_id: string | null
           class_id: string
           created_at: string
           date: string
@@ -23,10 +24,13 @@ export type Database = {
           notes: string | null
           recorded_by: string
           scanned_at: string | null
+          schedule_id: string | null
           status: string
           student_id: string
+          type: string | null
         }
         Insert: {
+          bus_route_id?: string | null
           class_id: string
           created_at?: string
           date: string
@@ -34,10 +38,13 @@ export type Database = {
           notes?: string | null
           recorded_by: string
           scanned_at?: string | null
+          schedule_id?: string | null
           status: string
           student_id: string
+          type?: string | null
         }
         Update: {
+          bus_route_id?: string | null
           class_id?: string
           created_at?: string
           date?: string
@@ -45,10 +52,19 @@ export type Database = {
           notes?: string | null
           recorded_by?: string
           scanned_at?: string | null
+          schedule_id?: string | null
           status?: string
           student_id?: string
+          type?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "attendance_records_bus_route_id_fkey"
+            columns: ["bus_route_id"]
+            isOneToOne: false
+            referencedRelation: "bus_routes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "attendance_records_class_id_fkey"
             columns: ["class_id"]
@@ -61,6 +77,13 @@ export type Database = {
             columns: ["recorded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "class_schedules"
             referencedColumns: ["id"]
           },
           {
@@ -129,6 +152,7 @@ export type Database = {
           driver_phone: string
           id: string
           name: string
+          qr_code: string | null
           return_time: string
           route_code: string
           status: Database["public"]["Enums"]["user_status"] | null
@@ -141,6 +165,7 @@ export type Database = {
           driver_phone: string
           id?: string
           name: string
+          qr_code?: string | null
           return_time: string
           route_code: string
           status?: Database["public"]["Enums"]["user_status"] | null
@@ -153,6 +178,7 @@ export type Database = {
           driver_phone?: string
           id?: string
           name?: string
+          qr_code?: string | null
           return_time?: string
           route_code?: string
           status?: Database["public"]["Enums"]["user_status"] | null
@@ -509,6 +535,7 @@ export type Database = {
           grade: string
           id: string
           photo_url: string | null
+          qr_code: string | null
           section: string
           status: Database["public"]["Enums"]["user_status"] | null
           student_code: string
@@ -527,6 +554,7 @@ export type Database = {
           grade: string
           id?: string
           photo_url?: string | null
+          qr_code?: string | null
           section: string
           status?: Database["public"]["Enums"]["user_status"] | null
           student_code: string
@@ -545,6 +573,7 @@ export type Database = {
           grade?: string
           id?: string
           photo_url?: string | null
+          qr_code?: string | null
           section?: string
           status?: Database["public"]["Enums"]["user_status"] | null
           student_code?: string
@@ -586,6 +615,7 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          qr_code: string | null
           subjects: string[]
           teacher_code: string
           updated_at: string
@@ -597,6 +627,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          qr_code?: string | null
           subjects?: string[]
           teacher_code: string
           updated_at?: string
@@ -608,6 +639,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          qr_code?: string | null
           subjects?: string[]
           teacher_code?: string
           updated_at?: string
@@ -657,6 +689,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_missing_qr_codes: { Args: never; Returns: undefined }
       get_user_student_id: { Args: { _user_id: string }; Returns: string }
       get_user_teacher_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
@@ -665,6 +698,14 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      validate_student_attendance: {
+        Args: {
+          _recorded_by: string
+          _schedule_id: string
+          _student_qr: string
+        }
+        Returns: Json
       }
     }
     Enums: {
