@@ -10,6 +10,7 @@ import { PlusCircle, Edit, Trash2, Building2, Link } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { QuickRoomAssignment } from "./QuickRoomAssignment";
 
 interface Room {
   id: string;
@@ -34,9 +35,8 @@ export function RoomManagement() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [isQuickAssignOpen, setIsQuickAssignOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
-  const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     building: "",
@@ -320,6 +320,11 @@ export function RoomManagement() {
     setIsDeleteDialogOpen(true);
   };
 
+  const openQuickAssignDialog = (room: Room) => {
+    setSelectedRoom(room);
+    setIsQuickAssignOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -370,6 +375,14 @@ export function RoomManagement() {
                     <TableCell>{room.capacity || "-"}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openQuickAssignDialog(room)}
+                          title="Quick assign to class and period"
+                        >
+                          <Link className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -570,6 +583,21 @@ export function RoomManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {selectedRoom && (
+        <QuickRoomAssignment
+          room={selectedRoom}
+          isOpen={isQuickAssignOpen}
+          onClose={() => setIsQuickAssignOpen(false)}
+          onSuccess={() => {
+            loadRooms();
+            toast({
+              title: "Success",
+              description: "Schedule created successfully",
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

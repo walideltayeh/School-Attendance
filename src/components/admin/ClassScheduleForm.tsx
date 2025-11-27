@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { dataService } from "@/services/dataService";
 import { Save, Calendar } from "lucide-react";
@@ -29,6 +30,8 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
   const [applyToAllWeeks, setApplyToAllWeeks] = useState(false);
   const [availablePeriods, setAvailablePeriods] = useState<any[]>([]);
   const [availableRooms, setAvailableRooms] = useState<any[]>([]);
+  const [suggestedRooms, setSuggestedRooms] = useState<string[]>([]);
+  const [classEnrollmentCount, setClassEnrollmentCount] = useState<number>(0);
   
   // Show all classes when creating a schedule - any teacher can teach any class
   const availableClasses = selectedTeacher ? classes : [];
@@ -120,6 +123,72 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
       setApplyToAllWeeks(false);
     }
   }, [editingSchedule]);
+
+  // Load enrollment count when class is selected
+  useEffect(() => {
+    if (selectedClass) {
+      loadClassEnrollment();
+    }
+  }, [selectedClass]);
+
+  // Generate room suggestions when all criteria are selected
+  useEffect(() => {
+    if (selectedClass && selectedDay && selectedPeriod && weekSchedule.length > 0) {
+      generateRoomSuggestions();
+    }
+  }, [selectedClass, selectedDay, selectedPeriod, weekSchedule, availableRooms, classEnrollmentCount]);
+
+  const loadClassEnrollment = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('class_enrollments')
+        .select('*', { count: 'exact', head: true })
+        .eq('class_id', selectedClass);
+
+      if (error) throw error;
+      setClassEnrollmentCount(count || 0);
+    } catch (error) {
+      console.error('Error loading enrollment:', error);
+    }
+  };
+
+  const generateRoomSuggestions = async () => {
+    try {
+      const suggestions: string[] = [];
+
+      // Check which rooms are available for the selected time slot
+      for (const room of availableRooms) {
+        let isAvailable = true;
+
+        // Check availability for each week in the schedule
+        for (const week of weekSchedule) {
+          const { data: conflicts } = await supabase
+            .from('class_schedules')
+            .select('id')
+            .eq('room_id', room.id)
+            .eq('day', selectedDay as 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday')
+            .eq('period_id', selectedPeriod)
+            .eq('week_number', week);
+
+          if (conflicts && conflicts.length > 0) {
+            isAvailable = false;
+            break;
+          }
+        }
+
+        // If room is available and has sufficient capacity, suggest it
+        if (isAvailable) {
+          if (!room.capacity || room.capacity >= classEnrollmentCount) {
+            suggestions.push(room.id);
+          }
+        }
+      }
+
+      setSuggestedRooms(suggestions);
+    } catch (error) {
+      console.error('Error generating room suggestions:', error);
+    }
+  };
   
   const handleWeekChange = (week: number) => {
     if (applyToAllWeeks) {
@@ -319,15 +388,39 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
               <SelectValue placeholder={availableRooms.length === 0 ? "No rooms configured" : "Select room"} />
             </SelectTrigger>
             <SelectContent>
-              {availableRooms.map((room) => (
-                <SelectItem key={room.id} value={room.id}>
-                  {room.name}
-                  {room.building && ` - ${room.building}`}
-                  {room.capacity && ` (Cap: ${room.capacity})`}
-                </SelectItem>
-              ))}
+              {availableRooms.map((room) => {
+                const isSuggested = suggestedRooms.includes(room.id);
+                const enrollmentFits = !room.capacity || room.capacity >= classEnrollmentCount;
+                
+                return (
+                  <SelectItem key={room.id} value={room.id}>
+                    <div className="flex items-center justify-between w-full gap-2">
+                      <span>
+                        {room.name}
+                        {room.building && ` - ${room.building}`}
+                        {room.capacity && ` (Cap: ${room.capacity})`}
+                      </span>
+                      {isSuggested && (
+                        <Badge variant="default" className="ml-2 bg-green-500">
+                          Suggested
+                        </Badge>
+                      )}
+                      {!enrollmentFits && classEnrollmentCount > 0 && (
+                        <Badge variant="destructive" className="ml-2 text-xs">
+                          Too Small
+                        </Badge>
+                      )}
+                    </div>
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
+          {classEnrollmentCount > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {classEnrollmentCount} student{classEnrollmentCount !== 1 ? 's' : ''} enrolled • {suggestedRooms.length} room{suggestedRooms.length !== 1 ? 's' : ''} suggested
+            </p>
+          )}
         </div>
         
         <div className="space-y-2">
