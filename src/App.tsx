@@ -40,6 +40,7 @@ function App() {
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/attendance/scan/:roomId/:teacherId" element={<Attendance />} />
             <Route path="/classroom-login" element={<ClassroomLogin />} />
+            <Route path="/classroom-login/:roomId" element={<ClassroomLogin />} />
             <Route path="/student-portal" element={<StudentPortal />} />
             <Route path="/bus-attendance" element={<BusAttendance />} />
             <Route path="/calendar" element={<Calendar />} />
