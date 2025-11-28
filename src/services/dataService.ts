@@ -9,6 +9,7 @@ export interface Student {
   allergies: boolean;
   busRoute?: string;
   status: "active" | "inactive";
+  isEnrolled?: boolean;
 }
 
 export interface Teacher {

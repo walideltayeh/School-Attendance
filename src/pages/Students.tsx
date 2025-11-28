@@ -100,10 +100,25 @@ export default function Students() {
       console.error('Error loading bus assignments:', busError);
     }
 
+    // Fetch class enrollments for all students
+    const { data: enrollments, error: enrollError } = await supabase
+      .from('class_enrollments')
+      .select('student_id');
+
+    if (enrollError) {
+      console.error('Error loading enrollments:', enrollError);
+    }
+
     // Create a map of student_id to route_id
     const busAssignmentMap = new Map<string, string>();
     (busAssignments || []).forEach((assignment: any) => {
       busAssignmentMap.set(assignment.student_id, assignment.route_id);
+    });
+
+    // Create a set of enrolled student IDs
+    const enrolledStudentIds = new Set<string>();
+    (enrollments || []).forEach((enrollment: any) => {
+      enrolledStudentIds.add(enrollment.student_id);
     });
 
     const mappedStudents: Student[] = (data || []).map((s: any) => ({
@@ -114,7 +129,8 @@ export default function Students() {
       bloodType: s.blood_type || '',
       allergies: s.allergies || false,
       busRoute: busAssignmentMap.get(s.id),
-      status: s.status as 'active' | 'inactive'
+      status: s.status as 'active' | 'inactive',
+      isEnrolled: enrolledStudentIds.has(s.id)
     }));
     setStudents(mappedStudents);
   };
@@ -325,6 +341,7 @@ export default function Students() {
                 <TableHead>ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Grade/Section</TableHead>
+                <TableHead>Enrollment</TableHead>
                 <TableHead>Teacher</TableHead>
                 <TableHead>Blood Type</TableHead>
                 <TableHead>Allergies</TableHead>
@@ -339,6 +356,18 @@ export default function Students() {
                   <TableCell className="font-medium">{student.id}</TableCell>
                   <TableCell>{student.name}</TableCell>
                   <TableCell>{student.grade} - {student.section}</TableCell>
+                  <TableCell>
+                    {student.isEnrolled ? (
+                      <Badge variant="default" className="bg-green-600">
+                        <Check className="h-3 w-3 mr-1" />
+                        Enrolled
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="bg-yellow-600 text-white">
+                        Not Enrolled
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell>{student.teacher}</TableCell>
                   <TableCell>{student.bloodType}</TableCell>
                   <TableCell>{student.allergies ? "Yes" : "No"}</TableCell>
