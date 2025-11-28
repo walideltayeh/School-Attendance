@@ -907,6 +907,7 @@ const Admin = () => {
       >
         <TabsList className="grid w-full grid-cols-7 mb-6">
           <TabsTrigger value="rooms">Rooms</TabsTrigger>
+          <TabsTrigger value="periods">Periods</TabsTrigger>
           <TabsTrigger value="classes">
             <BookOpen className="h-4 w-4 mr-2" />
             Manage Classes
@@ -914,7 +915,6 @@ const Admin = () => {
           <TabsTrigger value="teachers">Manage Teachers</TabsTrigger>
           <TabsTrigger value="buses">Bus Routes</TabsTrigger>
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
-          <TabsTrigger value="periods">Periods</TabsTrigger>
           <TabsTrigger value="qrcodes">QR Codes</TabsTrigger>
         </TabsList>
         
@@ -925,6 +925,20 @@ const Admin = () => {
             <RoomOccupancyCalendar />
             <RoomScheduleView />
           </div>
+        </TabsContent>
+        
+        <TabsContent value="periods">
+          <Card>
+            <CardHeader className="border-b bg-muted/50">
+              <CardTitle className="text-2xl font-bold text-primary">Class Period Times</CardTitle>
+              <CardDescription>
+                Configure the start and end times for each class period
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ClassPeriodsForm />
+            </CardContent>
+          </Card>
         </TabsContent>
         
         <TabsContent value="classes">
@@ -1238,20 +1252,6 @@ const Admin = () => {
               </CardContent>
             </Card>
           )}
-        </TabsContent>
-        
-        <TabsContent value="periods">
-          <Card>
-            <CardHeader className="border-b bg-muted/50">
-              <CardTitle className="text-2xl font-bold text-primary">Class Period Times</CardTitle>
-              <CardDescription>
-                Configure the start and end times for each class period
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ClassPeriodsForm />
-            </CardContent>
-          </Card>
         </TabsContent>
         
         <TabsContent value="qrcodes">
