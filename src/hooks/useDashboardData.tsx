@@ -203,15 +203,16 @@ export function useDashboardData(): DashboardData {
         totalLate += counts.late;
       });
 
-      const total = totalPresent + totalAbsent + totalLate;
-      const presentPercent = total > 0 ? parseFloat(((totalPresent / total) * 100).toFixed(1)) : 0;
-      const absentPercent = total > 0 ? parseFloat(((totalAbsent / total) * 100).toFixed(1)) : 0;
+      // Total should be total enrolled students, not sum of attendance records
+      const totalRecords = totalPresent + totalAbsent + totalLate;
+      const presentPercent = totalRecords > 0 ? parseFloat(((totalPresent / totalRecords) * 100).toFixed(1)) : 0;
+      const absentPercent = totalRecords > 0 ? parseFloat(((totalAbsent / totalRecords) * 100).toFixed(1)) : 0;
 
       setAttendanceOverview({
         present: totalPresent,
         absent: totalAbsent,
         late: totalLate,
-        total,
+        total: totalStudents, // Use actual enrolled students count
         presentPercent,
         absentPercent,
         trend: "+5.2%" // You can calculate this based on comparison with previous week
