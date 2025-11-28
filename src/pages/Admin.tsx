@@ -28,6 +28,7 @@ import { RoomScheduleView } from "@/components/admin/RoomScheduleView";
 import { RoomOccupancyCalendar } from "@/components/admin/RoomOccupancyCalendar";
 import { BulkRoomImport } from "@/components/admin/BulkRoomImport";
 import { BulkQRGenerator } from "@/components/admin/BulkQRGenerator";
+import { BulkScheduleImport } from "@/components/admin/BulkScheduleImport";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -1199,6 +1200,12 @@ const Admin = () => {
                 teachers={teachers}
                 classes={classes}
               />
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardContent className="pt-6">
+              <BulkScheduleImport />
             </CardContent>
           </Card>
           
