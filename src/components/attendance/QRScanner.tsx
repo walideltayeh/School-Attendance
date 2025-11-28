@@ -78,17 +78,17 @@ export function QRScanner({ onScan, isActive }: QRScannerProps) {
         {scanMode === "manual" && !showCamera && (
           <form onSubmit={handleManualSubmit} className="space-y-3">
             <div className="space-y-2">
-              <Label htmlFor="qr-input">Student QR Code</Label>
+              <Label htmlFor="qr-input">Student Code</Label>
               <Input
                 id="qr-input"
                 value={manualInput}
                 onChange={(e) => setManualInput(e.target.value)}
-                placeholder="Enter or scan QR code..."
+                placeholder="Enter student code..."
                 autoFocus
                 className="text-lg"
               />
               <p className="text-xs text-muted-foreground">
-                Format: STUDENT:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+                Enter the student code (same as registration)
               </p>
             </div>
             <Button type="submit" className="w-full" disabled={!manualInput.trim()}>

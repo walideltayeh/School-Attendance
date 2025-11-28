@@ -195,10 +195,40 @@ export default function ClassroomLogin() {
     try {
       setLoading(true);
 
+      // If input doesn't start with "STUDENT:", treat it as a student_code and look it up
+      let studentQrCode = qrCode;
+      if (!qrCode.startsWith("STUDENT:")) {
+        const { data: student, error: studentError } = await supabase
+          .from("students")
+          .select("qr_code")
+          .eq("student_code", qrCode)
+          .maybeSingle();
+
+        if (studentError || !student) {
+          toast({
+            title: "Student Not Found",
+            description: "Invalid student code",
+            variant: "destructive",
+          });
+          
+          setRecentScans(prev => [{
+            id: qrCode,
+            name: "Unknown Student",
+            success: false,
+            time: new Date(),
+            message: "Invalid student code",
+          }, ...prev.slice(0, 9)]);
+          setLoading(false);
+          return;
+        }
+
+        studentQrCode = student.qr_code!;
+      }
+
       // Call the validation function
       const { data: validationData, error: validationError } = await supabase
         .rpc("validate_student_attendance", {
-          _student_qr: qrCode,
+          _student_qr: studentQrCode,
           _schedule_id: selectedSchedule.id,
           _recorded_by: selectedTeacherId,
         });
