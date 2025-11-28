@@ -1,5 +1,5 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Bell, 
   Clock, 
@@ -17,80 +17,105 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
 
-// Mock notification data
-const notifications = [
-  { 
-    id: 1, 
-    studentName: "Emma Thompson",
-    studentId: "ST001",
-    type: "classroom",
-    location: "Grade 5 - Section A",
-    time: "08:02 AM",
-    timeAgo: "2 minutes ago",
-    date: "Today",
-    read: false
-  },
-  { 
-    id: 2, 
-    studentName: "Noah Martinez",
-    studentId: "ST002",
-    type: "bus",
-    location: "Bus Route #2",
-    time: "07:45 AM",
-    timeAgo: "19 minutes ago",
-    date: "Today",
-    read: false
-  },
-  { 
-    id: 3, 
-    studentName: "Olivia Wilson",
-    studentId: "ST003",
-    type: "classroom",
-    location: "Grade 6 - Section A",
-    time: "08:05 AM",
-    timeAgo: "35 minutes ago",
-    date: "Today",
-    read: true
-  },
-  { 
-    id: 4, 
-    studentName: "William Brown",
-    studentId: "ST006",
-    type: "bus",
-    location: "Bus Route #1",
-    time: "07:32 AM",
-    timeAgo: "42 minutes ago",
-    date: "Today",
-    read: true
-  },
-  { 
-    id: 5, 
-    studentName: "Emma Thompson",
-    studentId: "ST001",
-    type: "classroom",
-    location: "Grade 5 - Section A",
-    time: "03:16 PM",
-    timeAgo: "1 day ago",
-    date: "Yesterday",
-    read: true
-  },
-  { 
-    id: 6, 
-    studentName: "Noah Martinez",
-    studentId: "ST002",
-    type: "bus",
-    location: "Bus Route #2",
-    time: "03:42 PM",
-    timeAgo: "1 day ago",
-    date: "Yesterday",
-    read: true
-  }
-];
+interface Notification {
+  id: string;
+  studentName: string;
+  studentId: string;
+  type: "classroom" | "bus";
+  location: string;
+  time: string;
+  timeAgo: string;
+  date: string;
+  read: boolean;
+}
 
 export default function Notifications() {
   const [activeTab, setActiveTab] = useState<string>("all");
-  const [notificationList, setNotificationList] = useState(notifications);
+  const [notificationList, setNotificationList] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const loadNotifications = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch recent attendance records (last 7 days)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .select(`
+          id,
+          scanned_at,
+          type,
+          status,
+          students(full_name, student_code),
+          classes(name, grade, section),
+          bus_routes(name)
+        `)
+        .gte('date', sevenDaysAgoStr)
+        .order('scanned_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      const notifications: Notification[] = (data || []).map((record: any) => {
+        const scannedAt = new Date(record.scanned_at);
+        const now = new Date();
+        const diffMs = now.getTime() - scannedAt.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        let timeAgo = "";
+        if (diffMins < 1) timeAgo = "Just now";
+        else if (diffMins < 60) timeAgo = `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+        else if (diffHours < 24) timeAgo = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+        else timeAgo = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+
+        let date = "";
+        if (diffDays === 0) date = "Today";
+        else if (diffDays === 1) date = "Yesterday";
+        else date = scannedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+        const location = record.type === 'bus' 
+          ? record.bus_routes?.name || 'Unknown Bus'
+          : record.classes 
+            ? `${record.classes.grade} - Section ${record.classes.section}`
+            : 'Unknown Class';
+
+        return {
+          id: record.id,
+          studentName: record.students?.full_name || 'Unknown Student',
+          studentId: record.students?.student_code || 'N/A',
+          type: record.type === 'bus' ? 'bus' : 'classroom',
+          location,
+          time: scannedAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+          timeAgo,
+          date,
+          read: diffDays > 0 // Mark as read if older than today
+        };
+      });
+
+      setNotificationList(notifications);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load notifications",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const filteredNotifications = activeTab === "all" 
     ? notificationList 
@@ -102,7 +127,7 @@ export default function Notifications() {
     setNotificationList(notificationList.map(n => ({ ...n, read: true })));
   };
   
-  const markAsRead = (id: number) => {
+  const markAsRead = (id: string) => {
     setNotificationList(notificationList.map(n => 
       n.id === id ? { ...n, read: true } : n
     ));
@@ -118,8 +143,8 @@ export default function Notifications() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="blue-outline">
-            <RefreshCw className="mr-2 h-4 w-4" />
+          <Button variant="blue-outline" onClick={loadNotifications} disabled={loading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button variant="blue">
@@ -172,7 +197,15 @@ export default function Notifications() {
             </TabsList>
             
             <TabsContent value={activeTab} className="space-y-4">
-              {filteredNotifications.length === 0 ? (
+              {loading ? (
+                <div className="text-center py-8">
+                  <RefreshCw className="h-12 w-12 text-muted-foreground mx-auto mb-3 animate-spin" />
+                  <h3 className="font-medium text-lg mb-1">Loading notifications...</h3>
+                  <p className="text-muted-foreground">
+                    Please wait while we fetch your notifications
+                  </p>
+                </div>
+              ) : filteredNotifications.length === 0 ? (
                 <div className="text-center py-8">
                   <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
                   <h3 className="font-medium text-lg mb-1">No notifications</h3>
@@ -259,7 +292,7 @@ export default function Notifications() {
                               )}
                             </div>
                           </div>
-                        ))}
+                         ))}
                     </div>
                   ))}
                 </>
