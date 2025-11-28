@@ -129,6 +129,18 @@ export function Sidebar({ isOpen }: SidebarProps) {
             <span>Notifications</span>
           </NavLink>
           <NavLink 
+            to="/parent-portal" 
+            className={({ isActive }) => 
+              cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-primary/85 hover:text-primary-foreground",
+                isActive ? "bg-muted text-foreground" : ""
+              )
+            }
+          >
+            <Users className="h-5 w-5" />
+            <span>Parent Portal</span>
+          </NavLink>
+          <NavLink 
             to="/admin" 
             className={({ isActive }) => 
               cn(
