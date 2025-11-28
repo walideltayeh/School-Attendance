@@ -255,14 +255,14 @@ export default function ClassroomLogin() {
         return;
       }
 
-      // Record attendance
+      // Record attendance (recorded_by is null for classroom device)
       const { error: insertError } = await supabase
         .from("attendance_records")
         .insert({
           student_id: validationResult.student_id!,
           class_id: validationResult.class_id!,
           schedule_id: validationResult.schedule_id!,
-          recorded_by: selectedTeacherId!,
+          recorded_by: null,
           status: "present",
           type: "classroom",
           date: new Date().toISOString().split('T')[0],

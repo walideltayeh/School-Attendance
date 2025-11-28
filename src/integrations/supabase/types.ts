@@ -22,7 +22,7 @@ export type Database = {
           date: string
           id: string
           notes: string | null
-          recorded_by: string
+          recorded_by: string | null
           scanned_at: string | null
           schedule_id: string | null
           status: string
@@ -36,7 +36,7 @@ export type Database = {
           date: string
           id?: string
           notes?: string | null
-          recorded_by: string
+          recorded_by?: string | null
           scanned_at?: string | null
           schedule_id?: string | null
           status: string
@@ -50,7 +50,7 @@ export type Database = {
           date?: string
           id?: string
           notes?: string | null
-          recorded_by?: string
+          recorded_by?: string | null
           scanned_at?: string | null
           schedule_id?: string | null
           status?: string
