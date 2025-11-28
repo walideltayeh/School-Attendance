@@ -129,42 +129,35 @@ export default function Attendance() {
   }, []);
 
   const handleStartScan = () => {
-    // Determine selected class ID based on grade, section, subject
-    const matchingClass = classes.find(c => 
-      c.grade === selectedGrade && 
-      c.section === selectedSection && 
-      c.subject === selectedSubject
-    );
+    // Validate selection based on tab
+    if (activeTab === "classroom") {
+      // Determine selected class ID based on grade, section, subject
+      const matchingClass = classes.find(c => 
+        c.grade === selectedGrade && 
+        c.section === selectedSection && 
+        c.subject === selectedSubject
+      );
 
-    if (!matchingClass) {
-      toast({
-        title: "Error",
-        description: "Could not find a matching class. Please verify your selections.",
-        variant: "destructive",
-      });
-      return;
-    }
+      if (!matchingClass) {
+        toast({
+          title: "Error",
+          description: "Could not find a matching class. Please verify your selections.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    // Set the selectedClass to the matching class ID
-    setSelectedClass(matchingClass.id);
-
-    // Validate selection
-    if (activeTab === "classroom" && !matchingClass.id) {
-      toast({
-        title: "Please complete all selections",
-        description: "You must select grade, section, subject, and room before starting the scan.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (activeTab === "bus" && !selectedBus) {
-      toast({
-        title: "Please select a bus route",
-        description: "You must select a bus route before starting the scan.",
-        variant: "destructive",
-      });
-      return;
+      // Set the selectedClass to the matching class ID
+      setSelectedClass(matchingClass.id);
+    } else if (activeTab === "bus") {
+      if (!selectedBus) {
+        toast({
+          title: "Please select a bus route",
+          description: "You must select a bus route before starting the scan.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setIsScanning(true);
