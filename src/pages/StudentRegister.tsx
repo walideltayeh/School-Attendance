@@ -62,6 +62,7 @@ export default function StudentRegister() {
   const [availableSections, setAvailableSections] = useState<string[]>([]);
   const [matchingClass, setMatchingClass] = useState<any>(null);
   const [autoEnroll, setAutoEnroll] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -204,7 +205,13 @@ export default function StudentRegister() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
+    console.log('=== FORM SUBMISSION STARTED ===', { isEdit: !!editStudent });
+    
     if (!firstName || !lastName || !grade || !section || !bloodType) {
+      setIsSubmitting(false);
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -220,6 +227,7 @@ export default function StudentRegister() {
       
       // Check if date is not in the future
       if (birthDate > today) {
+        setIsSubmitting(false);
         toast({
           title: "Invalid Date of Birth",
           description: "Date of birth cannot be in the future.",
@@ -230,6 +238,7 @@ export default function StudentRegister() {
       
       // Check if age is within reasonable range (2-20 years for school)
       if (age !== null && (age < 2 || age > 20)) {
+        setIsSubmitting(false);
         toast({
           title: "Invalid Age",
           description: "Student age must be between 2 and 20 years old.",
@@ -240,6 +249,7 @@ export default function StudentRegister() {
     }
     
     if (hasAllergies && !allergyDetails) {
+      setIsSubmitting(false);
       toast({
         title: "Missing Information",
         description: "Please provide details about the allergies.",
@@ -249,6 +259,7 @@ export default function StudentRegister() {
     }
     
     if (requiresBus && (!busRoute || !address)) {
+      setIsSubmitting(false);
       toast({
         title: "Missing Information",
         description: "Please select a bus route and provide an address for bus pickup.",
@@ -343,6 +354,7 @@ export default function StudentRegister() {
 
       if (studentError) {
         console.error('Error saving student:', studentError);
+        setIsSubmitting(false);
         toast({
           title: "Error",
           description: `Failed to ${editStudent ? 'update' : 'register'} student: ${studentError.message}`,
@@ -515,6 +527,8 @@ export default function StudentRegister() {
         description: "The student information has been saved to the system.",
       });
       
+      console.log('=== NAVIGATING TO /students ===');
+      setIsSubmitting(false);
       navigate("/students");
     } catch (error: any) {
       console.error('Error registering student:', error);
@@ -523,9 +537,10 @@ export default function StudentRegister() {
         code: error?.code,
         details: error?.details
       });
+      setIsSubmitting(false);
       toast({
         title: "Error",
-        description: `Failed to register student: ${error?.message || 'Unknown error'}`,
+        description: `Failed to ${editStudent ? 'update' : 'register'} student: ${error?.message || 'Unknown error'}`,
         variant: "destructive"
       });
     }
@@ -921,9 +936,9 @@ export default function StudentRegister() {
                 <Link to="/students">
                   <Button variant="outline" type="button">Cancel</Button>
                 </Link>
-                <Button type="submit" variant="blue">
+                <Button type="submit" variant="blue" disabled={isSubmitting}>
                   <Save className="mr-2 h-4 w-4" />
-                  Register Student
+                  {isSubmitting ? 'Saving...' : (editStudent ? 'Update Student' : 'Register Student')}
                 </Button>
               </CardFooter>
             </Card>
