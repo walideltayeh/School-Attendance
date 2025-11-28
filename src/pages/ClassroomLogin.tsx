@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
@@ -44,7 +45,7 @@ interface ValidationResult {
 }
 
 export default function ClassroomLogin() {
-  const [searchParams] = useSearchParams();
+  const { roomId } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [teacherInfo, setTeacherInfo] = useState<any>(null);
@@ -53,20 +54,26 @@ export default function ClassroomLogin() {
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleEntry | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [recentScans, setRecentScans] = useState<ScanRecord[]>([]);
-  
-  const roomId = searchParams.get("roomId");
-  const teacherId = searchParams.get("teacherId");
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
+  const [showLogin, setShowLogin] = useState(true);
 
   useEffect(() => {
-    if (roomId && teacherId) {
-      loadRoomAndTeacherInfo();
+    if (roomId) {
+      loadRoomInfo();
+      loadTeachers();
+    }
+  }, [roomId]);
+
+  useEffect(() => {
+    if (selectedTeacherId && !showLogin) {
+      loadTeacherInfo();
       loadTodaySchedule();
     }
-  }, [roomId, teacherId]);
+  }, [selectedTeacherId, showLogin]);
 
-  const loadRoomAndTeacherInfo = async () => {
+  const loadRoomInfo = async () => {
     try {
-      // Load room info
       const { data: room } = await supabase
         .from("rooms")
         .select("*")
@@ -74,18 +81,49 @@ export default function ClassroomLogin() {
         .maybeSingle();
       
       setRoomInfo(room);
+    } catch (error) {
+      console.error("Error loading room info:", error);
+    }
+  };
 
-      // Load teacher info
+  const loadTeachers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("teachers")
+        .select("*")
+        .order("full_name");
+      
+      if (error) throw error;
+      setTeachers(data || []);
+    } catch (error) {
+      console.error("Error loading teachers:", error);
+    }
+  };
+
+  const loadTeacherInfo = async () => {
+    try {
       const { data: teacher } = await supabase
         .from("teachers")
         .select("*")
-        .eq("id", teacherId)
+        .eq("id", selectedTeacherId)
         .maybeSingle();
       
       setTeacherInfo(teacher);
     } catch (error) {
-      console.error("Error loading info:", error);
+      console.error("Error loading teacher info:", error);
     }
+  };
+
+  const handleTeacherLogin = () => {
+    if (!selectedTeacherId) {
+      toast({
+        title: "Select Teacher",
+        description: "Please select a teacher to continue",
+        variant: "destructive",
+      });
+      return;
+    }
+    setShowLogin(false);
   };
 
   const loadTodaySchedule = async () => {
@@ -110,10 +148,10 @@ export default function ClassroomLogin() {
           period_id,
           room_id,
           classes!inner(name, grade, section, subject, teacher_id),
-          periods!inner(period_number, start_time, end_time),
+          periods!inner(period_number, start_time, end_time, is_all_day),
           rooms!inner(name)
         `)
-        .eq("classes.teacher_id", teacherId)
+        .eq("classes.teacher_id", selectedTeacherId)
         .eq("day", today);
 
       if (error) throw error;
@@ -162,7 +200,7 @@ export default function ClassroomLogin() {
         .rpc("validate_student_attendance", {
           _student_qr: qrCode,
           _schedule_id: selectedSchedule.id,
-          _recorded_by: teacherId,
+          _recorded_by: selectedTeacherId,
         });
 
       if (validationError) throw validationError;
@@ -193,7 +231,7 @@ export default function ClassroomLogin() {
           student_id: validationResult.student_id!,
           class_id: validationResult.class_id!,
           schedule_id: validationResult.schedule_id!,
-          recorded_by: teacherId!,
+          recorded_by: selectedTeacherId!,
           status: "present",
           type: "classroom",
           date: new Date().toISOString().split('T')[0],
@@ -231,19 +269,61 @@ export default function ClassroomLogin() {
     navigate("/attendance");
   };
 
-  if (!roomId || !teacherId) {
+  if (!roomId) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10 p-4">
         <Card className="max-w-md">
           <CardHeader>
             <CardTitle>Invalid Access</CardTitle>
             <CardDescription>
-              This page requires valid room and teacher parameters
+              This page requires a valid room parameter
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => navigate("/attendance")} className="w-full">
               Go to Attendance
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show teacher login screen
+  if (showLogin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10 p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle>Classroom Device Login</CardTitle>
+            <CardDescription>
+              {roomInfo?.name ? `Room: ${roomInfo.name}` : "Select teacher to continue"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="teacher-select" className="text-sm font-medium">
+                Select Teacher
+              </label>
+              <select
+                id="teacher-select"
+                value={selectedTeacherId}
+                onChange={(e) => setSelectedTeacherId(e.target.value)}
+                className="w-full p-2 border rounded-md bg-background"
+              >
+                <option value="">-- Select a teacher --</option>
+                {teachers.map((teacher) => (
+                  <option key={teacher.id} value={teacher.id}>
+                    {teacher.full_name || teacher.teacher_code}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button onClick={handleTeacherLogin} className="w-full" disabled={!selectedTeacherId}>
+              Login to Classroom Device
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/attendance")} className="w-full">
+              Cancel
             </Button>
           </CardContent>
         </Card>
@@ -306,7 +386,9 @@ export default function ClassroomLogin() {
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3" />
-                              {schedule.start_time} - {schedule.end_time}
+                              {schedule.start_time === "00:00:00" && schedule.end_time === "23:59:59" 
+                                ? "All Day" 
+                                : `${schedule.start_time} - ${schedule.end_time}`}
                             </span>
                             <span className="flex items-center gap-1">
                               <MapPin className="h-3 w-3" />
