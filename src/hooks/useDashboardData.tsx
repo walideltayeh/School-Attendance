@@ -192,30 +192,20 @@ export function useDashboardData(): DashboardData {
 
       setAttendanceData(chartData);
 
-      // Calculate attendance overview (last 7 days)
-      let totalPresent = 0;
-      let totalAbsent = 0;
-      let totalLate = 0;
-
-      Object.values(attendanceByDate).forEach(counts => {
-        totalPresent += counts.present;
-        totalAbsent += counts.absent;
-        totalLate += counts.late;
-      });
-
-      // Total should be total enrolled students, not sum of attendance records
-      const totalRecords = totalPresent + totalAbsent + totalLate;
-      const presentPercent = totalRecords > 0 ? parseFloat(((totalPresent / totalRecords) * 100).toFixed(1)) : 0;
-      const absentPercent = totalRecords > 0 ? parseFloat(((totalAbsent / totalRecords) * 100).toFixed(1)) : 0;
+      // Calculate attendance overview (today's data, not 7-day sum)
+      const todayLate = todayAttendance?.filter(r => r.status === 'late').length || 0;
+      const todayTotal = totalStudents;
+      const todayPresentPercent = todayTotal > 0 ? parseFloat(((todayPresent / todayTotal) * 100).toFixed(1)) : 0;
+      const todayAbsentPercent = todayTotal > 0 ? parseFloat(((todayAbsent / todayTotal) * 100).toFixed(1)) : 0;
 
       setAttendanceOverview({
-        present: totalPresent,
-        absent: totalAbsent,
-        late: totalLate,
-        total: totalStudents, // Use actual enrolled students count
-        presentPercent,
-        absentPercent,
-        trend: "+5.2%" // You can calculate this based on comparison with previous week
+        present: todayPresent,
+        absent: todayAbsent,
+        late: todayLate,
+        total: todayTotal,
+        presentPercent: todayPresentPercent,
+        absentPercent: todayAbsentPercent,
+        trend: "+5.2%" // You can calculate this based on comparison with previous day
       });
 
       // Fetch recent activities (last 10 attendance records)
