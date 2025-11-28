@@ -18,6 +18,7 @@ import Calendar from "@/pages/Calendar";
 import Auth from "@/pages/Auth";
 import StudentPortal from "@/pages/StudentPortal";
 import BusAttendance from "@/pages/BusAttendance";
+import BusLogin from "@/pages/BusLogin";
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
             <Route path="/classroom-login/:roomId" element={<ClassroomLogin />} />
             <Route path="/student-portal" element={<StudentPortal />} />
             <Route path="/bus-attendance" element={<BusAttendance />} />
+            <Route path="/bus-login/:busId" element={<BusLogin />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="*" element={<NotFound />} />
           </Route>
