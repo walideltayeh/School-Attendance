@@ -251,6 +251,7 @@ export default function ClassroomLogin() {
           time: new Date(),
           message: validationResult.error || "Invalid QR code",
         }, ...prev.slice(0, 9)]);
+        setLoading(false);
         return;
       }
 
