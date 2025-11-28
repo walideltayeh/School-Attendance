@@ -3,11 +3,18 @@ import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, User, Bus, School, AlertCircle } from "lucide-react";
+import { Calendar, Clock, MapPin, User, Bus, School, AlertCircle, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import BusMap from "@/components/parent/BusMap";
 import { format } from "date-fns";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Student {
   id: string;
@@ -69,9 +76,11 @@ interface BusInfo {
 }
 
 export default function ParentPortal() {
-  const [searchParams] = useSearchParams();
-  const studentCode = searchParams.get("student") || "STU5508";
+  const [searchParams, setSearchParams] = useSearchParams();
+  const guardianPhone = searchParams.get("guardian") || "+1234567890"; // Default test guardian
   
+  const [children, setChildren] = useState<Student[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [student, setStudent] = useState<Student | null>(null);
   const [schedules, setSchedules] = useState<ClassSchedule[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
@@ -79,18 +88,74 @@ export default function ParentPortal() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadParentData();
-  }, [studentCode]);
+    loadGuardianChildren();
+  }, [guardianPhone]);
 
-  const loadParentData = async () => {
+  useEffect(() => {
+    if (selectedStudentId) {
+      loadStudentData(selectedStudentId);
+    }
+  }, [selectedStudentId]);
+
+  const loadGuardianChildren = async () => {
     try {
       setLoading(true);
 
+      // Fetch all students associated with this guardian
+      const { data: guardianRecords, error: guardianError } = await supabase
+        .from('guardians')
+        .select(`
+          student_id,
+          students:student_id (
+            id,
+            full_name,
+            student_code,
+            grade,
+            section,
+            photo_url
+          )
+        `)
+        .eq('phone', guardianPhone);
+
+      if (guardianError) throw guardianError;
+
+      if (guardianRecords && guardianRecords.length > 0) {
+        const studentsList = guardianRecords
+          .map(record => record.students)
+          .filter(Boolean) as Student[];
+        
+        setChildren(studentsList);
+        
+        // Select first child by default
+        if (studentsList.length > 0) {
+          setSelectedStudentId(studentsList[0].id);
+        }
+      } else {
+        toast({
+          title: "No Children Found",
+          description: "No students are associated with this guardian account.",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      console.error('Error loading guardian children:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load student information",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStudentData = async (studentId: string) => {
+    try {
       // Fetch student info
       const { data: studentData, error: studentError } = await supabase
         .from('students')
         .select('*')
-        .eq('student_code', studentCode)
+        .eq('id', studentId)
         .single();
 
       if (studentError) throw studentError;
@@ -164,14 +229,12 @@ export default function ParentPortal() {
       }
 
     } catch (error: any) {
-      console.error('Error loading parent data:', error);
+      console.error('Error loading student data:', error);
       toast({
         title: "Error",
         description: "Failed to load student information",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -211,22 +274,26 @@ export default function ParentPortal() {
     );
   }
 
-  if (!student) {
+  if (!student && !loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Card className="w-96">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-destructive" />
-              Student Not Found
+              No Children Found
             </CardTitle>
             <CardDescription>
-              No student found with code: {studentCode}
+              No students are associated with guardian: {guardianPhone}
             </CardDescription>
           </CardHeader>
         </Card>
       </div>
     );
+  }
+
+  if (!student) {
+    return null;
   }
 
   const stats = getAttendanceStats();
@@ -236,8 +303,8 @@ export default function ParentPortal() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
+        {/* Header with Child Selector */}
+        <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-20 h-20 rounded-full overflow-hidden bg-muted flex items-center justify-center">
               {student.photo_url ? (
@@ -254,6 +321,42 @@ export default function ParentPortal() {
               <Badge variant="outline" className="mt-1">{student.student_code}</Badge>
             </div>
           </div>
+          
+          {/* Child Selector */}
+          {children.length > 1 && (
+            <Card className="w-full md:w-auto">
+              <CardContent className="pt-6">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Viewing Child:
+                  </label>
+                  <Select
+                    value={selectedStudentId || undefined}
+                    onValueChange={setSelectedStudentId}
+                  >
+                    <SelectTrigger className="w-full md:w-[280px]">
+                      <SelectValue placeholder="Select a child" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {children.map((child) => (
+                        <SelectItem key={child.id} value={child.id}>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{child.full_name}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {child.student_code}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {children.length} children enrolled
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Stats Cards */}
