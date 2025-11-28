@@ -26,7 +26,6 @@ interface ClassInfo {
   grade: string;
   section: string;
   subject: string;
-  room_number?: string;
 }
 
 export function RoomManagement() {

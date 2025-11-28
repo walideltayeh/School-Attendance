@@ -11,14 +11,13 @@ interface ClassroomRow {
   grade: string;
   section: string;
   subject: string;
-  room_number: string;
 }
 
 export function BulkClassroomSetup({ onSetupComplete }: { onSetupComplete: () => void }) {
   const [isImporting, setIsImporting] = useState(false);
 
   const handleDownloadTemplate = () => {
-    const csv = "grade,section,subject,room_number\nKG1,A,Mathematics,101\nKG1,B,English,102\nGrade 1,A,Science,103";
+    const csv = "grade,section,subject\nKG1,A,Mathematics\nKG1,B,English\nGrade 1,A,Science";
     const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -45,7 +44,7 @@ export function BulkClassroomSetup({ onSetupComplete }: { onSetupComplete: () =>
         const validClassrooms: ClassroomRow[] = [];
 
         data.forEach((row, index) => {
-          if (!row.grade || !row.section || !row.subject || !row.room_number) {
+          if (!row.grade || !row.section || !row.subject) {
             errors.push(`Row ${index + 2}: Missing required fields`);
           } else {
             validClassrooms.push(row);
@@ -77,7 +76,7 @@ export function BulkClassroomSetup({ onSetupComplete }: { onSetupComplete: () =>
               if (error || !data) {
                 return {
                   success: false,
-                  classroom: `${classroom.grade} - ${classroom.section} - ${classroom.subject} - Room ${classroom.room_number}`,
+                  classroom: `${classroom.grade} - ${classroom.section} - ${classroom.subject}`,
                 };
               }
 
@@ -134,7 +133,7 @@ export function BulkClassroomSetup({ onSetupComplete }: { onSetupComplete: () =>
       <div className="flex flex-col gap-2">
         <Label>Bulk Classroom Setup from CSV</Label>
         <p className="text-sm text-muted-foreground">
-          Upload a CSV file with columns: grade, section, subject, room_number
+          Upload a CSV file with columns: grade, section, subject
         </p>
       </div>
 
