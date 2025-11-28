@@ -3,14 +3,15 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { PlusCircle, Save, Trash, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 
 export function ClassPeriodsForm() {
-  const [periods, setPeriods] = useState<Array<{ periodNumber: number; startTime: string; endTime: string }>>([
-    { periodNumber: 1, startTime: "", endTime: "" }
+  const [periods, setPeriods] = useState<Array<{ periodNumber: number; startTime: string; endTime: string; isAllDay: boolean }>>([
+    { periodNumber: 1, startTime: "", endTime: "", isAllDay: false }
   ]);
   const [savedPeriods, setSavedPeriods] = useState<any[]>([]);
 
@@ -55,7 +56,8 @@ export function ClassPeriodsForm() {
       setPeriods(data.map(p => ({
         periodNumber: p.period_number,
         startTime: p.start_time,
-        endTime: p.end_time
+        endTime: p.end_time,
+        isAllDay: p.is_all_day || false
       })));
     }
   };
@@ -68,7 +70,8 @@ export function ClassPeriodsForm() {
     setPeriods([...periods, { 
       periodNumber: nextPeriodNumber, 
       startTime: "", 
-      endTime: "" 
+      endTime: "",
+      isAllDay: false
     }]);
   };
 
@@ -80,22 +83,33 @@ export function ClassPeriodsForm() {
     }
   };
 
-  const updatePeriod = (index: number, field: "startTime" | "endTime", value: string) => {
+  const updatePeriod = (index: number, field: "startTime" | "endTime" | "isAllDay", value: string | boolean) => {
     const newPeriods = [...periods];
-    newPeriods[index][field] = value;
+    if (field === "isAllDay") {
+      newPeriods[index][field] = value as boolean;
+      // Clear times when switching to all day
+      if (value === true) {
+        newPeriods[index].startTime = "";
+        newPeriods[index].endTime = "";
+      }
+    } else {
+      newPeriods[index][field] = value as string;
+    }
     setPeriods(newPeriods);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate all periods have start and end times
-    const isValid = periods.every(period => period.startTime && period.endTime);
+    // Validate: non-all-day periods must have start and end times
+    const isValid = periods.every(period => 
+      period.isAllDay || (period.startTime && period.endTime)
+    );
     
     if (!isValid) {
       toast({
         title: "Error",
-        description: "Please provide start and end times for all periods",
+        description: "Please provide start and end times for all non-all-day periods",
         variant: "destructive",
       });
       return;
@@ -113,8 +127,9 @@ export function ClassPeriodsForm() {
       // Insert new periods
       const periodsToInsert = periods.map(period => ({
         period_number: period.periodNumber,
-        start_time: period.startTime,
-        end_time: period.endTime
+        start_time: period.isAllDay ? '00:00:00' : period.startTime,
+        end_time: period.isAllDay ? '23:59:59' : period.endTime,
+        is_all_day: period.isAllDay
       }));
 
       const { error: insertError } = await supabase
@@ -149,7 +164,9 @@ export function ClassPeriodsForm() {
               <div key={period.id} className="flex items-center gap-2 text-sm bg-muted p-2 rounded">
                 <Clock className="h-3 w-3 text-primary" />
                 <span className="font-medium">Period {period.period_number}:</span>
-                <span className="text-muted-foreground">{period.start_time} - {period.end_time}</span>
+                <span className="text-muted-foreground">
+                  {period.is_all_day ? 'All Day' : `${period.start_time} - ${period.end_time}`}
+                </span>
               </div>
             ))}
           </div>
@@ -178,27 +195,40 @@ export function ClassPeriodsForm() {
             </Label>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor={`startTime-${index}`}>Start Time</Label>
-              <Input
-                id={`startTime-${index}`}
-                type="time"
-                value={period.startTime}
-                onChange={(e) => updatePeriod(index, "startTime", e.target.value)}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor={`endTime-${index}`}>End Time</Label>
-              <Input
-                id={`endTime-${index}`}
-                type="time"
-                value={period.endTime}
-                onChange={(e) => updatePeriod(index, "endTime", e.target.value)}
-              />
-            </div>
+          <div className="flex items-center space-x-2 mb-3">
+            <Checkbox 
+              id={`allDay-${index}`}
+              checked={period.isAllDay}
+              onCheckedChange={(checked) => updatePeriod(index, "isAllDay", checked === true)}
+            />
+            <Label htmlFor={`allDay-${index}`} className="cursor-pointer font-medium">
+              All Day
+            </Label>
           </div>
+          
+          {!period.isAllDay && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor={`startTime-${index}`}>Start Time</Label>
+                <Input
+                  id={`startTime-${index}`}
+                  type="time"
+                  value={period.startTime}
+                  onChange={(e) => updatePeriod(index, "startTime", e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor={`endTime-${index}`}>End Time</Label>
+                <Input
+                  id={`endTime-${index}`}
+                  type="time"
+                  value={period.endTime}
+                  onChange={(e) => updatePeriod(index, "endTime", e.target.value)}
+                />
+              </div>
+            </div>
+          )}
           
           <div className="flex justify-end">
             <Button

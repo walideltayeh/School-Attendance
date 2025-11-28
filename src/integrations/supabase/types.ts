@@ -443,6 +443,7 @@ export type Database = {
           created_at: string
           end_time: string
           id: string
+          is_all_day: boolean
           period_number: number
           start_time: string
         }
@@ -450,6 +451,7 @@ export type Database = {
           created_at?: string
           end_time: string
           id?: string
+          is_all_day?: boolean
           period_number: number
           start_time: string
         }
@@ -457,6 +459,7 @@ export type Database = {
           created_at?: string
           end_time?: string
           id?: string
+          is_all_day?: boolean
           period_number?: number
           start_time?: string
         }
