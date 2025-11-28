@@ -101,6 +101,8 @@ export function useDashboardData(): DashboardData {
 
   const loadDashboardData = async () => {
     try {
+      console.log('=== LOADING DASHBOARD DATA ===');
+      
       // Fetch total students
       const { data: students, error: studentsError } = await supabase
         .from('students')
@@ -109,6 +111,7 @@ export function useDashboardData(): DashboardData {
 
       if (studentsError) throw studentsError;
       const totalStudents = students?.length || 0;
+      console.log('Total active students:', totalStudents, students);
 
       // Fetch teachers
       const { data: teachers, error: teachersError } = await supabase
@@ -117,6 +120,7 @@ export function useDashboardData(): DashboardData {
 
       if (teachersError) throw teachersError;
       const totalTeachers = teachers?.length || 0;
+      console.log('Total teachers:', totalTeachers);
 
       // Fetch active bus routes
       const { data: busRoutes, error: busError } = await supabase
@@ -126,9 +130,11 @@ export function useDashboardData(): DashboardData {
 
       if (busError) throw busError;
       const totalBusRoutes = busRoutes?.length || 0;
+      console.log('Total bus routes:', totalBusRoutes);
 
       // Get today's date
       const today = new Date().toISOString().split('T')[0];
+      console.log('Today date:', today);
 
       // Fetch today's attendance
       const { data: todayAttendance, error: todayError } = await supabase
@@ -141,6 +147,14 @@ export function useDashboardData(): DashboardData {
       const todayPresent = todayAttendance?.filter(r => r.status === 'present').length || 0;
       const todayAbsent = totalStudents - todayPresent;
       const todayPercentage = totalStudents > 0 ? Math.round((todayPresent / totalStudents) * 100) : 0;
+      
+      console.log('Today attendance:', {
+        totalRecords: todayAttendance?.length,
+        todayPresent,
+        todayAbsent,
+        totalStudents,
+        todayPercentage
+      });
 
       // Fetch last 7 days attendance for chart
       const sevenDaysAgo = new Date();
@@ -197,6 +211,15 @@ export function useDashboardData(): DashboardData {
       const todayTotal = totalStudents;
       const todayPresentPercent = todayTotal > 0 ? parseFloat(((todayPresent / todayTotal) * 100).toFixed(1)) : 0;
       const todayAbsentPercent = todayTotal > 0 ? parseFloat(((todayAbsent / todayTotal) * 100).toFixed(1)) : 0;
+
+      console.log('Attendance Overview:', {
+        present: todayPresent,
+        absent: todayAbsent,
+        late: todayLate,
+        total: todayTotal,
+        presentPercent: todayPresentPercent,
+        absentPercent: todayAbsentPercent
+      });
 
       setAttendanceOverview({
         present: todayPresent,
