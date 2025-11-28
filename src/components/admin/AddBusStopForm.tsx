@@ -21,6 +21,27 @@ export function AddBusStopForm({ onSuccess }: AddBusStopFormProps) {
 
   useEffect(() => {
     fetchBusRoutes();
+
+    // Subscribe to real-time updates for bus routes
+    const busRoutesChannel = supabase
+      .channel('bus-routes-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bus_routes'
+        },
+        () => {
+          console.log('Bus routes changed, reloading...');
+          fetchBusRoutes();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(busRoutesChannel);
+    };
   }, []);
 
   const fetchBusRoutes = async () => {
