@@ -224,14 +224,13 @@ export function useDashboardData(): DashboardData {
       const activities = recentRecords?.map((record: any) => ({
         id: record.id,
         type: record.type === 'bus' ? 'bus' : 'attendance',
-        student: record.students?.full_name || 'Unknown',
-        class: record.classes?.name || 'Unknown',
+        description: `${record.students?.full_name || 'Unknown Student'} - ${record.classes?.name || 'Unknown Class'}`,
+        user: `${record.status === 'present' ? 'Present' : record.status === 'late' ? 'Late' : 'Absent'} • ${record.type === 'bus' ? 'Bus' : 'Classroom'}`,
         time: record.scanned_at ? new Date(record.scanned_at).toLocaleTimeString('en-US', { 
           hour: 'numeric', 
           minute: '2-digit',
           hour12: true 
-        }) : 'N/A',
-        status: record.status
+        }) : 'N/A'
       })) || [];
 
       setRecentActivities(activities);
