@@ -100,20 +100,25 @@ export function ClassPeriodsForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Save Periods clicked, current periods:', periods);
     
     // Validate: non-all-day periods must have start and end times
-    const isValid = periods.every(period => 
-      period.isAllDay || (period.startTime && period.endTime)
+    const invalidPeriods = periods.filter(period => 
+      !period.isAllDay && (!period.startTime || !period.endTime)
     );
     
-    if (!isValid) {
+    if (invalidPeriods.length > 0) {
+      console.log('Validation failed for periods:', invalidPeriods);
+      const periodNumbers = invalidPeriods.map(p => p.periodNumber).join(', ');
       toast({
-        title: "Error",
-        description: "Please provide start and end times for all non-all-day periods",
+        title: "Validation Error",
+        description: `Period(s) ${periodNumbers} need start and end times, or mark them as "All Day"`,
         variant: "destructive",
       });
       return;
     }
+    
+    console.log('Validation passed, saving to database...');
     
     try {
       // Delete existing periods
@@ -122,7 +127,10 @@ export function ClassPeriodsForm() {
         .delete()
         .neq('id', '00000000-0000-0000-0000-000000000000');
 
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.error('Delete error:', deleteError);
+        throw deleteError;
+      }
 
       // Insert new periods
       const periodsToInsert = periods.map(period => ({
@@ -132,17 +140,23 @@ export function ClassPeriodsForm() {
         is_all_day: period.isAllDay
       }));
 
+      console.log('Inserting periods:', periodsToInsert);
+
       const { error: insertError } = await supabase
         .from('periods')
         .insert(periodsToInsert);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        throw insertError;
+      }
 
+      console.log('Periods saved successfully');
       await loadPeriods();
       
       toast({
         title: "Success",
-        description: `${periods.length} class periods have been saved`,
+        description: `${periods.length} class period(s) saved successfully`,
       });
     } catch (error: any) {
       console.error('Error saving periods:', error);
