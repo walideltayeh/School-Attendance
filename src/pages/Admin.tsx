@@ -324,7 +324,8 @@ const Admin = () => {
       .select(`
         *,
         classes(id, name, grade, section, subject, teacher_id),
-        periods(id, period_number, start_time, end_time)
+        periods(id, period_number, start_time, end_time),
+        rooms:room_id(id, name)
       `)
       .order('day', { ascending: true })
       .order('week_number', { ascending: true });
@@ -343,6 +344,7 @@ const Admin = () => {
     const transformedSchedules = (data || []).map((sched: any) => {
       const classData = sched.classes;
       const periodData = sched.periods;
+      const roomData = sched.rooms;
       const teacher = teachers.find(t => t.id === classData?.teacher_id);
       
       return {
@@ -351,8 +353,8 @@ const Admin = () => {
         teacherName: teacher?.name || 'Unassigned',
         classId: sched.class_id,
         className: `${classData?.grade} - Section ${classData?.section} (${classData?.subject})`,
-        roomId: '',
-        roomName: 'TBD',
+        roomId: sched.room_id || '',
+        roomName: roomData?.name || 'TBD',
         day: sched.day,
         period: periodData?.period_number || 0,
         week: sched.week_number,
