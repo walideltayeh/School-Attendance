@@ -60,6 +60,8 @@ export default function StudentRegister() {
   const [busRoutes, setBusRoutes] = useState<BusRoute[]>([]);
   const [availableGrades, setAvailableGrades] = useState<string[]>([]);
   const [availableSections, setAvailableSections] = useState<string[]>([]);
+  const [matchingClass, setMatchingClass] = useState<any>(null);
+  const [autoEnroll, setAutoEnroll] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
@@ -125,6 +127,30 @@ export default function StudentRegister() {
       getAvailableSections(grade).then(sections => setAvailableSections(sections));
     }
   }, [grade, classes]);
+
+  // Check for matching class when grade/section changes
+  useEffect(() => {
+    const checkMatchingClass = async () => {
+      if (grade && section) {
+        const { data: matchingClasses } = await supabase
+          .from('classes')
+          .select('*')
+          .eq('grade', grade)
+          .eq('section', section)
+          .limit(1);
+        
+        if (matchingClasses && matchingClasses.length > 0) {
+          setMatchingClass(matchingClasses[0]);
+        } else {
+          setMatchingClass(null);
+        }
+      } else {
+        setMatchingClass(null);
+      }
+    };
+    
+    checkMatchingClass();
+  }, [grade, section]);
 
   // Calculate age when date of birth changes
   useEffect(() => {
@@ -374,6 +400,27 @@ export default function StudentRegister() {
           if (guardianError) {
             console.error('Error saving guardian:', guardianError);
           }
+        }
+      }
+
+      // Auto-enroll in class if enabled and matching class found
+      if (autoEnroll && matchingClass && newStudent) {
+        const { error: enrollError } = await supabase
+          .from('class_enrollments')
+          .insert({
+            student_id: newStudent.id,
+            class_id: matchingClass.id
+          });
+
+        if (enrollError) {
+          console.error('Error enrolling student:', enrollError);
+          toast({
+            title: "Warning",
+            description: `Student ${editStudent ? 'updated' : 'registered'} but auto-enrollment failed`,
+            variant: "default"
+          });
+        } else {
+          console.log('Student auto-enrolled successfully');
         }
       }
 
@@ -694,6 +741,26 @@ export default function StudentRegister() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {matchingClass && (
+                    <div className="grid grid-cols-4 items-center gap-4 bg-muted/50 p-3 rounded-lg">
+                      <Label htmlFor="autoEnroll" className="text-right">
+                        Auto-Enroll
+                      </Label>
+                      <div className="col-span-3 flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id="autoEnroll"
+                            checked={autoEnroll}
+                            onCheckedChange={setAutoEnroll}
+                          />
+                          <Label htmlFor="autoEnroll" className="font-normal cursor-pointer">
+                            Enroll in "{matchingClass.name}"
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="address" className="text-right">
