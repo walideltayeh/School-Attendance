@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
@@ -35,6 +37,8 @@ export default function BusAttendance() {
   const [isScanning, setIsScanning] = useState(false);
   const [recentScans, setRecentScans] = useState<ScanRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [manualInput, setManualInput] = useState("");
+  const [showCamera, setShowCamera] = useState(false);
 
   useEffect(() => {
     loadBusRoutes();
@@ -68,7 +72,10 @@ export default function BusAttendance() {
   };
 
   const handleScan = async (qrCode: string) => {
+    console.log('handleScan called with:', qrCode);
+    
     if (!selectedBus) {
+      console.log('No bus selected');
       toast({
         title: "No Bus Selected",
         description: "Please select a bus route first",
@@ -79,9 +86,11 @@ export default function BusAttendance() {
 
     try {
       setLoading(true);
+      console.log('Starting scan process for bus:', selectedBus.name);
 
       // Validate it's a student QR code
       if (!qrCode.startsWith("STUDENT:")) {
+        console.log('Invalid QR format:', qrCode);
         toast({
           title: "Invalid QR Code",
           description: "Please scan a valid student QR code",
@@ -98,6 +107,8 @@ export default function BusAttendance() {
         return;
       }
 
+      console.log('Looking up student with QR code:', qrCode);
+      
       // Get student info
       const { data: studentData, error: studentError } = await supabase
         .from("students")
@@ -106,9 +117,13 @@ export default function BusAttendance() {
         .eq("status", "active")
         .maybeSingle();
 
-      if (studentError) throw studentError;
+      if (studentError) {
+        console.error('Student lookup error:', studentError);
+        throw studentError;
+      }
 
       if (!studentData) {
+        console.log('Student not found for QR:', qrCode);
         toast({
           title: "Student Not Found",
           description: "Invalid student QR code",
@@ -125,8 +140,10 @@ export default function BusAttendance() {
         return;
       }
 
+      console.log('Student found:', studentData.full_name);
+
       // Check if student is assigned to this bus
-      const { data: assignmentData } = await supabase
+      const { data: assignmentData, error: assignmentError } = await supabase
         .from("bus_assignments")
         .select("*")
         .eq("student_id", studentData.id)
@@ -134,7 +151,12 @@ export default function BusAttendance() {
         .eq("status", "active")
         .maybeSingle();
 
+      if (assignmentError) {
+        console.error('Assignment check error:', assignmentError);
+      }
+
       if (!assignmentData) {
+        console.log('Student not assigned to this bus');
         toast({
           title: "Not Assigned",
           description: `${studentData.full_name} is not assigned to this bus`,
@@ -151,24 +173,47 @@ export default function BusAttendance() {
         return;
       }
 
-      // Record bus attendance (class_id not needed for bus type)
-      // We need to get the user's ID for recorded_by
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      console.log('Recording attendance for student:', studentData.full_name);
+
+      // Record bus attendance
       const { error: insertError } = await supabase
         .from("attendance_records")
         .insert([{
           student_id: studentData.id,
           class_id: '00000000-0000-0000-0000-000000000000', // Dummy class ID for bus attendance
           bus_route_id: selectedBus.id,
-          recorded_by: user?.id || '00000000-0000-0000-0000-000000000000',
+          recorded_by: null,
           status: "present",
           type: "bus",
           date: new Date().toISOString().split('T')[0],
           scanned_at: new Date().toISOString(),
         }]);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        
+        // Check if it's a duplicate entry
+        if (insertError.code === '23505') {
+          toast({
+            title: "Already Checked In",
+            description: `${studentData.full_name} has already boarded today`,
+            variant: "destructive",
+          });
+          
+          setRecentScans(prev => [{
+            id: studentData.id,
+            name: studentData.full_name,
+            success: false,
+            time: new Date(),
+            message: "Already checked in today",
+          }, ...prev.slice(0, 9)]);
+          return;
+        }
+        
+        throw insertError;
+      }
+
+      console.log('Attendance recorded successfully');
 
       toast({
         title: "Attendance Recorded",
@@ -183,16 +228,63 @@ export default function BusAttendance() {
         message: "Boarded",
       }, ...prev.slice(0, 9)]);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error recording bus attendance:", error);
       toast({
         title: "Error",
-        description: "Failed to record attendance",
+        description: error.message || "Failed to record attendance",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle manual input for bus attendance
+  const handleManualSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Manual submit with input:', manualInput);
+    
+    if (!manualInput.trim()) {
+      console.log('Empty input');
+      return;
+    }
+
+    try {
+      // Look up by student code
+      const { data: studentData, error } = await supabase
+        .from("students")
+        .select("qr_code")
+        .eq("student_code", manualInput.trim())
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error looking up student code:', error);
+        throw error;
+      }
+
+      if (studentData?.qr_code) {
+        console.log('Found student, calling handleScan with QR:', studentData.qr_code);
+        await handleScan(studentData.qr_code);
+      } else {
+        console.log('Student code not found:', manualInput);
+        toast({
+          title: "Student Not Found",
+          description: "Invalid student code",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Manual submit error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to look up student",
+        variant: "destructive",
+      });
+    }
+    
+    setManualInput("");
   };
 
   return (
@@ -271,25 +363,62 @@ export default function BusAttendance() {
 
         {/* Scanner */}
         {selectedBus && (
-          <div className="space-y-4">
-            {!isScanning ? (
-              <Button
-                onClick={() => setIsScanning(true)}
-                size="lg"
-                className="w-full"
-              >
-                Start Scanning Student QR Codes
-              </Button>
-            ) : (
-              <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Scan Student Attendance</CardTitle>
+              <CardDescription>Use manual entry or camera to record boarding</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Manual Input Option */}
+              <div className="space-y-2">
+                <Label htmlFor="manual-student-code">Manual Student Code Entry</Label>
+                <form onSubmit={handleManualSubmit} className="flex gap-2">
+                  <Input
+                    id="manual-student-code"
+                    placeholder="Enter student code (e.g., STU8371)"
+                    value={manualInput}
+                    onChange={(e) => setManualInput(e.target.value)}
+                    disabled={loading}
+                  />
+                  <Button type="submit" disabled={loading || !manualInput.trim()}>
+                    Submit
+                  </Button>
+                </form>
+                <p className="text-xs text-muted-foreground">
+                  Use this if camera scanning is not available
+                </p>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Or scan with camera
+                  </span>
+                </div>
+              </div>
+
+              {/* Camera Scanner */}
+              {showCamera ? (
                 <CameraQRScanner
                   onScan={handleScan}
-                  isActive={isScanning}
-                  onClose={() => setIsScanning(false)}
+                  isActive={showCamera}
+                  onClose={() => setShowCamera(false)}
                 />
-              </>
-            )}
-          </div>
+              ) : (
+                <Button
+                  onClick={() => setShowCamera(true)}
+                  size="lg"
+                  className="w-full"
+                  disabled={loading}
+                >
+                  Start Camera Scanner
+                </Button>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {/* Recent Scans */}
@@ -297,9 +426,9 @@ export default function BusAttendance() {
           <AttendanceScanner
             type="bus"
             selectedItemName={selectedBus?.name || ""}
-            isScanning={isScanning}
-            onStartScan={() => setIsScanning(true)}
-            onStopScan={() => setIsScanning(false)}
+            isScanning={showCamera}
+            onStartScan={() => setShowCamera(true)}
+            onStopScan={() => setShowCamera(false)}
             recentScans={recentScans}
           />
         )}
