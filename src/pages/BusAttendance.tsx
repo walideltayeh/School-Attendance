@@ -180,7 +180,7 @@ export default function BusAttendance() {
         .from("attendance_records")
         .insert([{
           student_id: studentData.id,
-          class_id: '00000000-0000-0000-0000-000000000000', // Dummy class ID for bus attendance
+          class_id: null, // Bus attendance doesn't require a class
           bus_route_id: selectedBus.id,
           recorded_by: null,
           status: "present",

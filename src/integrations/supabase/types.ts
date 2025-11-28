@@ -17,7 +17,7 @@ export type Database = {
       attendance_records: {
         Row: {
           bus_route_id: string | null
-          class_id: string
+          class_id: string | null
           created_at: string
           date: string
           id: string
@@ -31,7 +31,7 @@ export type Database = {
         }
         Insert: {
           bus_route_id?: string | null
-          class_id: string
+          class_id?: string | null
           created_at?: string
           date: string
           id?: string
@@ -45,7 +45,7 @@ export type Database = {
         }
         Update: {
           bus_route_id?: string | null
-          class_id?: string
+          class_id?: string | null
           created_at?: string
           date?: string
           id?: string
