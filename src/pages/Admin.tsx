@@ -405,7 +405,8 @@ const Admin = () => {
         class_id: schedule.classId,
         period_id: periodData.id,
         day: schedule.day,
-        week_number: schedule.week
+        week_number: schedule.week,
+        room_id: schedule.roomId
       })
       .select();
 

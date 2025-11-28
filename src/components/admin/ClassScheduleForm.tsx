@@ -24,7 +24,7 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
   const [selectedTeacher, setSelectedTeacher] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedRoom, setSelectedRoom] = useState("");
-  const [selectedDay, setSelectedDay] = useState<string>("Monday");
+  const [selectedDays, setSelectedDays] = useState<string[]>(["Monday"]);
   const [selectedPeriod, setSelectedPeriod] = useState<string>("1");
   const [weekSchedule, setWeekSchedule] = useState<number[]>([1]);
   const [applyToAllWeeks, setApplyToAllWeeks] = useState(false);
@@ -117,7 +117,7 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
       setSelectedTeacher(editingSchedule.teacherId);
       setSelectedClass(editingSchedule.className);
       setSelectedRoom(editingSchedule.roomId);
-      setSelectedDay(editingSchedule.day);
+      setSelectedDays([editingSchedule.day]);
       setSelectedPeriod(String(editingSchedule.period));
       setWeekSchedule([editingSchedule.week]);
       setApplyToAllWeeks(false);
@@ -133,10 +133,10 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
 
   // Generate room suggestions when all criteria are selected
   useEffect(() => {
-    if (selectedClass && selectedDay && selectedPeriod && weekSchedule.length > 0) {
+    if (selectedClass && selectedDays.length > 0 && selectedPeriod && weekSchedule.length > 0) {
       generateRoomSuggestions();
     }
-  }, [selectedClass, selectedDay, selectedPeriod, weekSchedule, availableRooms, classEnrollmentCount]);
+  }, [selectedClass, selectedDays, selectedPeriod, weekSchedule, availableRooms, classEnrollmentCount]);
 
   const loadClassEnrollment = async () => {
     try {
@@ -160,20 +160,23 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
       for (const room of availableRooms) {
         let isAvailable = true;
 
-        // Check availability for each week in the schedule
-        for (const week of weekSchedule) {
-          const { data: conflicts } = await supabase
-            .from('class_schedules')
-            .select('id')
-            .eq('room_id', room.id)
-            .eq('day', selectedDay as 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday')
-            .eq('period_id', selectedPeriod)
-            .eq('week_number', week);
+        // Check availability for each day, week combination in the schedule
+        for (const day of selectedDays) {
+          for (const week of weekSchedule) {
+            const { data: conflicts } = await supabase
+              .from('class_schedules')
+              .select('id')
+              .eq('room_id', room.id)
+              .eq('day', day as 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday')
+              .eq('period_id', selectedPeriod)
+              .eq('week_number', week);
 
-          if (conflicts && conflicts.length > 0) {
-            isAvailable = false;
-            break;
+            if (conflicts && conflicts.length > 0) {
+              isAvailable = false;
+              break;
+            }
           }
+          if (!isAvailable) break;
         }
 
         // If room is available and has sufficient capacity, suggest it
@@ -273,7 +276,7 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedTeacher || !selectedClass || !selectedRoom || !selectedDay || !selectedPeriod || weekSchedule.length === 0) {
+    if (!selectedTeacher || !selectedClass || !selectedRoom || selectedDays.length === 0 || !selectedPeriod || weekSchedule.length === 0) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -295,17 +298,23 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
       return;
     }
     
-    const schedules = weekSchedule.map(week => ({
-      teacherId: teacher.id,
-      teacherName: teacher.full_name || teacher.name,
-      classId: selectedClass,
-      className: `${selectedClassObj.name} (${selectedClassObj.subject})`,
-      roomId: selectedRoom,
-      roomName: selectedRoomObj.name,
-      day: selectedDay,
-      period: parseInt(selectedPeriod),
-      week: week
-    }));
+    // Create schedules for all selected day and week combinations
+    const schedules = [];
+    for (const day of selectedDays) {
+      for (const week of weekSchedule) {
+        schedules.push({
+          teacherId: teacher.id,
+          teacherName: teacher.full_name || teacher.name,
+          classId: selectedClass,
+          className: `${selectedClassObj.name} (${selectedClassObj.subject})`,
+          roomId: selectedRoom,
+          roomName: selectedRoomObj.name,
+          day: day,
+          period: parseInt(selectedPeriod),
+          week: week
+        });
+      }
+    }
     
     // Check each schedule for conflicts
     for (const schedule of schedules) {
@@ -327,7 +336,7 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
       setSelectedTeacher("");
       setSelectedClass("");
       setSelectedRoom("");
-      setSelectedDay("Monday");
+      setSelectedDays(["Monday"]);
       setSelectedPeriod("1");
       if (!applyToAllWeeks) {
         setWeekSchedule([1]);
@@ -424,19 +433,33 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="day">Day</Label>
-          <Select value={selectedDay} onValueChange={setSelectedDay}>
-            <SelectTrigger id="day">
-              <SelectValue placeholder="Select day" />
-            </SelectTrigger>
-            <SelectContent>
-              {days.map((day) => (
-                <SelectItem key={day} value={day}>
+          <Label htmlFor="day">Days (select multiple)</Label>
+          <div className="border rounded-md p-3 space-y-2">
+            {days.map((day) => (
+              <div key={day} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`day-${day}`}
+                  checked={selectedDays.includes(day)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedDays([...selectedDays, day]);
+                    } else {
+                      setSelectedDays(selectedDays.filter(d => d !== day));
+                    }
+                  }}
+                  disabled={!!editingSchedule}
+                />
+                <Label htmlFor={`day-${day}`} className="cursor-pointer font-normal">
                   {day}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                </Label>
+              </div>
+            ))}
+          </div>
+          {selectedDays.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {selectedDays.length} day{selectedDays.length !== 1 ? 's' : ''} selected
+            </p>
+          )}
         </div>
         
         <div className="space-y-2">
