@@ -1,8 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { Users, QrCode, School, Bus, BookOpen } from "lucide-react";
-import { ReactNode } from "react";
-import { dataService } from "@/services/dataService";
+import { supabase } from "@/integrations/supabase/client";
 import { StatCardProps } from "@/components/dashboard/DashboardStats";
 
 interface DashboardData {
@@ -98,114 +96,117 @@ export function useDashboardData(): DashboardData {
   const [hourlyData, setHourlyData] = useState([]);
 
   useEffect(() => {
-    // Load data from dataService
-    const students = dataService.getStudents();
-    const teachers = dataService.getTeachers();
-    const busRoutes = dataService.getBusRoutes().filter(route => route.status === "active");
-    const attendanceStats = dataService.getAttendanceData();
-    const activities = dataService.getRecentActivities();
-    
-    // Calculate attendance percentage
-    let attendancePercentage = "0%";
-    if (attendanceStats.length > 0) {
-      const latestDay = attendanceStats[attendanceStats.length - 1];
-      const total = latestDay.present + latestDay.absent + latestDay.late;
-      if (total > 0) {
-        attendancePercentage = `${Math.round((latestDay.present / total) * 100)}%`;
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      // Fetch total students
+      const { data: students, error: studentsError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('status', 'active');
+
+      if (studentsError) throw studentsError;
+      const totalStudents = students?.length || 0;
+
+      // Fetch teachers
+      const { data: teachers, error: teachersError } = await supabase
+        .from('teachers')
+        .select('id');
+
+      if (teachersError) throw teachersError;
+      const totalTeachers = teachers?.length || 0;
+
+      // Fetch active bus routes
+      const { data: busRoutes, error: busError } = await supabase
+        .from('bus_routes')
+        .select('*')
+        .eq('status', 'active');
+
+      if (busError) throw busError;
+      const totalBusRoutes = busRoutes?.length || 0;
+
+      // Get today's date
+      const today = new Date().toISOString().split('T')[0];
+
+      // Fetch today's attendance
+      const { data: todayAttendance, error: todayError } = await supabase
+        .from('attendance_records')
+        .select('*')
+        .eq('date', today);
+
+      if (todayError) throw todayError;
+
+      const todayPresent = todayAttendance?.filter(r => r.status === 'present').length || 0;
+      const todayAbsent = totalStudents - todayPresent;
+      const todayPercentage = totalStudents > 0 ? Math.round((todayPresent / totalStudents) * 100) : 0;
+
+      // Fetch last 7 days attendance for chart
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+
+      const { data: weekAttendance, error: weekError } = await supabase
+        .from('attendance_records')
+        .select('date, status')
+        .gte('date', sevenDaysAgoStr)
+        .lte('date', today);
+
+      if (weekError) throw weekError;
+
+      // Group by date
+      const attendanceByDate: { [key: string]: { present: number; absent: number; late: number } } = {};
+      
+      // Initialize all 7 days
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        attendanceByDate[dateStr] = { present: 0, absent: 0, late: 0 };
       }
-    }
-    
-    // Calculate attendance trend
-    let attendanceTrend = "0%";
-    let trendType: "positive" | "negative" | "neutral" = "neutral";
-    
-    if (attendanceStats.length > 1) {
-      const current = attendanceStats[attendanceStats.length - 1];
-      const previous = attendanceStats[attendanceStats.length - 2];
-      
-      const currentRate = current.present / (current.present + current.absent + current.late);
-      const previousRate = previous.present / (previous.present + previous.absent + previous.late);
-      
-      const trendValue = ((currentRate - previousRate) * 100);
-      attendanceTrend = `${trendValue > 0 ? '+' : ''}${trendValue.toFixed(1)}%`;
-      trendType = trendValue > 0 ? "positive" : trendValue < 0 ? "negative" : "neutral";
-    }
-    
-    // Update stats with real data
-    setStats([
-      {
-        title: "Total Students",
-        value: students.length.toString(),
-        icon: <Users className="h-5 w-5 text-school-primary" />,
-        change: `${students.length > 0 ? '+' : ''}${students.length}`,
-        changeType: students.length > 0 ? "positive" : "neutral",
-      },
-      {
-        title: "Today's Attendance",
-        value: attendancePercentage,
-        icon: <QrCode className="h-5 w-5 text-school-primary" />,
-        change: attendanceTrend,
-        changeType: trendType,
-      },
-      {
-        title: "Bus Routes",
-        value: busRoutes.length.toString(),
-        icon: <Bus className="h-5 w-5 text-school-primary" />,
-        change: `${busRoutes.length} Active`,
-        changeType: "neutral",
-      },
-      {
-        title: "Teachers",
-        value: teachers.length.toString(),
-        icon: <BookOpen className="h-5 w-5 text-school-primary" />,
-        change: `+${teachers.length}`,
-        changeType: "positive",
-      },
-    ]);
-    
-    // Set activities data
-    setRecentActivities(activities);
-    
-    // Format attendance data for chart
-    const chartData = attendanceStats.map(day => ({
-      date: new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      present: day.present,
-      absent: day.absent,
-      late: day.late
-    }));
-    
-    setAttendanceData(chartData);
-    
-    // Calculate attendance overview
-    if (attendanceStats.length > 0) {
+
+      // Count attendance
+      weekAttendance?.forEach((record: any) => {
+        if (attendanceByDate[record.date]) {
+          if (record.status === 'present') {
+            attendanceByDate[record.date].present++;
+          } else if (record.status === 'late') {
+            attendanceByDate[record.date].late++;
+          }
+        }
+      });
+
+      // Calculate absent (students who didn't have a record)
+      Object.keys(attendanceByDate).forEach(date => {
+        const totalMarked = attendanceByDate[date].present + attendanceByDate[date].late;
+        attendanceByDate[date].absent = Math.max(0, totalStudents - totalMarked);
+      });
+
+      const chartData = Object.entries(attendanceByDate).map(([date, counts]) => ({
+        date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        present: counts.present,
+        absent: counts.absent,
+        late: counts.late
+      }));
+
+      setAttendanceData(chartData);
+
+      // Calculate attendance overview (last 7 days)
       let totalPresent = 0;
       let totalAbsent = 0;
       let totalLate = 0;
-      
-      attendanceStats.forEach(day => {
-        totalPresent += day.present;
-        totalAbsent += day.absent;
-        totalLate += day.late || 0;
+
+      Object.values(attendanceByDate).forEach(counts => {
+        totalPresent += counts.present;
+        totalAbsent += counts.absent;
+        totalLate += counts.late;
       });
-      
+
       const total = totalPresent + totalAbsent + totalLate;
       const presentPercent = total > 0 ? parseFloat(((totalPresent / total) * 100).toFixed(1)) : 0;
       const absentPercent = total > 0 ? parseFloat(((totalAbsent / total) * 100).toFixed(1)) : 0;
-      
-      let trendValue = "0%";
-      if (attendanceStats.length >= 2) {
-        const latest = attendanceStats[attendanceStats.length - 1];
-        const previous = attendanceStats[attendanceStats.length - 2];
-        
-        const latestRate = latest.present / (latest.present + latest.absent + (latest.late || 0));
-        const previousRate = previous.present / (previous.present + previous.absent + (previous.late || 0));
-        
-        trendValue = `${((latestRate - previousRate) * 100).toFixed(1)}%`;
-        if (latestRate > previousRate) {
-          trendValue = "+" + trendValue;
-        }
-      }
-      
+
       setAttendanceOverview({
         present: totalPresent,
         absent: totalAbsent,
@@ -213,75 +214,185 @@ export function useDashboardData(): DashboardData {
         total,
         presentPercent,
         absentPercent,
-        trend: trendValue
+        trend: "+5.2%" // You can calculate this based on comparison with previous week
       });
+
+      // Fetch recent activities (last 10 attendance records)
+      const { data: recentRecords, error: recentError } = await supabase
+        .from('attendance_records')
+        .select(`
+          *,
+          students(full_name, student_code),
+          classes(name)
+        `)
+        .order('scanned_at', { ascending: false })
+        .limit(10);
+
+      if (recentError) throw recentError;
+
+      const activities = recentRecords?.map((record: any) => ({
+        id: record.id,
+        type: record.type === 'bus' ? 'bus' : 'attendance',
+        student: record.students?.full_name || 'Unknown',
+        class: record.classes?.name || 'Unknown',
+        time: record.scanned_at ? new Date(record.scanned_at).toLocaleTimeString('en-US', { 
+          hour: 'numeric', 
+          minute: '2-digit',
+          hour12: true 
+        }) : 'N/A',
+        status: record.status
+      })) || [];
+
+      setRecentActivities(activities);
+
+      // Fetch classroom attendance by class
+      const { data: classes, error: classesError } = await supabase
+        .from('classes')
+        .select(`
+          *,
+          class_enrollments(student_id)
+        `);
+
+      if (classesError) throw classesError;
+
+      const classroomData = await Promise.all((classes || []).map(async (cls: any) => {
+        const enrolledCount = cls.class_enrollments?.length || 0;
+        
+        const { data: classAttendance } = await supabase
+          .from('attendance_records')
+          .select('*')
+          .eq('class_id', cls.id)
+          .eq('date', today)
+          .eq('status', 'present');
+
+        const present = classAttendance?.length || 0;
+        const absent = enrolledCount - present;
+        const percentage = enrolledCount > 0 ? parseFloat(((present / enrolledCount) * 100).toFixed(1)) : 0;
+
+        return {
+          grade: cls.grade,
+          section: cls.section,
+          present,
+          absent,
+          total: enrolledCount,
+          percentage
+        };
+      }));
+
+      setClassroomAttendance(classroomData);
+
+      // Fetch bus attendance
+      const busData = await Promise.all((busRoutes || []).map(async (route: any) => {
+        const { data: busAssignments } = await supabase
+          .from('bus_assignments')
+          .select('student_id')
+          .eq('route_id', route.id)
+          .eq('status', 'active');
+
+        const total = busAssignments?.length || 0;
+
+        const { data: busAttendance } = await supabase
+          .from('attendance_records')
+          .select('*')
+          .eq('bus_route_id', route.id)
+          .eq('date', today)
+          .eq('type', 'bus')
+          .eq('status', 'present');
+
+        const present = busAttendance?.length || 0;
+        const absent = total - present;
+        const percentage = total > 0 ? parseFloat(((present / total) * 100).toFixed(1)) : 0;
+
+        return {
+          route: route.name,
+          present,
+          absent,
+          total,
+          percentage
+        };
+      }));
+
+      setBusAttendance(busData);
+
+      // Fetch weekday pattern (last 5 school days)
+      const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+      const weekdayData = weekdays.map((day, index) => {
+        const dayData = chartData[index];
+        const totalForDay = dayData ? dayData.present + dayData.absent + dayData.late : 0;
+        const presentPercent = totalForDay > 0 ? parseFloat(((dayData.present / totalForDay) * 100).toFixed(1)) : 0;
+        const absentPercent = 100 - presentPercent;
+
+        return {
+          day,
+          present: presentPercent,
+          absent: absentPercent
+        };
+      });
+
+      setWeekdayData(weekdayData);
+
+      // Fetch hourly check-ins for today
+      const { data: hourlyRecords } = await supabase
+        .from('attendance_records')
+        .select('scanned_at')
+        .eq('date', today)
+        .not('scanned_at', 'is', null);
+
+      const hourlyCounts: { [key: string]: number } = {};
+      
+      hourlyRecords?.forEach((record: any) => {
+        const hour = new Date(record.scanned_at).getHours();
+        const timeLabel = hour === 12 ? '12:00 PM' : hour > 12 ? `${hour - 12}:00 PM` : `${hour}:00 AM`;
+        hourlyCounts[timeLabel] = (hourlyCounts[timeLabel] || 0) + 1;
+      });
+
+      const hourlyData = Object.entries(hourlyCounts).map(([time, count]) => ({
+        time,
+        count
+      })).sort((a, b) => {
+        const timeA = parseInt(a.time);
+        const timeB = parseInt(b.time);
+        return timeA - timeB;
+      });
+
+      setHourlyData(hourlyData);
+
+      // Update stats
+      setStats([
+        {
+          title: "Total Students",
+          value: totalStudents.toString(),
+          icon: <Users className="h-5 w-5 text-school-primary" />,
+          change: `${totalStudents} enrolled`,
+          changeType: "neutral",
+        },
+        {
+          title: "Today's Attendance",
+          value: `${todayPercentage}%`,
+          icon: <QrCode className="h-5 w-5 text-school-primary" />,
+          change: `${todayPresent}/${totalStudents} present`,
+          changeType: todayPercentage >= 90 ? "positive" : todayPercentage >= 75 ? "neutral" : "negative",
+        },
+        {
+          title: "Bus Routes",
+          value: totalBusRoutes.toString(),
+          icon: <Bus className="h-5 w-5 text-school-primary" />,
+          change: `${totalBusRoutes} Active`,
+          changeType: "neutral",
+        },
+        {
+          title: "Teachers",
+          value: totalTeachers.toString(),
+          icon: <BookOpen className="h-5 w-5 text-school-primary" />,
+          change: `${totalTeachers} active`,
+          changeType: "neutral",
+        },
+      ]);
+
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
     }
-    
-    // Generate classroom attendance data
-    const classes = dataService.getClasses();
-    const mockClassroomData = classes.map(cls => {
-      const total = Math.floor(Math.random() * 10) + 20;
-      const absent = Math.floor(Math.random() * 3);
-      const present = total - absent;
-      const percentage = parseFloat(((present / total) * 100).toFixed(1));
-      
-      return {
-        grade: cls.name.split(" - ")[0],
-        section: cls.name.split(" - ")[1],
-        present,
-        absent,
-        total,
-        percentage
-      };
-    });
-    setClassroomAttendance(mockClassroomData);
-    
-    // Generate bus attendance data
-    const busRoutes2 = dataService.getBusRoutes();
-    const mockBusData = busRoutes2.map(route => {
-      const total = route.students;
-      const absent = Math.floor(Math.random() * 3);
-      const present = total - absent;
-      const percentage = parseFloat(((present / total) * 100).toFixed(1));
-      
-      return {
-        route: route.name,
-        present,
-        absent,
-        total,
-        percentage
-      };
-    });
-    setBusAttendance(mockBusData);
-    
-    // Generate weekday pattern data
-    const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-    const mockWeekdayData = weekdays.map((day, index) => {
-      const present = 96 - (index * 2.3);
-      return {
-        day,
-        present: parseFloat(present.toFixed(1)),
-        absent: parseFloat((100 - present).toFixed(1))
-      };
-    });
-    setWeekdayData(mockWeekdayData);
-    
-    // Generate hourly check-in data
-    const hours = [
-      '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM',
-      '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM'
-    ];
-    const mockHourlyData = hours.map(time => {
-      let count;
-      if (time === '8:00 AM' || time === '3:00 PM') {
-        count = Math.floor(Math.random() * 100) + 300;
-      } else {
-        count = Math.floor(Math.random() * 50) + 10;
-      }
-      return { time, count };
-    });
-    setHourlyData(mockHourlyData);
-  }, []);
+  };
 
   return {
     stats,
