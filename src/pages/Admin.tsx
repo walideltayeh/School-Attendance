@@ -156,7 +156,7 @@ const Admin = () => {
       name: `${cls.grade} - Section ${cls.section}`,
       teacher: 'Unassigned',
       teacher_id: cls.teacher_id,
-      room: cls.room_number || 'TBD',
+      room: 'TBD',
       subject: cls.subject
     }));
 
@@ -322,7 +322,7 @@ const Admin = () => {
       .from('class_schedules')
       .select(`
         *,
-        classes(id, name, grade, section, subject, room_number, teacher_id),
+        classes(id, name, grade, section, subject, teacher_id),
         periods(id, period_number, start_time, end_time)
       `)
       .order('day', { ascending: true })
@@ -350,8 +350,8 @@ const Admin = () => {
         teacherName: teacher?.name || 'Unassigned',
         classId: sched.class_id,
         className: `${classData?.grade} - Section ${classData?.section} (${classData?.subject})`,
-        roomId: classData?.room_number || '',
-        roomName: classData?.room_number || 'TBD',
+        roomId: '',
+        roomName: 'TBD',
         day: sched.day,
         period: periodData?.period_number || 0,
         week: sched.week_number,
@@ -384,8 +384,7 @@ const Admin = () => {
     const { error: classUpdateError } = await supabase
       .from('classes')
       .update({
-        teacher_id: schedule.teacherId || null,
-        room_number: schedule.roomName || 'TBD'
+        teacher_id: schedule.teacherId || null
       })
       .eq('id', schedule.classId);
 
@@ -464,7 +463,7 @@ const Admin = () => {
     });
   };
 
-  const handleAddClass = async (classData: { grades: string[]; sections: string[]; subjects: string[]; roomNumber: string; teacherId?: string }) => {
+  const handleAddClass = async (classData: { grades: string[]; sections: string[]; subjects: string[]; teacherId?: string }) => {
     console.log("handleAddClass called with:", classData);
     
     // Create a class for each combination of grade, section, and subject
@@ -478,7 +477,6 @@ const Admin = () => {
             grade: grade,
             section: section,
             teacher_id: classData.teacherId || null,
-            room_number: classData.roomNumber,
             subject: subject
           });
         }
@@ -609,7 +607,6 @@ const Admin = () => {
       grade: duplicateTargetGrade,
       section: duplicateTargetSection,
       teacher_id: null,
-      room_number: "TBD",
       subject: subject
     }));
 
@@ -744,7 +741,6 @@ const Admin = () => {
               grade: newGrade,
               section: newSection,
               teacher_id: updatedData.teacherId || null,
-              room_number: "TBD",
               subject: subject
             })));
 
@@ -781,7 +777,6 @@ const Admin = () => {
               grade: newGrade,
               section: newSection,
               teacher_id: updatedData.teacherId || null,
-              room_number: "TBD",
               subject: subject
             })));
 

@@ -129,12 +129,11 @@ export default function Attendance() {
   }, []);
 
   const handleStartScan = () => {
-    // Determine selected class ID based on grade, section, subject, room
+    // Determine selected class ID based on grade, section, subject
     const matchingClass = classes.find(c => 
       c.grade === selectedGrade && 
       c.section === selectedSection && 
-      c.subject === selectedSubject && 
-      c.room_number === selectedRoom
+      c.subject === selectedSubject
     );
 
     if (!matchingClass) {
@@ -406,35 +405,9 @@ export default function Attendance() {
 
                 {selectedSubject && (
                   <div className="space-y-2">
-                    <Label htmlFor="teacher-room-select">Select Room</Label>
-                    <Select value={selectedRoom} onValueChange={(value) => {
-                      setSelectedRoom(value);
-                      // Find and set the matching class
-                      const matchingClass = teacherClasses.find(c => 
-                        c.grade === selectedGrade && 
-                        c.section === selectedSection && 
-                        c.subject === selectedSubject && 
-                        c.room_number === value
-                      );
-                      if (matchingClass) {
-                        setSelectedClass(matchingClass.id);
-                      }
-                    }}>
-                      <SelectTrigger id="teacher-room-select" className="bg-background">
-                        <SelectValue placeholder="Select a room" />
-                      </SelectTrigger>
-                      <SelectContent className="z-50 bg-background border border-border">
-                        {[...new Set(teacherClasses.filter(c => 
-                          c.grade === selectedGrade && 
-                          c.section === selectedSection && 
-                          c.subject === selectedSubject
-                        ).map(c => c.room_number))].filter(room => room && room.trim() !== '').map((room) => (
-                          <SelectItem key={room} value={room}>
-                            Room {room}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <p className="text-sm text-muted-foreground">
+                      Room assignments are managed through class schedules.
+                    </p>
                   </div>
                 )}
                 
@@ -442,7 +415,7 @@ export default function Attendance() {
                   <Button 
                     className="w-full bg-school-primary hover:bg-school-secondary" 
                     onClick={handleStartScan}
-                    disabled={!selectedGrade || !selectedSection || !selectedSubject || !selectedRoom}
+                    disabled={!selectedGrade || !selectedSection || !selectedSubject}
                   >
                     <QrCode className="mr-2 h-4 w-4" />
                     Start Scanning
@@ -589,23 +562,9 @@ export default function Attendance() {
 
               {selectedSubject && (
                 <div className="space-y-2">
-                  <Label htmlFor="room-select">Select Room</Label>
-                  <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-                    <SelectTrigger id="room-select" className="bg-background">
-                      <SelectValue placeholder="Select a room" />
-                    </SelectTrigger>
-                    <SelectContent className="z-50 bg-background border border-border">
-                      {[...new Set(classes.filter(c => 
-                        c.grade === selectedGrade && 
-                        c.section === selectedSection && 
-                        c.subject === selectedSubject
-                      ).map(c => c.room_number))].filter(room => room && room.trim() !== '').map((room) => (
-                        <SelectItem key={room} value={room}>
-                          Room {room}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <p className="text-sm text-muted-foreground">
+                    Room assignments are managed through class schedules.
+                  </p>
                 </div>
               )}
               
