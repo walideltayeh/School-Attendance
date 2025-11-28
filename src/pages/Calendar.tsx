@@ -27,6 +27,7 @@ interface Period {
   periodNumber: number;
   startTime: string;
   endTime: string;
+  isAllDay?: boolean;
 }
 
 export default function CalendarPage() {
@@ -159,7 +160,8 @@ export default function CalendarPage() {
       id: p.id,
       periodNumber: p.period_number,
       startTime: p.start_time,
-      endTime: p.end_time
+      endTime: p.end_time,
+      isAllDay: p.is_all_day || false
     }));
 
     console.log('Loaded periods from database:', transformedPeriods);
@@ -279,7 +281,7 @@ export default function CalendarPage() {
                           <td className="border p-2 bg-muted/30">
                             <div className="font-semibold">Period {period.periodNumber}</div>
                             <div className="text-xs text-muted-foreground">
-                              {period.startTime} - {period.endTime}
+                              {period.isAllDay ? 'All Day' : `${period.startTime} - ${period.endTime}`}
                             </div>
                           </td>
                           {days.map(day => {
@@ -321,7 +323,7 @@ export default function CalendarPage() {
                         <div className="font-semibold">Period {schedule.period}</div>
                         {periodInfo && (
                           <div className="text-xs opacity-70">
-                            {periodInfo.startTime} - {periodInfo.endTime}
+                            {periodInfo.isAllDay ? 'All Day' : `${periodInfo.startTime} - ${periodInfo.endTime}`}
                           </div>
                         )}
                       </div>
