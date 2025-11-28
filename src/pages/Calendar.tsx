@@ -1,15 +1,170 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { dataService } from "@/services/dataService";
 import { format } from "date-fns";
 import { Clock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+
+interface Schedule {
+  id: string;
+  teacherId: string;
+  teacherName: string;
+  classId: string;
+  className: string;
+  roomId: string;
+  roomName: string;
+  day: string;
+  period: number;
+  week: number;
+  qrCode?: string;
+}
+
+interface Period {
+  id: string;
+  periodNumber: number;
+  startTime: string;
+  endTime: string;
+}
 
 export default function CalendarPage() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [view, setView] = useState<"day" | "week" | "month">("day");
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [periods, setPeriods] = useState<Period[]>([]);
+  
+  // Load schedules and periods from Supabase
+  useEffect(() => {
+    loadSchedules();
+    loadPeriods();
+
+    // Subscribe to real-time updates
+    const schedulesChannel = supabase
+      .channel('schedules-changes-calendar')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'class_schedules'
+        },
+        () => {
+          console.log('Schedules changed, reloading in calendar...');
+          loadSchedules();
+        }
+      )
+      .subscribe();
+
+    const periodsChannel = supabase
+      .channel('periods-changes-calendar')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'periods'
+        },
+        () => {
+          console.log('Periods changed, reloading in calendar...');
+          loadPeriods();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(schedulesChannel);
+      supabase.removeChannel(periodsChannel);
+    };
+  }, []);
+
+  const loadSchedules = async () => {
+    const { data, error } = await supabase
+      .from('class_schedules')
+      .select(`
+        *,
+        classes(id, name, grade, section, subject, teacher_id),
+        periods(id, period_number, start_time, end_time),
+        rooms:room_id(id, name)
+      `)
+      .order('day', { ascending: true })
+      .order('week_number', { ascending: true });
+
+    if (error) {
+      console.error('Error loading schedules:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load schedules",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Transform to match Schedule interface
+    const transformedSchedules: Schedule[] = (data || []).map((schedule: any) => {
+      const teacher = schedule.classes?.teacher_id;
+      
+      return {
+        id: schedule.id,
+        teacherId: teacher || '',
+        teacherName: 'Unassigned', // Will be loaded from teachers table if needed
+        classId: schedule.class_id,
+        className: schedule.classes 
+          ? `${schedule.classes.name} (${schedule.classes.subject})`
+          : 'Unknown Class',
+        roomId: schedule.room_id || '',
+        roomName: schedule.rooms?.name || 'TBD',
+        day: schedule.day,
+        period: schedule.periods?.period_number || 0,
+        week: schedule.week_number,
+        qrCode: schedule.qr_code
+      };
+    });
+
+    // Load teacher names
+    const teacherIds = [...new Set(transformedSchedules.map(s => s.teacherId).filter(Boolean))];
+    if (teacherIds.length > 0) {
+      const { data: teachers } = await supabase
+        .from('teachers')
+        .select('id, full_name')
+        .in('id', teacherIds);
+
+      if (teachers) {
+        transformedSchedules.forEach(schedule => {
+          const teacher = teachers.find(t => t.id === schedule.teacherId);
+          if (teacher) {
+            schedule.teacherName = teacher.full_name || 'Unassigned';
+          }
+        });
+      }
+    }
+
+    console.log('Loaded schedules from database:', transformedSchedules);
+    setSchedules(transformedSchedules);
+  };
+
+  const loadPeriods = async () => {
+    const { data, error } = await supabase
+      .from('periods')
+      .select('*')
+      .order('period_number', { ascending: true });
+
+    if (error) {
+      console.error('Error loading periods:', error);
+      return;
+    }
+
+    const transformedPeriods: Period[] = (data || []).map(p => ({
+      id: p.id,
+      periodNumber: p.period_number,
+      startTime: p.start_time,
+      endTime: p.end_time
+    }));
+
+    console.log('Loaded periods from database:', transformedPeriods);
+    setPeriods(transformedPeriods);
+  };
   
   // Subject color mapping
   const subjectColors: Record<string, string> = {
@@ -37,7 +192,6 @@ export default function CalendarPage() {
   };
   
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-  const schedules = dataService.getClassSchedules();
   
   // Filter schedules for the selected date if in day view
   const filteredSchedules = date 
@@ -50,9 +204,6 @@ export default function CalendarPage() {
   
   // Sort by period
   const sortedSchedules = [...filteredSchedules].sort((a, b) => a.period - b.period);
-  
-  // Get periods data
-  const periods = dataService.getPeriods();
 
   return (
     <div className="space-y-6">
