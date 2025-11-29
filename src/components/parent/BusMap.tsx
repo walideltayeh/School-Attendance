@@ -42,6 +42,39 @@ const BusMap: React.FC<BusMapProps> = ({ routeId }) => {
     }
   };
 
+  // Get user's current location for testing
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const { longitude, latitude } = position.coords;
+          setBusLocation([longitude, latitude]);
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          toast({
+            title: "Location Error",
+            description: "Could not get your current location. Please enable location access.",
+            variant: "destructive"
+          });
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        }
+      );
+
+      return () => navigator.geolocation.clearWatch(watchId);
+    } else {
+      toast({
+        title: "Location Not Supported",
+        description: "Your browser doesn't support geolocation",
+        variant: "destructive"
+      });
+    }
+  }, []);
+
   useEffect(() => {
     if (!mapContainer.current) return;
 
@@ -77,12 +110,11 @@ const BusMap: React.FC<BusMapProps> = ({ routeId }) => {
     );
 
     // Add stops to map once loaded
-    if (stops.length > 0) {
+    if (stops.length > 0 && busLocation) {
       stops.forEach((stop, index) => {
-        // For demo, we'll use approximate coordinates
-        // In production, you'd geocode the location or store coordinates
-        const lng = -74.0060 + (index * 0.01); // Demo coordinates
-        const lat = 40.7128 + (index * 0.01);
+        // Create stops around the current location for demo
+        const lng = busLocation[0] + ((index - 1) * 0.01);
+        const lat = busLocation[1] + ((index - 1) * 0.01);
 
         new mapboxgl.Marker({ color: '#3b82f6' })
           .setLngLat([lng, lat])
@@ -93,33 +125,15 @@ const BusMap: React.FC<BusMapProps> = ({ routeId }) => {
           )
           .addTo(map.current!);
       });
-
-      // Center map on first stop
-      if (stops.length > 0) {
-        map.current.setCenter([-74.0060, 40.7128]);
-      }
     }
 
-    // Simulate bus movement (in production, this would come from real GPS data)
-    const simulateBusMovement = () => {
-      const baseLng = -74.0060;
-      const baseLat = 40.7128;
-      const offset = (Date.now() / 10000) % 1; // Move over time
-      
-      const newLocation: [number, number] = [
-        baseLng + (offset * 0.05),
-        baseLat + (offset * 0.05)
-      ];
-      
-      setBusLocation(newLocation);
-    };
-
-    simulateBusMovement();
-    const interval = setInterval(simulateBusMovement, 5000); // Update every 5 seconds
+    // Center map on current location if available
+    if (busLocation) {
+      map.current.setCenter(busLocation);
+    }
 
     // Cleanup
     return () => {
-      clearInterval(interval);
       map.current?.remove();
     };
   }, [stops]);
