@@ -479,7 +479,12 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
         </div>
       </div>
       
-      <div className="space-y-2 border rounded-md p-4">
+      <div className="space-y-3 border-2 border-primary/20 rounded-lg p-4 bg-accent/5">
+        <div className="flex items-center gap-2 mb-3">
+          <Calendar className="h-5 w-5 text-primary" />
+          <Label className="text-base font-semibold text-primary">Week Selection</Label>
+        </div>
+        
         <div className="flex items-center space-x-2 mb-4">
           <Checkbox 
             id="applyToAll" 
@@ -488,13 +493,13 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
             disabled={!!editingSchedule}
           />
           <Label htmlFor="applyToAll" className="font-medium">
-            Apply to all weeks (2, 3, 4 same as Week 1)
+            Apply to all weeks (Weeks 1, 2, 3, 4)
           </Label>
         </div>
         
         {!applyToAllWeeks && (
           <div className="space-y-2">
-            <Label className="block mb-2">Select weeks for this schedule:</Label>
+            <Label className="block mb-2 text-sm font-medium">Select specific week(s):</Label>
             <div className="flex flex-wrap gap-2">
               {weeks.map((week) => (
                 <Button
@@ -510,7 +515,17 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
                 </Button>
               ))}
             </div>
+            {weekSchedule.length > 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                {weekSchedule.length} week{weekSchedule.length !== 1 ? 's' : ''} selected: Week {weekSchedule.sort().join(', Week ')}
+              </p>
+            )}
           </div>
+        )}
+        {applyToAllWeeks && (
+          <p className="text-sm text-muted-foreground">
+            Schedule will be created for all 4 weeks
+          </p>
         )}
       </div>
       
