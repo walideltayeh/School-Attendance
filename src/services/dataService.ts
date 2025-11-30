@@ -82,6 +82,7 @@ export interface ClassSchedule {
   day: "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday";
   period: number;
   week: number;
+  month?: number;
   qrCode?: string;
 }
 
