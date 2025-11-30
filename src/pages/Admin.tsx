@@ -1391,6 +1391,8 @@ const Admin = () => {
               onSubmit={handleUpdateSchedule} 
               editingSchedule={selectedSchedule}
               onCancelEdit={() => setIsScheduleEditDialogOpen(false)}
+              teachers={teachers}
+              classes={classes}
             />
           )}
         </DialogContent>

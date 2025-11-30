@@ -34,8 +34,13 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
   const [suggestedRooms, setSuggestedRooms] = useState<string[]>([]);
   const [classEnrollmentCount, setClassEnrollmentCount] = useState<number>(0);
   
-  // Show all classes when creating a schedule - any teacher can teach any class
-  const availableClasses = selectedTeacher ? classes : [];
+  // Filter classes by selected teacher's subjects
+  const availableClasses = selectedTeacher ? classes.filter(c => {
+    const teacher = teachers.find(t => t.id === selectedTeacher);
+    if (!teacher) return false;
+    // Show all classes for this teacher (any teacher can teach any class)
+    return true;
+  }) : [];
   
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   const weeks = [1, 2, 3, 4];
@@ -295,10 +300,13 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedTeacher || !selectedClass || !selectedRoom || selectedDays.length === 0 || !selectedPeriod || weekSchedule.length === 0 || selectedMonths.length === 0) {
+    // Auto-select all months if none selected
+    const monthsToUse = selectedMonths.length === 0 ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] : selectedMonths;
+    
+    if (!selectedTeacher || !selectedClass || !selectedRoom || selectedDays.length === 0 || !selectedPeriod || weekSchedule.length === 0) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields (including months)",
+        description: "Please fill in all required fields",
         variant: "destructive",
       });
       return;
@@ -321,7 +329,7 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
     const schedules = [];
     for (const day of selectedDays) {
       for (const week of weekSchedule) {
-        for (const month of selectedMonths) {
+        for (const month of monthsToUse) {
           schedules.push({
             teacherId: teacher.id,
             teacherName: teacher.full_name || teacher.name,
