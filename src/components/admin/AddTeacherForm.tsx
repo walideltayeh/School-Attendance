@@ -56,7 +56,11 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
 
   // Load available grades on mount
   useEffect(() => {
-    getAvailableGrades().then(grades => setAvailableGrades(grades));
+    console.log("DEBUG AddTeacherForm: Loading available grades...");
+    getAvailableGrades().then(grades => {
+      console.log("DEBUG AddTeacherForm: Available grades loaded:", grades);
+      setAvailableGrades(grades);
+    });
   }, []);
 
   // Helper functions for getting sections and subjects (now async)
@@ -272,6 +276,7 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
                 <Select 
                   value={assignment.grade} 
                   onValueChange={(value) => {
+                    console.log("DEBUG AddTeacherForm: Grade selected:", value);
                     updateClassAssignment(index, "grade", value);
                     updateClassAssignment(index, "section", "");
                     updateClassAssignment(index, "subject", "");
@@ -281,11 +286,15 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
                     <SelectValue placeholder={availableGrades.length === 0 ? "No classes available" : "Select class"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableGrades.map((grade) => (
-                      <SelectItem key={grade} value={grade}>
-                        {grade}
-                      </SelectItem>
-                    ))}
+                    {availableGrades.length > 0 ? (
+                      availableGrades.map((grade) => (
+                        <SelectItem key={grade} value={grade}>
+                          {grade}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="p-2 text-sm text-gray-500">No grades available. Create classes first.</div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
