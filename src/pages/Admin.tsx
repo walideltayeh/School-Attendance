@@ -200,6 +200,8 @@ const Admin = () => {
 
   const handleAddTeacher = async (teacher: Omit<Teacher, "id">, classAssignments: any[]) => {
     try {
+      console.log('DEBUG: handleAddTeacher called with:', { teacher, classAssignments });
+      
       // Create teacher record directly with all info
       const { data: newTeacher, error: teacherError } = await supabase
         .from('teachers')
@@ -223,18 +225,37 @@ const Admin = () => {
         return;
       }
 
+      console.log('DEBUG: Teacher created:', newTeacher);
+
       // Update classes to assign this teacher
-      for (const assignment of classAssignments) {
-        if (assignment.grade && assignment.section && assignment.subject) {
-          const { error: updateError } = await supabase
-            .from('classes')
-            .update({ teacher_id: newTeacher.id })
-            .eq('grade', assignment.grade)
-            .eq('section', assignment.section)
-            .eq('subject', assignment.subject);
-          
-          if (updateError) {
-            console.error('Error assigning class to teacher:', updateError);
+      // Get all classes first, then match and update
+      const { data: allClasses, error: fetchError } = await supabase
+        .from('classes')
+        .select('*');
+      
+      if (!fetchError && allClasses) {
+        for (const assignment of classAssignments) {
+          if (assignment.grade && assignment.section && assignment.subject) {
+            // Find matching class
+            const matchingClass = allClasses.find(c =>
+              c.grade === assignment.grade &&
+              c.section === assignment.section &&
+              c.subject === assignment.subject
+            );
+            
+            if (matchingClass) {
+              console.log('DEBUG: Found matching class:', matchingClass, 'Assigning teacher:', newTeacher.id);
+              const { error: updateError } = await supabase
+                .from('classes')
+                .update({ teacher_id: newTeacher.id })
+                .eq('id', matchingClass.id);
+              
+              if (updateError) {
+                console.error('Error assigning class to teacher:', updateError);
+              }
+            } else {
+              console.warn('DEBUG: No matching class found for', assignment);
+            }
           }
         }
       }
@@ -298,18 +319,30 @@ const Admin = () => {
         console.error('Error clearing teacher assignments:', clearError);
       }
 
-      // Now assign to the new classes
-      for (const assignment of classAssignments) {
-        if (assignment.grade && assignment.section && assignment.subject) {
-          const { error: assignError } = await supabase
-            .from('classes')
-            .update({ teacher_id: selectedTeacher.id })
-            .eq('grade', assignment.grade)
-            .eq('section', assignment.section)
-            .eq('subject', assignment.subject);
-          
-          if (assignError) {
-            console.error('Error assigning class to teacher:', assignError);
+      // Get all classes and match by grade/section/subject, then assign
+      const { data: allClasses, error: fetchError } = await supabase
+        .from('classes')
+        .select('*');
+      
+      if (!fetchError && allClasses) {
+        for (const assignment of classAssignments) {
+          if (assignment.grade && assignment.section && assignment.subject) {
+            const matchingClass = allClasses.find(c =>
+              c.grade === assignment.grade &&
+              c.section === assignment.section &&
+              c.subject === assignment.subject
+            );
+            
+            if (matchingClass) {
+              const { error: assignError } = await supabase
+                .from('classes')
+                .update({ teacher_id: selectedTeacher.id })
+                .eq('id', matchingClass.id);
+              
+              if (assignError) {
+                console.error('Error assigning class to teacher:', assignError);
+              }
+            }
           }
         }
       }
