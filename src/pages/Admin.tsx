@@ -608,24 +608,43 @@ const Admin = () => {
 
     const targetClassName = `${duplicateTargetGrade} - Section ${duplicateTargetSection}`;
     
-    // Check if target already exists
-    const existingTargetClasses = classes.filter(c => c.name === targetClassName);
-    if (existingTargetClasses.length > 0) {
-      toast({
-        title: "Error",
-        description: `${targetClassName} already exists. Please choose a different target.`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     // Get subjects from source class
     const sourceSubjects = classes
       .filter(c => c.name === duplicateSourceClass)
       .map(c => c.subject);
 
-    // Create new classes with same subjects in Supabase
-    const classesToInsert = sourceSubjects.map(subject => ({
+    // Check which subjects already exist in target grade/section
+    const { data: existingClasses, error: checkError } = await supabase
+      .from('classes')
+      .select('subject')
+      .eq('grade', duplicateTargetGrade)
+      .eq('section', duplicateTargetSection);
+
+    if (checkError) {
+      console.error("Error checking existing classes:", checkError);
+      toast({
+        title: "Error",
+        description: "Failed to check existing classes",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const existingSubjects = (existingClasses || []).map(c => c.subject);
+    const newSubjects = sourceSubjects.filter(s => !existingSubjects.includes(s));
+    const duplicateSubjects = sourceSubjects.filter(s => existingSubjects.includes(s));
+
+    if (newSubjects.length === 0) {
+      toast({
+        title: "Error",
+        description: `All subjects from ${duplicateSourceClass} already exist in ${targetClassName}`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Create new classes with only non-duplicate subjects
+    const classesToInsert = newSubjects.map(subject => ({
       name: targetClassName,
       grade: duplicateTargetGrade,
       section: duplicateTargetSection,
@@ -647,9 +666,13 @@ const Admin = () => {
       return;
     }
     
+    const message = duplicateSubjects.length > 0
+      ? `Duplicated ${newSubjects.length} subject(s). Skipped ${duplicateSubjects.length} subject(s) that already exist.`
+      : `Created ${targetClassName} with ${newSubjects.length} subject(s)`;
+
     toast({
       title: "Class Group Duplicated",
-      description: `Created ${targetClassName} with ${sourceSubjects.length} subject(s)`,
+      description: message,
     });
 
     // Reset state
@@ -657,6 +680,9 @@ const Admin = () => {
     setDuplicateSourceClass(null);
     setDuplicateTargetGrade("");
     setDuplicateTargetSection("");
+    
+    // Reload classes
+    await loadClasses();
   };
 
   const handleDeleteClassGroup = (className: string) => {
