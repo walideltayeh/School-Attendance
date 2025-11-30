@@ -34,9 +34,10 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
   const [suggestedRooms, setSuggestedRooms] = useState<string[]>([]);
   const [classEnrollmentCount, setClassEnrollmentCount] = useState<number>(0);
   
-  // Filter classes - show all classes for selection
-  // (teachers may not have classes pre-assigned, but can schedule any class they teach)
-  const availableClasses = selectedTeacher ? classes : [];
+  // Filter classes by selected teacher's assigned classes
+  const availableClasses = selectedTeacher ? classes.filter(c => 
+    c.teacher_id === selectedTeacher
+  ) : [];
   
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   const weeks = [1, 2, 3, 4];
@@ -410,14 +411,21 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
             disabled={!selectedTeacher || availableClasses.length === 0}
           >
             <SelectTrigger id="class">
-              <SelectValue placeholder={!selectedTeacher ? "Select a teacher first" : "Select class"} />
+              <SelectValue placeholder={!selectedTeacher ? "Select a teacher first" : availableClasses.length === 0 ? "No classes assigned to this teacher" : "Select class"} />
             </SelectTrigger>
             <SelectContent>
-              {availableClasses.map((classObj) => (
-                <SelectItem key={classObj.id} value={classObj.id}>
-                  {classObj.name} ({classObj.subject})
-                </SelectItem>
-              ))}
+              {availableClasses.length === 0 ? (
+                <div className="p-2 text-sm text-muted-foreground text-center">
+                  No classes assigned to this teacher.<br/>
+                  Assign classes in the Classes tab first.
+                </div>
+              ) : (
+                availableClasses.map((classObj) => (
+                  <SelectItem key={classObj.id} value={classObj.id}>
+                    {classObj.name} ({classObj.subject})
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>
