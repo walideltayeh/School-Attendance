@@ -109,8 +109,10 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('DEBUG AddTeacherForm: handleSubmit called', { name, email, phone, username, password, classAssignments });
     
     if (!name || !email || !phone) {
+      console.warn('DEBUG AddTeacherForm: Missing required fields');
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -120,6 +122,7 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
     }
 
     if (!username || !password) {
+      console.warn('DEBUG AddTeacherForm: Missing username or password');
       toast({
         title: "Error",
         description: "Please provide a username and password for teacher login",
@@ -129,7 +132,9 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
     }
 
     const hasCompleteAssignment = classAssignments.some(a => a.grade && a.section && a.subject);
+    console.log('DEBUG AddTeacherForm: hasCompleteAssignment=', hasCompleteAssignment, classAssignments);
     if (!hasCompleteAssignment) {
+      console.warn('DEBUG AddTeacherForm: No complete class assignments');
       toast({
         title: "Error",
         description: "Please assign at least one class with grade, section, and subject",
@@ -154,6 +159,7 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
       students: initialValues?.students || 0
     };
     
+    console.log('DEBUG AddTeacherForm: Calling onSubmit with:', { newTeacher, classAssignments });
     onSubmit(newTeacher, classAssignments);
     
     if (!isEditing) {
