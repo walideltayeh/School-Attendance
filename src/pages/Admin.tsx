@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +30,7 @@ import { BulkQRGenerator } from "@/components/admin/BulkQRGenerator";
 import { BulkScheduleImport } from "@/components/admin/BulkScheduleImport";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format, startOfYear, addDays } from "date-fns";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -358,6 +358,7 @@ const Admin = () => {
         day: sched.day,
         period: periodData?.period_number || 0,
         week: sched.week_number,
+        month: sched.month,
         qrCode: sched.qr_code
       };
     });
@@ -409,7 +410,8 @@ const Admin = () => {
         period_id: periodData.id,
         day: schedule.day,
         week_number: schedule.week,
-        room_id: schedule.roomId
+        room_id: schedule.roomId,
+        month: schedule.month
       })
       .select();
 
@@ -1243,7 +1245,44 @@ const Admin = () => {
                       </div>
                       <div className="flex items-center gap-2 mb-2">
                         <Calendar className="h-4 w-4 text-primary" />
-                        <span className="font-medium">{schedule.day} - Period {schedule.period}</span>
+                        <span className="font-medium">
+                          {(() => {
+                            // Calculate the actual date for display
+                            if (schedule.month && schedule.week) {
+                              const year = new Date().getFullYear();
+                              const monthStart = startOfYear(new Date(year, 0, 1));
+                              
+                              // Days to get to the target month
+                              const monthIndex = schedule.month - 1;
+                              
+                              // Get day of week index (0 = Sunday, 1 = Monday, etc.)
+                              const dayMap: Record<string, number> = {
+                                'Monday': 1,
+                                'Tuesday': 2,
+                                'Wednesday': 3,
+                                'Thursday': 4,
+                                'Friday': 5
+                              };
+                              const targetDayOfWeek = dayMap[schedule.day];
+                              
+                              // Calculate the date
+                              const firstDayOfMonth = new Date(year, monthIndex, 1);
+                              const firstDayOfWeek = firstDayOfMonth.getDay();
+                              
+                              // Calculate days to first occurrence of target day
+                              let daysToAdd = targetDayOfWeek - firstDayOfWeek;
+                              if (daysToAdd < 0) daysToAdd += 7;
+                              
+                              // Add weeks
+                              daysToAdd += (schedule.week - 1) * 7;
+                              
+                              const actualDate = addDays(firstDayOfMonth, daysToAdd);
+                              
+                              return `${schedule.day} ${format(actualDate, 'dd MMM yyyy')} - Period ${schedule.period}`;
+                            }
+                            return `${schedule.day} - Period ${schedule.period}`;
+                          })()}
+                        </span>
                         <span className="text-xs bg-secondary px-2 py-0.5 rounded-full ml-auto">Week {schedule.week}</span>
                       </div>
                       <div className="text-sm space-y-1 mt-2">

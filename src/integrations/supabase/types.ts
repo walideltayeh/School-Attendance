@@ -266,6 +266,7 @@ export type Database = {
           created_at: string
           day: Database["public"]["Enums"]["day_of_week"]
           id: string
+          month: number | null
           period_id: string
           qr_code: string | null
           room_id: string | null
@@ -276,6 +277,7 @@ export type Database = {
           created_at?: string
           day: Database["public"]["Enums"]["day_of_week"]
           id?: string
+          month?: number | null
           period_id: string
           qr_code?: string | null
           room_id?: string | null
@@ -286,6 +288,7 @@ export type Database = {
           created_at?: string
           day?: Database["public"]["Enums"]["day_of_week"]
           id?: string
+          month?: number | null
           period_id?: string
           qr_code?: string | null
           room_id?: string | null
