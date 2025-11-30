@@ -34,13 +34,10 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
   const [suggestedRooms, setSuggestedRooms] = useState<string[]>([]);
   const [classEnrollmentCount, setClassEnrollmentCount] = useState<number>(0);
   
-  // Filter classes by selected teacher's subjects
-  const availableClasses = selectedTeacher ? classes.filter(c => {
-    const teacher = teachers.find(t => t.id === selectedTeacher);
-    if (!teacher) return false;
-    // Show all classes for this teacher (any teacher can teach any class)
-    return true;
-  }) : [];
+  // Filter classes by selected teacher's assigned classes
+  const availableClasses = selectedTeacher ? classes.filter(c => 
+    c.teacher_id === selectedTeacher
+  ) : [];
   
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   const weeks = [1, 2, 3, 4];
@@ -147,6 +144,21 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
       }
     }
   }, [editingSchedule]);
+
+  // Auto-select class when teacher changes
+  useEffect(() => {
+    if (selectedTeacher && availableClasses.length > 0) {
+      // If only 1 class, auto-select it
+      if (availableClasses.length === 1) {
+        setSelectedClass(availableClasses[0].id);
+      } else {
+        // If multiple classes, clear selection to show dropdown
+        setSelectedClass("");
+      }
+    } else {
+      setSelectedClass("");
+    }
+  }, [selectedTeacher, availableClasses]);
 
   // Load enrollment count when class is selected
   useEffect(() => {
