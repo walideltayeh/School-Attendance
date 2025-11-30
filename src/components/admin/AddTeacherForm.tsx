@@ -3,17 +3,23 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MultiSelect } from "@/components/ui/multi-select";
 import { toast } from "@/hooks/use-toast";
 import { dataService, Teacher } from "@/services/dataService";
-import { PlusCircle, Trash, Save, BookOpen, Eye, EyeOff } from "lucide-react";
-import { getAvailableGrades, getAvailableSections, getAvailableSubjects } from "@/utils/classHelpers";
+import { Save, Eye, EyeOff, Check } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ClassAssignment {
   grade: string;
   section: string;
   subject: string;
+}
+
+interface AvailableClass {
+  id: string;
+  grade: string;
+  section: string;
+  subject: string;
+  display: string;
 }
 
 interface AddTeacherFormProps {
@@ -30,93 +36,82 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
   const [username, setUsername] = useState(initialValues?.username || "");
   const [password, setPassword] = useState(initialValues?.password || "");
   const [showPassword, setShowPassword] = useState(false);
-  const [availableGrades, setAvailableGrades] = useState<string[]>([]);
-  const [classAssignments, setClassAssignments] = useState<ClassAssignment[]>(() => {
-    if (initialValues?.classes?.length) {
-      return initialValues.classes.map(cls => {
-        const match = cls.match(/(Grade \d+) - Section ([A-E]) \((.*)\)/);
-        if (match) {
-          const [, grade, section, subject] = match;
-          
-          return { 
-            grade, 
-            section, 
-            subject
-          };
-        }
-        return { grade: "", section: "", subject: "" };
-      }).filter(a => a.grade !== "");
-    }
-    return [{
-      grade: "",
-      section: "",
-      subject: ""
-    }];
-  });
+  const [availableClasses, setAvailableClasses] = useState<AvailableClass[]>([]);
+  const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load available grades on mount
+  // Load available classes on mount
   useEffect(() => {
-    console.log("DEBUG AddTeacherForm: Loading available grades...");
-    getAvailableGrades().then(grades => {
-      console.log("DEBUG AddTeacherForm: Available grades loaded:", grades);
-      setAvailableGrades(grades);
-    });
+    const loadClasses = async () => {
+      try {
+        console.log("DEBUG: Loading available classes for teacher assignment...");
+        const { data, error } = await supabase
+          .from("classes")
+          .select("id, grade, section, subject")
+          .order("grade", { ascending: true })
+          .order("section", { ascending: true })
+          .order("subject", { ascending: true });
+
+        if (error) {
+          console.error("Error loading classes:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load classes",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const classes: AvailableClass[] = data.map((c) => ({
+          id: c.id,
+          grade: c.grade,
+          section: c.section,
+          subject: c.subject,
+          display: `${c.grade} - Section ${c.section} (${c.subject})`,
+        }));
+
+        console.log("DEBUG: Loaded classes:", classes);
+        setAvailableClasses(classes);
+
+        // If editing, pre-select existing classes
+        if (initialValues?.classes && initialValues.classes.length > 0) {
+          const existingClassIds = initialValues.classes
+            .map((className) => {
+              const matching = classes.find((c) => c.display === className);
+              return matching?.id;
+            })
+            .filter(Boolean) as string[];
+          setSelectedClassIds(existingClassIds);
+        }
+      } catch (err) {
+        console.error("Error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadClasses();
   }, []);
 
-  // Helper functions for getting sections and subjects (now async)
-  const [gradeSections, setGradeSections] = useState<Record<string, string[]>>({});
-  const [gradeSubjects, setGradeSubjects] = useState<Record<string, string[]>>({});
-  
-  const loadGradeSections = async (grade: string) => {
-    if (!gradeSections[grade]) {
-      const sections = await getAvailableSections(grade);
-      setGradeSections(prev => ({ ...prev, [grade]: sections }));
-    }
-  };
-  
-  const loadGradeSubjects = async (grade: string, section: string) => {
-    const key = `${grade}-${section}`;
-    if (!gradeSubjects[key]) {
-      const subjects = await getAvailableSubjects(grade, section);
-      setGradeSubjects(prev => ({ ...prev, [key]: subjects }));
-    }
-  };
-
-  const handleAddClassAssignment = () => {
-    setClassAssignments([...classAssignments, { grade: "", section: "", subject: "" }]);
-  };
-
-  const handleRemoveClassAssignment = (index: number) => {
-    if (classAssignments.length > 1) {
-      const newAssignments = [...classAssignments];
-      newAssignments.splice(index, 1);
-      setClassAssignments(newAssignments);
-    }
-  };
-
-  const updateClassAssignment = (index: number, field: keyof ClassAssignment, value: string) => {
-    const newAssignments = [...classAssignments];
-    newAssignments[index][field] = value;
-    
-    // Load sections when grade is selected
-    if (field === 'grade' && value) {
-      loadGradeSections(value);
-    }
-    
-    // Load subjects when section is selected
-    if (field === 'section' && value && newAssignments[index].grade) {
-      loadGradeSubjects(newAssignments[index].grade, value);
-    }
-    
-    setClassAssignments(newAssignments);
+  const toggleClassSelection = (classId: string) => {
+    setSelectedClassIds((prev) =>
+      prev.includes(classId) ? prev.filter((id) => id !== classId) : [...prev, classId]
+    );
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('DEBUG AddTeacherForm: handleSubmit called', { name, email, phone, username, password, classAssignments });
-    
+    console.log("DEBUG AddTeacherForm: handleSubmit called", {
+      name,
+      email,
+      phone,
+      username,
+      password,
+      selectedClassIds,
+    });
+
     if (!name || !email || !phone) {
-      console.warn('DEBUG AddTeacherForm: Missing required fields');
+      console.warn("DEBUG AddTeacherForm: Missing required fields");
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -126,7 +121,7 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
     }
 
     if (!username || !password) {
-      console.warn('DEBUG AddTeacherForm: Missing username or password');
+      console.warn("DEBUG AddTeacherForm: Missing username or password");
       toast({
         title: "Error",
         description: "Please provide a username and password for teacher login",
@@ -135,22 +130,28 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
       return;
     }
 
-    const hasCompleteAssignment = classAssignments.some(a => a.grade && a.section && a.subject);
-    console.log('DEBUG AddTeacherForm: hasCompleteAssignment=', hasCompleteAssignment, classAssignments);
-    if (!hasCompleteAssignment) {
-      console.warn('DEBUG AddTeacherForm: No complete class assignments');
+    if (selectedClassIds.length === 0) {
+      console.warn("DEBUG AddTeacherForm: No classes selected");
       toast({
         title: "Error",
-        description: "Please assign at least one class with grade, section, and subject",
+        description: "Please select at least one class",
         variant: "destructive",
       });
       return;
     }
 
-    const formattedClasses = classAssignments
-      .filter(a => a.grade && a.section && a.subject)
-      .map(a => `${a.grade} - Section ${a.section} (${a.subject})`);
-    
+    // Build class assignments from selected classes
+    const classAssignments = selectedClassIds
+      .map((id) => availableClasses.find((c) => c.id === id))
+      .filter(Boolean)
+      .map((c) => ({
+        grade: c!.grade,
+        section: c!.section,
+        subject: c!.subject,
+      }));
+
+    const formattedClasses = classAssignments.map((a) => `${a.grade} - Section ${a.section} (${a.subject})`);
+
     const newTeacher: Omit<Teacher, "id"> = {
       name,
       email,
@@ -160,19 +161,19 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
       subject: "",
       subjects: [],
       classes: formattedClasses,
-      students: initialValues?.students || 0
+      students: initialValues?.students || 0,
     };
-    
-    console.log('DEBUG AddTeacherForm: Calling onSubmit with:', { newTeacher, classAssignments });
+
+    console.log("DEBUG AddTeacherForm: Calling onSubmit with:", { newTeacher, classAssignments });
     onSubmit(newTeacher, classAssignments);
-    
+
     if (!isEditing) {
       setName("");
       setEmail("");
       setPhone("");
       setUsername("");
       setPassword("");
-      setClassAssignments([{ grade: "", section: "", subject: "" }]);
+      setSelectedClassIds([]);
     }
 
     toast({
@@ -213,153 +214,76 @@ export function AddTeacherForm({ onSubmit, initialValues, isEditing = false, onC
             id="phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            placeholder="(123) 456-7890"
+            placeholder="+1 (555) 000-0000"
           />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="username">Username (for login)</Label>
-          <Input
-            id="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="jdoe"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <div className="relative">
-            <Input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-            <Button 
-              type="button" 
-              variant="ghost" 
-              size="sm" 
-              className="absolute right-2 top-1/2 transform -translate-y-1/2"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </Button>
-          </div>
         </div>
       </div>
-      
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label>Class Assignments</Label>
-          <Button 
-            type="button" 
-            variant="outline" 
-            size="sm" 
-            onClick={handleAddClassAssignment}
-          >
-            <PlusCircle className="h-4 w-4 mr-1" /> Add Class
-          </Button>
-        </div>
-        
-        {classAssignments.map((assignment, index) => (
-          <div key={index} className="border p-3 rounded-md space-y-3">
-            <div className="flex items-center gap-2 pb-2 border-b">
-              <BookOpen className="h-4 w-4 text-primary" />
-              <Label className="font-semibold">
-                Assignment {index + 1}
-              </Label>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor={`class-${index}`}>Class</Label>
-                <Select 
-                  value={assignment.grade} 
-                  onValueChange={(value) => {
-                    console.log("DEBUG AddTeacherForm: Grade selected:", value);
-                    updateClassAssignment(index, "grade", value);
-                    updateClassAssignment(index, "section", "");
-                    updateClassAssignment(index, "subject", "");
-                  }}
-                >
-                  <SelectTrigger id={`class-${index}`}>
-                    <SelectValue placeholder={availableGrades.length === 0 ? "No classes available" : "Select class"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableGrades.length > 0 ? (
-                      availableGrades.map((grade) => (
-                        <SelectItem key={grade} value={grade}>
-                          {grade}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <div className="p-2 text-sm text-gray-500">No grades available. Create classes first.</div>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor={`section-${index}`}>Section</Label>
-                <Select 
-                  value={assignment.section} 
-                  onValueChange={(value) => {
-                    updateClassAssignment(index, "section", value);
-                    updateClassAssignment(index, "subject", "");
-                  }}
-                  disabled={!assignment.grade}
-                >
-                  <SelectTrigger id={`section-${index}`}>
-                    <SelectValue placeholder="Select section" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(gradeSections[assignment.grade] || []).map((section) => (
-                      <SelectItem key={section} value={section}>
-                        Section {section}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor={`subject-${index}`}>Subject</Label>
-                <Select 
-                  value={assignment.subject} 
-                  onValueChange={(value) => updateClassAssignment(index, "subject", value)}
-                  disabled={!assignment.grade || !assignment.section}
-                >
-                  <SelectTrigger id={`subject-${index}`}>
-                    <SelectValue placeholder="Select subject" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(gradeSubjects[`${assignment.grade}-${assignment.section}`] || []).map((subject) => (
-                      <SelectItem key={subject} value={subject}>
-                        {subject}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div className="flex justify-end">
+
+      <div className="space-y-4 pt-4 border-t">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="username">Username</Label>
+            <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="jdoe" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => handleRemoveClassAssignment(index)}
-                disabled={classAssignments.length <= 1}
-                className="text-destructive"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                onClick={() => setShowPassword(!showPassword)}
               >
-                <Trash className="h-4 w-4 mr-1" /> Remove
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </div>
           </div>
-        ))}
+        </div>
       </div>
-      
-      <div className="flex gap-2 justify-end">
+
+      <div className="space-y-3 pt-4 border-t">
+        <Label>Select Classes</Label>
+        {loading ? (
+          <p className="text-sm text-gray-500">Loading classes...</p>
+        ) : availableClasses.length === 0 ? (
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+            No classes available. Please create classes first before adding teachers.
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {availableClasses.map((cls) => (
+              <button
+                key={cls.id}
+                type="button"
+                onClick={() => toggleClassSelection(cls.id)}
+                className={`w-full p-3 text-left rounded border-2 transition-colors ${
+                  selectedClassIds.includes(cls.id)
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm">{cls.display}</span>
+                  {selectedClassIds.includes(cls.id) && <Check className="h-4 w-4 text-blue-500" />}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-gray-500">
+          Selected: {selectedClassIds.length} class{selectedClassIds.length !== 1 ? "es" : ""}
+        </p>
+      </div>
+
+      <div className="flex gap-2 justify-end pt-4 border-t">
         {isEditing && onCancel && (
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
