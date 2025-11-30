@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Calendar, Clock, MapPin, User, Bus, School, AlertCircle, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import BusMap from "@/components/parent/BusMap";
 import { format } from "date-fns";
+import { LogOut } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -76,8 +78,8 @@ interface BusInfo {
 }
 
 export default function ParentPortal() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const guardianPhone = searchParams.get("guardian") || "+1234567890"; // Default test guardian
+  const navigate = useNavigate();
+  const [guardianEmail, setGuardianEmail] = useState<string | null>(null);
   
   const [children, setChildren] = useState<Student[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
@@ -87,9 +89,22 @@ export default function ParentPortal() {
   const [busInfo, setBusInfo] = useState<BusInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Check authentication on mount
   useEffect(() => {
-    loadGuardianChildren();
-  }, [guardianPhone]);
+    const email = sessionStorage.getItem('parentEmail');
+    if (!email) {
+      navigate('/parent-login');
+      return;
+    }
+    setGuardianEmail(email);
+    loadGuardianChildren(email);
+  }, []);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('parentEmail');
+    sessionStorage.removeItem('parentPhone');
+    navigate('/parent-login');
+  };
 
   useEffect(() => {
     if (selectedStudentId) {
@@ -97,7 +112,7 @@ export default function ParentPortal() {
     }
   }, [selectedStudentId]);
 
-  const loadGuardianChildren = async () => {
+  const loadGuardianChildren = async (email: string) => {
     try {
       setLoading(true);
 
@@ -115,7 +130,7 @@ export default function ParentPortal() {
             photo_url
           )
         `)
-        .eq('phone', guardianPhone);
+        .eq('email', email);
 
       if (guardianError) throw guardianError;
 
@@ -284,9 +299,15 @@ export default function ParentPortal() {
               No Children Found
             </CardTitle>
             <CardDescription>
-              No students are associated with guardian: {guardianPhone}
+              No students are associated with your account.
             </CardDescription>
           </CardHeader>
+          <CardContent>
+            <Button variant="outline" onClick={handleLogout} className="w-full">
+              <LogOut className="h-4 w-4 mr-2" />
+              Back to Login
+            </Button>
+          </CardContent>
         </Card>
       </div>
     );
@@ -303,6 +324,13 @@ export default function ParentPortal() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
+        {/* Logout Button */}
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
+        </div>
         {/* Header with Child Selector */}
         <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
           <div className="flex items-center gap-4">

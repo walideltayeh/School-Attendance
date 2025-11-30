@@ -52,6 +52,7 @@ export default function StudentRegister() {
   // Guardian form state
   const [guardianName, setGuardianName] = useState("");
   const [guardianEmail, setGuardianEmail] = useState("");
+  const [guardianUsername, setGuardianUsername] = useState("");
   const [guardianPhone, setGuardianPhone] = useState("");
   const [guardianRelation, setGuardianRelation] = useState("");
   
@@ -378,8 +379,8 @@ export default function StudentRegister() {
         }
       }
 
-      // Handle guardian information
-      if (guardianName && guardianPhone && guardianRelation && newStudent) {
+      // Handle guardian information (required for parent portal access)
+      if (guardianName && guardianPhone && guardianEmail && guardianRelation && newStudent) {
         if (editStudent) {
           // Update existing guardian
           const { error: guardianError } = await supabase
@@ -387,7 +388,7 @@ export default function StudentRegister() {
             .upsert({
               student_id: newStudent.id,
               full_name: guardianName,
-              email: guardianEmail || null,
+              email: guardianEmail.toLowerCase(),
               phone: guardianPhone,
               relation: guardianRelation,
               is_primary: true
@@ -403,7 +404,7 @@ export default function StudentRegister() {
             .insert({
               student_id: newStudent.id,
               full_name: guardianName,
-              email: guardianEmail || null,
+              email: guardianEmail.toLowerCase(),
               phone: guardianPhone,
               relation: guardianRelation,
               is_primary: true
@@ -413,6 +414,12 @@ export default function StudentRegister() {
             console.error('Error saving guardian:', guardianError);
           }
         }
+      } else if (newStudent && (!guardianName || !guardianPhone || !guardianEmail || !guardianRelation)) {
+        toast({
+          title: "Warning",
+          description: "Guardian information is incomplete. Parent portal access may not be available.",
+          variant: "default"
+        });
       }
 
       // Auto-enroll in class if enabled and matching class found
@@ -905,7 +912,7 @@ export default function StudentRegister() {
                   
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="guardianEmail" className="text-right">
-                      Email
+                      Email <span className="text-destructive">*</span>
                     </Label>
                     <Input 
                       id="guardianEmail" 
@@ -914,12 +921,16 @@ export default function StudentRegister() {
                       placeholder="guardian@example.com"
                       value={guardianEmail}
                       onChange={(e) => setGuardianEmail(e.target.value)}
+                      required
                     />
+                    <p className="col-start-2 col-span-3 text-xs text-muted-foreground">
+                      Used for parent portal login
+                    </p>
                   </div>
                   
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="guardianPhone" className="text-right">
-                      Phone
+                      Phone <span className="text-destructive">*</span>
                     </Label>
                     <Input 
                       id="guardianPhone" 
@@ -928,7 +939,11 @@ export default function StudentRegister() {
                       placeholder="+1 (555) 000-0000"
                       value={guardianPhone}
                       onChange={(e) => setGuardianPhone(e.target.value)}
+                      required
                     />
+                    <p className="col-start-2 col-span-3 text-xs text-muted-foreground">
+                      Alternative login method for parent portal
+                    </p>
                   </div>
                 </div>
               </CardContent>
