@@ -459,13 +459,30 @@ const Admin = () => {
     }
   };
 
-  const handleDeleteSchedule = (scheduleId: string) => {
+  const handleDeleteSchedule = async (scheduleId: string) => {
+    // Delete from database
+    const { error } = await supabase
+      .from('class_schedules')
+      .delete()
+      .eq('id', scheduleId);
+    
+    if (error) {
+      console.error('Error deleting schedule:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete schedule",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Update local state
     const updatedSchedules = schedules.filter(s => s.id !== scheduleId);
     setSchedules(updatedSchedules);
     
     toast({
       title: "Schedule Deleted",
-      description: "The schedule has been removed",
+      description: "The schedule has been permanently removed",
     });
   };
 
