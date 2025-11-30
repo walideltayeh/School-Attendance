@@ -223,13 +223,30 @@ const Admin = () => {
         return;
       }
 
+      // Update classes to assign this teacher
+      for (const assignment of classAssignments) {
+        if (assignment.grade && assignment.section && assignment.subject) {
+          const { error: updateError } = await supabase
+            .from('classes')
+            .update({ teacher_id: newTeacher.id })
+            .eq('grade', assignment.grade)
+            .eq('section', assignment.section)
+            .eq('subject', assignment.subject);
+          
+          if (updateError) {
+            console.error('Error assigning class to teacher:', updateError);
+          }
+        }
+      }
+
       toast({
         title: "Teacher Added",
-        description: `${teacher.name} has been added successfully`,
+        description: `${teacher.name} has been added successfully with ${classAssignments.length} class assignment(s)`,
       });
       
-      // Reload teachers list to show the new teacher
+      // Reload teachers list and classes to show updates
       await loadTeachers();
+      await loadClasses();
     } catch (error) {
       console.error('Error adding teacher:', error);
       toast({
@@ -271,15 +288,42 @@ const Admin = () => {
         return;
       }
 
+      // Remove this teacher from all classes first
+      const { error: clearError } = await supabase
+        .from('classes')
+        .update({ teacher_id: null })
+        .eq('teacher_id', selectedTeacher.id);
+      
+      if (clearError) {
+        console.error('Error clearing teacher assignments:', clearError);
+      }
+
+      // Now assign to the new classes
+      for (const assignment of classAssignments) {
+        if (assignment.grade && assignment.section && assignment.subject) {
+          const { error: assignError } = await supabase
+            .from('classes')
+            .update({ teacher_id: selectedTeacher.id })
+            .eq('grade', assignment.grade)
+            .eq('section', assignment.section)
+            .eq('subject', assignment.subject);
+          
+          if (assignError) {
+            console.error('Error assigning class to teacher:', assignError);
+          }
+        }
+      }
+
       toast({
         title: "Teacher Updated",
-        description: `${updatedTeacherData.name}'s information has been updated`,
+        description: `${updatedTeacherData.name}'s information has been updated with ${classAssignments.length} class assignment(s)`,
       });
 
       // Close dialog and reload
       setIsEditDialogOpen(false);
       setSelectedTeacher(null);
       await loadTeachers();
+      await loadClasses();
     } catch (error) {
       console.error('Error updating teacher:', error);
       toast({
