@@ -860,6 +860,9 @@ const Admin = () => {
       setEditingClassName(null);
       setSelectedClass(null);
       
+      // Reload classes to reflect changes
+      await loadClasses();
+      
       toast({
         title: "Class Group Updated",
         description: `Updated ${newClassName}`,
@@ -1461,7 +1464,7 @@ const Admin = () => {
                 grade: editingClassName.split(' - ')[0],
                 section: editingClassName.split('Section ')[1],
                 subjects: classes.filter(c => c.name === editingClassName).map(c => c.subject),
-                teacherId: selectedClass.teacher || undefined
+                teacherId: selectedClass.teacher_id || undefined
               }}
               isEditing={true}
               teachers={teachers}
