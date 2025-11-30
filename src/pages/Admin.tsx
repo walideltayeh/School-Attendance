@@ -245,24 +245,47 @@ const Admin = () => {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateTeacher = (updatedTeacherData: Omit<Teacher, "id">, classAssignments: any[]) => {
-    if (selectedTeacher) {
-      const updatedTeacher = { 
-        ...updatedTeacherData, 
-        id: selectedTeacher.id 
-      };
-      
-      const updatedTeachers = teachers.map(t => 
-        t.id === selectedTeacher.id ? updatedTeacher : t
-      );
-      
-      setTeachers(updatedTeachers);
-      setIsEditDialogOpen(false);
-      setSelectedTeacher(null);
-      
+  const handleUpdateTeacher = async (updatedTeacherData: Omit<Teacher, "id">, classAssignments: any[]) => {
+    if (!selectedTeacher) return;
+    
+    try {
+      // Update teacher record in Supabase
+      const { error: updateError } = await supabase
+        .from('teachers')
+        .update({
+          teacher_code: updatedTeacherData.username,
+          subjects: classAssignments.map(ca => ca.subject).filter(Boolean),
+          full_name: updatedTeacherData.name,
+          email: updatedTeacherData.email,
+          phone: updatedTeacherData.phone || null
+        })
+        .eq('id', selectedTeacher.id);
+
+      if (updateError) {
+        console.error('Error updating teacher:', updateError);
+        toast({
+          title: "Error",
+          description: "Failed to update teacher record",
+          variant: "destructive"
+        });
+        return;
+      }
+
       toast({
         title: "Teacher Updated",
         description: `${updatedTeacherData.name}'s information has been updated`,
+      });
+
+      // Close dialog and reload
+      setIsEditDialogOpen(false);
+      setSelectedTeacher(null);
+      await loadTeachers();
+    } catch (error) {
+      console.error('Error updating teacher:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update teacher",
+        variant: "destructive"
       });
     }
   };
