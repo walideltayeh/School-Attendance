@@ -305,10 +305,76 @@ export function ClassScheduleForm({ onSubmit, editingSchedule = null, onCancelEd
     // Auto-select all months if none selected
     const monthsToUse = selectedMonths.length === 0 ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] : selectedMonths;
     
-    if (!selectedTeacher || !selectedClass || !selectedRoom || selectedDays.length === 0 || !selectedPeriod || weekSchedule.length === 0) {
+    // Detailed validation with specific error messages
+    if (!selectedTeacher) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
+        description: "Please select a teacher",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!selectedClass) {
+      toast({
+        title: "Error",
+        description: availableClasses.length === 0 
+          ? "Selected teacher has no assigned classes. Please assign classes to this teacher first."
+          : "Please select a class",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (availablePeriods.length === 0) {
+      toast({
+        title: "Error",
+        description: "No periods configured. Please add periods in the Periods section first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!selectedPeriod) {
+      toast({
+        title: "Error",
+        description: "Please select a period",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (availableRooms.length === 0) {
+      toast({
+        title: "Error",
+        description: "No rooms configured. Please add rooms in the Rooms section first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!selectedRoom) {
+      toast({
+        title: "Error",
+        description: "Please select a room",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (selectedDays.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one day",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (weekSchedule.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one week",
         variant: "destructive",
       });
       return;
