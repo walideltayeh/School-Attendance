@@ -15,6 +15,16 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { dataService, ClassInfo, BusRoute } from "@/services/dataService";
 import { getAvailableGrades, getAvailableSections } from "@/utils/classHelpers";
@@ -64,6 +74,7 @@ export default function StudentRegister() {
   const [matchingClass, setMatchingClass] = useState<any>(null);
   const [autoEnroll, setAutoEnroll] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -207,12 +218,11 @@ export default function StudentRegister() {
     event.preventDefault();
     
     if (isSubmitting) return;
-    setIsSubmitting(true);
     
     console.log('=== FORM SUBMISSION STARTED ===', { isEdit: !!editStudent });
     
+    // Validate all fields before showing confirmation
     if (!firstName || !lastName || !grade || !section || !bloodType) {
-      setIsSubmitting(false);
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -228,7 +238,6 @@ export default function StudentRegister() {
       
       // Check if date is not in the future
       if (birthDate > today) {
-        setIsSubmitting(false);
         toast({
           title: "Invalid Date of Birth",
           description: "Date of birth cannot be in the future.",
@@ -239,7 +248,6 @@ export default function StudentRegister() {
       
       // Check if age is within reasonable range (2-20 years for school)
       if (age !== null && (age < 2 || age > 20)) {
-        setIsSubmitting(false);
         toast({
           title: "Invalid Age",
           description: "Student age must be between 2 and 20 years old.",
@@ -250,7 +258,6 @@ export default function StudentRegister() {
     }
     
     if (hasAllergies && !allergyDetails) {
-      setIsSubmitting(false);
       toast({
         title: "Missing Information",
         description: "Please provide details about the allergies.",
@@ -260,7 +267,6 @@ export default function StudentRegister() {
     }
     
     if (requiresBus && (!busRoute || !address)) {
-      setIsSubmitting(false);
       toast({
         title: "Missing Information",
         description: "Please select a bus route and provide an address for bus pickup.",
@@ -268,6 +274,14 @@ export default function StudentRegister() {
       });
       return;
     }
+    
+    // All validation passed, show confirmation dialog
+    setShowConfirmDialog(true);
+  };
+
+  const confirmAndSubmit = async () => {
+    setShowConfirmDialog(false);
+    setIsSubmitting(true);
     
     try {
       let photoUrl = null;
@@ -1023,6 +1037,76 @@ export default function StudentRegister() {
           </Card>
         </div>
       </form>
+
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {editStudent ? 'Confirm Student Update' : 'Confirm Student Registration'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>Please review the student information before {editStudent ? 'updating' : 'registering'}:</p>
+              <div className="bg-muted p-4 rounded-lg space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="font-medium">Name:</span>
+                  <span>{firstName} {lastName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Student ID:</span>
+                  <span>{barcodeValue}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Grade:</span>
+                  <span>{grade}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Section:</span>
+                  <span>{section}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Blood Type:</span>
+                  <span>{bloodType}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Gender:</span>
+                  <span className="capitalize">{gender}</span>
+                </div>
+                {requiresBus && (
+                  <div className="flex justify-between">
+                    <span className="font-medium">Bus Route:</span>
+                    <span>{busRoutes.find(r => r.id === busRoute)?.name || "Not Specified"}</span>
+                  </div>
+                )}
+                {guardianName && (
+                  <>
+                    <div className="border-t pt-2 mt-2">
+                      <span className="font-medium">Guardian Information</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Name:</span>
+                      <span>{guardianName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Email:</span>
+                      <span>{guardianEmail}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-medium">Phone:</span>
+                      <span>{guardianPhone}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmAndSubmit}>
+              {editStudent ? 'Update Student' : 'Register Student'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
