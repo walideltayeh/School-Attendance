@@ -819,6 +819,9 @@ const Admin = () => {
     
     setDeleteConfirmOpen(false);
     setClassGroupToDelete(null);
+    
+    // Reload classes to update UI
+    await loadClasses();
   };
 
   const handleEditClassGroup = (className: string) => {
@@ -826,14 +829,8 @@ const Admin = () => {
     const classGroup = classes.filter(c => c.name === className);
     if (classGroup.length > 0) {
       const firstClass = classGroup[0];
-      const [grade, sectionPart] = firstClass.name.split(' - Section ');
-      const subjects = classGroup.map(c => c.subject);
       
-      setSelectedClass({
-        ...firstClass,
-        name: className,
-        subject: subjects.join(', ')
-      });
+      setSelectedClass(firstClass);
       setIsClassEditDialogOpen(true);
     }
   };
