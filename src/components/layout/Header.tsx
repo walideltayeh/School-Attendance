@@ -12,13 +12,25 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
-import { SCHOOL_CONFIG } from "@/config/school";
+import { getSchoolConfig } from "@/config/school";
+import { useEffect, useState } from "react";
 
 interface HeaderProps {
   toggleSidebar: () => void;
 }
 
 export function Header({ toggleSidebar }: HeaderProps) {
+  const [schoolName, setSchoolName] = useState(() => getSchoolConfig().name);
+  
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setSchoolName(getSchoolConfig().name);
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+  
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
       <Button variant="outline" size="icon" onClick={toggleSidebar} className="shrink-0 md:hidden">
@@ -26,7 +38,7 @@ export function Header({ toggleSidebar }: HeaderProps) {
         <span className="sr-only">Toggle sidebar</span>
       </Button>
       <Link to="/" className="flex items-center gap-2 shrink-0">
-        <span className="font-bold text-xl text-school-primary">{SCHOOL_CONFIG.name}</span>
+        <span className="font-bold text-xl text-school-primary">{schoolName}</span>
       </Link>
       <div className="w-full flex-1 md:grow-0 md:w-[240px]">
         <form>
