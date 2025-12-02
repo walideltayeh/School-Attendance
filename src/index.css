@@ -23,6 +23,9 @@
 @import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Libre+Caslon+Text&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Work+Sans&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Lora&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inconsolata&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -35,7 +38,7 @@
     --card: 0 0% 98%;
     --card-foreground: 0 0% 9%;
 
-    --popover: 0 0% 89%;
+    --popover: 213 26.8293% 83.9216%;
     --popover-foreground: 0 0% 9%;
 
     --primary: 161 93% 30%; /* Dark blue for primary */
@@ -44,7 +47,7 @@
     --secondary: 0 0% 32%; /* Darker blue for secondary */
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 63%; /* Very light blue for muted */
+    --muted: 23 82.5% 31.3725%; /* Very light blue for muted */
     --muted-foreground: 0 0% 9%;
 
     --accent: 166 76% 96%; /* Lighter blue for accent */
