@@ -36,15 +36,15 @@
     --popover-foreground: 240 5% 10%;
 
     --primary: 0 72.2222% 50.5882%; /* Dark blue for primary */
-    --primary-foreground: 250 100% 97%;
+    --primary-foreground: 210 40% 98.0392%;
 
-    --secondary: 240 5% 33%; /* Darker blue for secondary */
+    --secondary: 214 31.8182% 91.3725%; /* Darker blue for secondary */
     --secondary-foreground: 0 0% 98%;
 
     --muted: 240 4% 83%; /* Very light blue for muted */
     --muted-foreground: 240 5% 10%;
 
-    --accent: 269 100% 98%; /* Lighter blue for accent */
+    --accent: 213 26.8293% 83.9216%; /* Lighter blue for accent */
     --accent-foreground: 17 88.3495% 40.3922%;
 
     --destructive: 0 72% 50%;
