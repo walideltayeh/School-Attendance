@@ -181,7 +181,7 @@ export default {
     		},
     		fontFamily: {
     			sans: [
-    				'Work Sans',
+    				'Montserrat',
     				'ui-sans-serif',
     				'system-ui',
     				'sans-serif',
