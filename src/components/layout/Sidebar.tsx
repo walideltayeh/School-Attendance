@@ -16,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SCHOOL_CONFIG } from "@/config/school";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -166,10 +167,17 @@ export function Sidebar({ isOpen }: SidebarProps) {
           </NavLink>
         </nav>
       </ScrollArea>
-      <div className="mt-auto p-4 border-t">
-        <div className="text-xs text-muted-foreground">
-          <p>School Scan Connect</p>
-          <p>Version 1.0.0</p>
+      <div className="mt-auto border-t">
+        <div className="p-4 flex flex-col items-center gap-3">
+          <img 
+            src={SCHOOL_CONFIG.logo} 
+            alt={`${SCHOOL_CONFIG.name} Logo`}
+            className="h-16 w-16 object-contain"
+          />
+          <div className="text-xs text-muted-foreground text-center">
+            <p className="font-medium">{SCHOOL_CONFIG.name}</p>
+            <p>Version {SCHOOL_CONFIG.version}</p>
+          </div>
         </div>
       </div>
     </div>

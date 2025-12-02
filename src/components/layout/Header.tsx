@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
+import { SCHOOL_CONFIG } from "@/config/school";
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -25,7 +26,7 @@ export function Header({ toggleSidebar }: HeaderProps) {
         <span className="sr-only">Toggle sidebar</span>
       </Button>
       <Link to="/" className="flex items-center gap-2 shrink-0">
-        <span className="font-bold text-xl text-school-primary">School Scan Connect</span>
+        <span className="font-bold text-xl text-school-primary">{SCHOOL_CONFIG.name}</span>
       </Link>
       <div className="w-full flex-1 md:grow-0 md:w-[240px]">
         <form>
