@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
-import { Save, Server, Bell, Shield, Database, Trash2 } from "lucide-react";
+import { Save, Server, Bell, Shield, Database, Trash2, Upload, Building2 } from "lucide-react";
+import { useSchoolConfig } from "@/hooks/useSchoolConfig";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +26,9 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Settings() {
-  const [schoolName, setSchoolName] = useState("Valley High School");
+  const { schoolInfo, updateSchoolInfo } = useSchoolConfig();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [databaseUrl, setDatabaseUrl] = useState("https://school-database.example.com/api");
   const [apiKey, setApiKey] = useState("sk_test_••••••••••••••••");
   const [sendNotifications, setSendNotifications] = useState(true);
@@ -33,15 +37,73 @@ export default function Settings() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const navigate = useNavigate();
   
+  // Local state for form editing
+  const [formData, setFormData] = useState({
+    name: schoolInfo.name,
+    contactEmail: schoolInfo.contactEmail,
+    contactPhone: schoolInfo.contactPhone,
+    address: schoolInfo.address,
+    website: schoolInfo.website,
+    logo: schoolInfo.logo
+  });
+  
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Logo must be less than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        setFormData(prev => ({ ...prev, logo: base64 }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
   const handleSaveGeneral = async () => {
     setSaveLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSaveLoading(false);
     
-    toast({
-      title: "Settings saved",
-      description: "Your general settings have been updated successfully.",
-    });
+    try {
+      // Validate email
+      if (formData.contactEmail && !formData.contactEmail.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+        toast({
+          title: "Invalid email",
+          description: "Please enter a valid email address",
+          variant: "destructive",
+        });
+        setSaveLoading(false);
+        return;
+      }
+      
+      // Update school info
+      updateSchoolInfo(formData);
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      toast({
+        title: "Settings saved",
+        description: "School information has been updated successfully.",
+      });
+      
+      // Reload to apply changes
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save settings. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   const handleSaveDatabase = async () => {
@@ -121,20 +183,118 @@ export default function Settings() {
         <TabsContent value="general" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>General Settings</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                School Information
+              </CardTitle>
               <CardDescription>
-                Configure general settings for your school system
+                Manage your school's name, logo, contact details, and branding
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="school-name">School Name</Label>
-                <Input
-                  id="school-name"
-                  value={schoolName}
-                  onChange={(e) => setSchoolName(e.target.value)}
-                />
+            <CardContent className="space-y-6">
+              {/* Logo Upload Section */}
+              <div className="space-y-4">
+                <Label>School Logo</Label>
+                <div className="flex items-start gap-4">
+                  <div className="w-32 h-32 border-2 border-dashed rounded-lg flex items-center justify-center bg-muted overflow-hidden">
+                    {formData.logo ? (
+                      <img 
+                        src={formData.logo} 
+                        alt="School Logo" 
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <Building2 className="h-12 w-12 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      Upload your school logo. Recommended size: 512x512px. Max size: 5MB.
+                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Logo
+                    </Button>
+                  </div>
+                </div>
               </div>
+              
+              <Separator />
+              
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="school-name">School Name *</Label>
+                  <Input
+                    id="school-name"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter school name"
+                    maxLength={100}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="contact-email">Contact Email *</Label>
+                  <Input
+                    id="contact-email"
+                    type="email"
+                    value={formData.contactEmail}
+                    onChange={(e) => setFormData(prev => ({ ...prev, contactEmail: e.target.value }))}
+                    placeholder="info@school.edu"
+                    maxLength={255}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="contact-phone">Contact Phone</Label>
+                  <Input
+                    id="contact-phone"
+                    type="tel"
+                    value={formData.contactPhone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, contactPhone: e.target.value }))}
+                    placeholder="+1 (555) 123-4567"
+                    maxLength={20}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="website">Website</Label>
+                  <Input
+                    id="website"
+                    type="url"
+                    value={formData.website}
+                    onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
+                    placeholder="www.school.edu"
+                    maxLength={255}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Textarea
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                    placeholder="123 Education Lane, City, State 12345"
+                    rows={3}
+                    maxLength={500}
+                  />
+                </div>
+              </div>
+              
+              <Separator />
               
               <div className="flex items-center space-x-2">
                 <Switch
@@ -145,7 +305,7 @@ export default function Settings() {
                 <Label htmlFor="enable-barcodes">Enable Barcode Scanning</Label>
               </div>
               
-              <Separator className="my-4" />
+              <Separator />
               
               <Button 
                 onClick={handleSaveGeneral} 
@@ -153,7 +313,7 @@ export default function Settings() {
                 disabled={saveLoading}
               >
                 <Save className="mr-2 h-4 w-4" />
-                {saveLoading ? "Saving..." : "Save Settings"}
+                {saveLoading ? "Saving..." : "Save School Information"}
               </Button>
             </CardContent>
           </Card>
