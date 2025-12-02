@@ -974,9 +974,11 @@ const Admin = () => {
     }
 
     try {
+      const teacherId = bulkAssignTeacherId === "none" ? null : bulkAssignTeacherId;
+      
       const { error } = await supabase
         .from('classes')
-        .update({ teacher_id: bulkAssignTeacherId })
+        .update({ teacher_id: teacherId })
         .in('id', selectedClassIds);
 
       if (error) throw error;
@@ -1614,7 +1616,7 @@ const Admin = () => {
                   <SelectValue placeholder="Select a teacher" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None (Remove teacher)</SelectItem>
+                  <SelectItem value="none">None (Remove teacher)</SelectItem>
                   {teachers.map((teacher) => (
                     <SelectItem key={teacher.id} value={teacher.id}>
                       {teacher.name}
